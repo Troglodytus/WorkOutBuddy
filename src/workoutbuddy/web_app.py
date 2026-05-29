@@ -6,6 +6,7 @@ import math
 import html as html_lib
 import re
 import time
+import urllib.parse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -267,6 +268,10 @@ class WorkOutBuddyWeb:
         self.map_frame = None
         self.map_link = None
         self.map_status = None
+        self.route_metric_select = None
+        self.route_x_select = None
+        self.route_profile_frame = None
+        self.route_profile_status = None
         self.selected_activity_id: Optional[str] = None
         self.selected_apple_vo2_input = None
         self.selected_body_weight_input = None
@@ -419,6 +424,27 @@ class WorkOutBuddyWeb:
                 with ui.row().classes("w-full items-center gap-2"):
                     self.map_link = ui.link("Open route map in new tab", "#", new_tab=True).classes("text-sm")
                     self.map_status = ui.label("No route selected").classes("text-xs text-gray-500")
+
+                with ui.card().classes("w-full"):
+                    ui.label("Workout route/profile coloring").classes("font-semibold")
+                    with ui.row().classes("w-full items-end gap-2"):
+                        self.route_metric_select = ui.select(
+                            options=self._route_metric_options(),
+                            value="pace_min_km",
+                            label="Metric overlay / route color",
+                            on_change=self.refresh_route_visuals,
+                        ).classes("w-64")
+                        self.route_x_select = ui.select(
+                            options={"distance_km": "Distance", "time_min": "Time"},
+                            value="distance_km",
+                            label="Profile x-axis",
+                            on_change=self.refresh_route_visuals,
+                        ).classes("w-36")
+                    self.route_profile_frame = ui.element("iframe").classes("w-full").style(
+                        "height:300px; border:1px solid #ddd; border-radius:6px; background:#fafafa;"
+                    )
+                    self.route_profile_status = ui.label("No route/profile selected").classes("text-xs text-gray-500")
+                    self._set_profile_frame_none()
 
                 with ui.card().classes("w-full"):
                     ui.label("Selected activity manual values").classes("font-semibold")
@@ -980,10 +1006,12 @@ class WorkOutBuddyWeb:
             self._set_link_target_safe(self.map_link, "#")
         if self.map_status is not None:
             self.map_status.set_text("No route selected")
+        self._set_profile_frame_none()
 
     def _set_map_frame_activity(self, activity_id: str) -> None:
-        """Load the selected activity map in a real iframe and expose a debug link."""
-        url = f"/api/activity_map/{activity_id}?t={int(time.time())}"
+        """Load the selected activity map/profile in iframes and expose a debug link."""
+        metric = urllib.parse.quote(str(self._current_route_metric()))
+        url = f"/api/activity_map/{activity_id}?metric={metric}&t={int(time.time())}"
         if self.map_frame is not None:
             self.map_frame._props.pop("srcdoc", None)
             self.map_frame._props["src"] = url
@@ -996,6 +1024,36 @@ class WorkOutBuddyWeb:
             row = self.db.read_activity_row(activity_id) or {}
             pts = self._load_points(row) if row else []
             self.map_status.set_text(f"Route endpoint: {url} · GPS points detected: {len(pts)}")
+        self._set_profile_frame_activity(activity_id)
+
+    def _set_profile_frame_none(self) -> None:
+        if self.route_profile_frame is not None:
+            doc = self._route_message_document("No profile selected", "Select an activity row.")
+            self.route_profile_frame._props["srcdoc"] = doc
+            self.route_profile_frame._props.pop("src", None)
+            self.route_profile_frame.update()
+        if self.route_profile_status is not None:
+            self.route_profile_status.set_text("No route/profile selected")
+
+    def _set_profile_frame_activity(self, activity_id: str) -> None:
+        metric = urllib.parse.quote(str(self._current_route_metric()))
+        x_axis = urllib.parse.quote(str(self._current_route_x_axis()))
+        url = f"/api/activity_profile/{activity_id}?metric={metric}&x_axis={x_axis}&t={int(time.time())}"
+        if self.route_profile_frame is not None:
+            self.route_profile_frame._props.pop("srcdoc", None)
+            self.route_profile_frame._props["src"] = url
+            self.route_profile_frame._props["loading"] = "eager"
+            self.route_profile_frame._props["referrerpolicy"] = "no-referrer"
+            self.route_profile_frame.update()
+        if self.route_profile_status is not None:
+            self.route_profile_status.set_text(f"Profile endpoint: {url}")
+
+    def refresh_route_visuals(self, *args) -> None:
+        if self.selected_activity_id:
+            self._set_map_frame_activity(self.selected_activity_id)
+        else:
+            self._set_map_frame_none()
+            self._set_profile_frame_none()
 
     def save_selected_activity_manual_values(self) -> None:
         if not self.selected_activity_id:
@@ -1102,6 +1160,230 @@ class WorkOutBuddyWeb:
             lines.append(f"... {len(splits) - 25} more km omitted in detail view.")
         return lines
 
+
+    def _route_metric_options(self) -> Dict[str, str]:
+        return {
+            "pace_min_km": "Pace (fast green → slow red)",
+            "velocity_kmh": "Velocity / speed",
+            "heart_rate": "Heart rate",
+            "zone": "HR zone",
+            "power_w": "Power (W)",
+            "altitude_m": "Altitude",
+            "grade_pct": "Grade %",
+            "cadence": "Cadence",
+        }
+
+    def _current_route_metric(self) -> str:
+        value = getattr(self.route_metric_select, "value", None) if self.route_metric_select is not None else None
+        if value not in self._route_metric_options():
+            return "pace_min_km"
+        return str(value)
+
+    def _current_route_x_axis(self) -> str:
+        value = getattr(self.route_x_select, "value", None) if self.route_x_select is not None else None
+        return str(value) if value in {"distance_km", "time_min"} else "distance_km"
+
+    def _load_streams(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        streams_path = self._resolve_existing_path(row.get("streams_json_path"))
+        if streams_path is None:
+            return {}
+        try:
+            obj = json.loads(streams_path.read_text(encoding="utf-8"))
+            return obj if isinstance(obj, dict) else {}
+        except Exception:
+            return {}
+
+    def _stream_values(self, streams: Dict[str, Any], *keys: str) -> List[Any]:
+        for key in keys:
+            obj = streams.get(key)
+            if isinstance(obj, dict) and "data" in obj:
+                obj = obj.get("data")
+            if isinstance(obj, list):
+                return obj
+        return []
+
+    def _resample_numeric(self, values: List[Any], n: int) -> List[Optional[float]]:
+        vals: List[Optional[float]] = [_safe_float(v, None) for v in values]
+        if n <= 0:
+            return []
+        if not vals:
+            return [None] * n
+        if len(vals) == n:
+            return vals
+        x_old = np.linspace(0.0, 1.0, len(vals))
+        x_new = np.linspace(0.0, 1.0, n)
+        y = np.array([np.nan if v is None else float(v) for v in vals], dtype=float)
+        valid = np.isfinite(y)
+        if valid.sum() < 2:
+            fill = float(y[valid][0]) if valid.sum() == 1 else np.nan
+            return [None if not np.isfinite(fill) else fill] * n
+        out = np.interp(x_new, x_old[valid], y[valid])
+        return [None if not np.isfinite(v) else float(v) for v in out]
+
+    def _resample_latlng(self, points: List[Any], n: int) -> Tuple[List[Optional[float]], List[Optional[float]]]:
+        pts: List[Tuple[float, float]] = []
+        for p in points:
+            if isinstance(p, (list, tuple)) and len(p) >= 2:
+                lat = _safe_float(p[0], None)
+                lon = _safe_float(p[1], None)
+                if lat is not None and lon is not None and -90 <= lat <= 90 and -180 <= lon <= 180:
+                    pts.append((float(lat), float(lon)))
+        if not pts or n <= 0:
+            return [None] * n, [None] * n
+        if len(pts) == n:
+            return [p[0] for p in pts], [p[1] for p in pts]
+        x_old = np.linspace(0.0, 1.0, len(pts))
+        x_new = np.linspace(0.0, 1.0, n)
+        lat = np.interp(x_new, x_old, [p[0] for p in pts])
+        lon = np.interp(x_new, x_old, [p[1] for p in pts])
+        return [float(v) for v in lat], [float(v) for v in lon]
+
+    def _activity_stream_dataframe(self, row: Dict[str, Any]) -> pd.DataFrame:
+        streams = self._load_streams(row)
+        if not streams:
+            return pd.DataFrame()
+
+        time_values = self._stream_values(streams, "time")
+        dist_values = self._stream_values(streams, "distance")
+        alt_values = self._stream_values(streams, "altitude", "altitude_m")
+        vel_values = self._stream_values(streams, "velocity_smooth", "speed", "speed_mps")
+        hr_values = self._stream_values(streams, "heartrate", "heart_rate", "hr")
+        power_values = self._stream_values(streams, "watts", "power", "power_w")
+        grade_values = self._stream_values(streams, "grade_smooth", "grade", "grade_pct")
+        cadence_values = self._stream_values(streams, "cadence")
+        latlng_values = self._stream_values(streams, "latlng")
+
+        lengths = [len(v) for v in [time_values, dist_values, alt_values, vel_values, hr_values, power_values, grade_values, cadence_values] if v]
+        if not lengths and latlng_values:
+            lengths = [len(latlng_values)]
+        n = max(lengths) if lengths else 0
+        if n <= 0:
+            return pd.DataFrame()
+
+        time_s = self._resample_numeric(time_values, n)
+        if not time_values:
+            time_s = [float(i) for i in range(n)]
+        dist_m = self._resample_numeric(dist_values, n)
+        alt_m = self._resample_numeric(alt_values, n)
+        vel_mps = self._resample_numeric(vel_values, n)
+        hr = self._resample_numeric(hr_values, n)
+        power = self._resample_numeric(power_values, n)
+        grade = self._resample_numeric(grade_values, n)
+        cadence = self._resample_numeric(cadence_values, n)
+        lat, lon = self._resample_latlng(latlng_values, n)
+
+        # Derive distance/speed if one of them is missing.
+        if all(v is None for v in dist_m):
+            total_km = _safe_float(row.get("distance_km"), None)
+            if total_km is not None and total_km > 0:
+                dist_m = [float(total_km * 1000.0 * i / max(n - 1, 1)) for i in range(n)]
+        if all(v is None for v in vel_mps) and not all(v is None for v in dist_m):
+            vel_mps = [None]
+            for i in range(1, n):
+                d0, d1 = dist_m[i - 1], dist_m[i]
+                t0, t1 = time_s[i - 1], time_s[i]
+                if d0 is None or d1 is None or t0 is None or t1 is None or t1 <= t0:
+                    vel_mps.append(None)
+                else:
+                    vel_mps.append(float(max(0.0, (d1 - d0) / (t1 - t0))))
+
+        velocity_kmh = [None if v is None else float(v) * 3.6 for v in vel_mps]
+        pace_min_km = [None if v is None or v <= 0.1 else float(1000.0 / v / 60.0) for v in vel_mps]
+        zone = []
+        for h in hr:
+            if h is None:
+                zone.append(None)
+            elif h < 134:
+                zone.append(1.0)
+            elif h < 146:
+                zone.append(2.0)
+            elif h < 156:
+                zone.append(3.0)
+            elif h < 167:
+                zone.append(4.0)
+            else:
+                zone.append(5.0)
+
+        df = pd.DataFrame({
+            "time_s": time_s,
+            "time_min": [None if v is None else float(v) / 60.0 for v in time_s],
+            "distance_m": dist_m,
+            "distance_km": [None if v is None else float(v) / 1000.0 for v in dist_m],
+            "altitude_m": alt_m,
+            "velocity_kmh": velocity_kmh,
+            "pace_min_km": pace_min_km,
+            "heart_rate": hr,
+            "zone": zone,
+            "power_w": power,
+            "grade_pct": grade,
+            "cadence": cadence,
+            "lat": lat,
+            "lon": lon,
+        })
+        # Smooth extreme spikes for visualization only.
+        if "pace_min_km" in df:
+            df.loc[(df["pace_min_km"] < 2.0) | (df["pace_min_km"] > 20.0), "pace_min_km"] = np.nan
+        return df
+
+    def _metric_label(self, metric_key: str) -> str:
+        return self._route_metric_options().get(metric_key, metric_key)
+
+    def _metric_unit(self, metric_key: str) -> str:
+        return {
+            "pace_min_km": "min/km",
+            "velocity_kmh": "km/h",
+            "heart_rate": "bpm",
+            "zone": "zone",
+            "power_w": "W",
+            "altitude_m": "m",
+            "grade_pct": "%",
+            "cadence": "rpm/spm",
+        }.get(metric_key, "")
+
+    def _metric_higher_is_better_for_color(self, metric_key: str) -> bool:
+        # Fast speed should be green; slow pace/high HR/high power/high grade effort should move towards red.
+        return metric_key in {"velocity_kmh"}
+
+    def _color_for_value(self, value: Any, vmin: float, vmax: float, metric_key: str) -> str:
+        x = _safe_float(value, None)
+        if x is None or not math.isfinite(vmin) or not math.isfinite(vmax) or vmax <= vmin:
+            return "#3b82f6"  # blue fallback
+        p = max(0.0, min(1.0, (float(x) - vmin) / (vmax - vmin)))
+        if self._metric_higher_is_better_for_color(metric_key):
+            p = 1.0 - p
+        # green -> yellow -> red
+        if p <= 0.5:
+            q = p / 0.5
+            r = int(34 + q * (250 - 34))
+            g = int(197 + q * (204 - 197))
+            b = int(94 + q * (21 - 94))
+        else:
+            q = (p - 0.5) / 0.5
+            r = int(250 + q * (220 - 250))
+            g = int(204 + q * (38 - 204))
+            b = int(21 + q * (38 - 21))
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    def _metric_color_range(self, values: Iterable[Any]) -> Tuple[float, float]:
+        vals = pd.to_numeric(pd.Series(list(values)), errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
+        if len(vals) == 0:
+            return (0.0, 1.0)
+        # Percentiles avoid one GPS/pace spike making all colors look the same.
+        vmin = float(vals.quantile(0.05))
+        vmax = float(vals.quantile(0.95))
+        if not math.isfinite(vmin) or not math.isfinite(vmax) or vmax <= vmin:
+            vmin = float(vals.min())
+            vmax = float(vals.max())
+        if vmax <= vmin:
+            vmax = vmin + 1.0
+        return vmin, vmax
+
+    def _downsample_route_df(self, df: pd.DataFrame, max_points: int = 900) -> pd.DataFrame:
+        if len(df) <= max_points:
+            return df.reset_index(drop=True)
+        idx = np.linspace(0, len(df) - 1, max_points).round().astype(int)
+        return df.iloc[idx].reset_index(drop=True)
+
     def make_activity_map_if_available(self, row: Dict[str, Any]) -> str:
         """Legacy helper retained for compatibility; the UI now uses /api/activity_map."""
         activity_id = str(row.get("activity_id") or "")
@@ -1113,34 +1395,132 @@ class WorkOutBuddyWeb:
             'loading="lazy"></iframe>'
         )
 
-    def make_activity_map_document(self, activity_id: str) -> str:
+    def make_activity_map_document(self, activity_id: str, metric_key: Optional[str] = None) -> str:
         """Return a complete HTML document for the selected activity route map.
 
-        This endpoint-based rendering avoids the main reason the map was blank in
-        the NiceGUI page: Folium embeds JavaScript/CSS that is not always executed
-        correctly when injected into a component via innerHTML/srcdoc.
+        Route color is driven by the selected stream metric. If no GPS points are
+        available, this endpoint returns a diagnostic page; the profile endpoint
+        can still visualize non-GPS streams such as ergometer power/HR/time.
         """
         row = self.db.read_activity_row(activity_id)
         if not row:
             return self._route_message_document("Activity not found", f"activity_id={activity_id}")
         points = self._load_points(row)
         if not points:
-            return self._route_message_document("No GPS route available for this activity", self._route_diagnostic(row))
+            return self._route_message_document(
+                "No GPS route available for this activity",
+                self._route_diagnostic(row) + "\n\nIf the activity has time/distance/HR/power streams, the profile chart below the map can still be used.",
+            )
 
-        lat0, lon0 = points[len(points) // 2]
+        metric_key = metric_key or "pace_min_km"
+        if metric_key not in self._route_metric_options():
+            metric_key = "pace_min_km"
+
+        stream_df = self._activity_stream_dataframe(row)
+        values: List[Optional[float]] = []
+        if not stream_df.empty and metric_key in stream_df.columns:
+            values = self._resample_numeric(stream_df[metric_key].tolist(), len(points))
+        if not values or all(v is None for v in values):
+            values = [None] * len(points)
+
+        vmin, vmax = self._metric_color_range(values)
+        route_df = pd.DataFrame({"lat": [p[0] for p in points], "lon": [p[1] for p in points], "metric": values})
+        route_df = self._downsample_route_df(route_df, max_points=900)
+        pts = [(float(r.lat), float(r.lon)) for r in route_df.itertuples()]
+        vals = route_df["metric"].tolist()
+
+        lat0, lon0 = pts[len(pts) // 2]
         m = folium.Map(location=[lat0, lon0], zoom_start=13, tiles="OpenStreetMap", control_scale=True)
-        folium.PolyLine(points, weight=4, opacity=0.85, color="blue").add_to(m)
-        folium.Marker(points[0], tooltip="Start").add_to(m)
-        folium.Marker(points[-1], tooltip="Finish").add_to(m)
+
+        if len(pts) >= 2:
+            for i in range(1, len(pts)):
+                color = self._color_for_value(vals[i], vmin, vmax, metric_key)
+                folium.PolyLine([pts[i - 1], pts[i]], weight=5, opacity=0.90, color=color).add_to(m)
+        else:
+            folium.PolyLine(pts, weight=5, opacity=0.90, color="blue").add_to(m)
+
+        folium.Marker(pts[0], tooltip="Start").add_to(m)
+        folium.Marker(pts[-1], tooltip="Finish").add_to(m)
         title = html_lib.escape(str(row.get("name") or activity_id))
-        point_count = len(points)
+        metric_label = html_lib.escape(self._metric_label(metric_key))
+        unit = html_lib.escape(self._metric_unit(metric_key))
         body = m.get_root().render()
-        # Add a tiny overlay. Keep it simple; Folium already returns a complete document.
-        body = body.replace(
-            "</body>",
-            f"<div style='position:fixed;left:8px;bottom:8px;z-index:9999;background:white;padding:4px 7px;border:1px solid #ccc;border-radius:4px;font:12px sans-serif;'>{title} · {point_count} GPS points</div></body>",
-        )
+        legend = f"""
+        <div style='position:fixed;left:8px;bottom:8px;z-index:9999;background:white;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:12px sans-serif;max-width:340px;'>
+          <b>{title}</b><br>
+          Route colored by: {metric_label}<br>
+          <div style='height:10px;width:160px;background:linear-gradient(90deg,#22c55e,#facc15,#dc2626);border:1px solid #aaa;margin-top:4px;'></div>
+          <span style='font-size:11px;'>green = better/lower effort, red = slower/harder &nbsp; · &nbsp; range {vmin:.2f}–{vmax:.2f} {unit}</span><br>
+          <span style='font-size:11px;'>{len(points)} GPS points · rendered {len(pts)} points</span>
+        </div>
+        """
+        body = body.replace("</body>", legend + "</body>")
         return body
+
+    def make_activity_profile_document(self, activity_id: str, metric_key: Optional[str] = None, x_axis: str = "distance_km") -> str:
+        row = self.db.read_activity_row(activity_id)
+        if not row:
+            return self._route_message_document("Activity not found", f"activity_id={activity_id}")
+        metric_key = metric_key or "pace_min_km"
+        if metric_key not in self._route_metric_options():
+            metric_key = "pace_min_km"
+        x_axis = x_axis if x_axis in {"distance_km", "time_min"} else "distance_km"
+        df = self._activity_stream_dataframe(row)
+        if df.empty:
+            return self._route_message_document("No stream/profile data available", self._route_diagnostic(row))
+        if x_axis == "distance_km" and ("distance_km" not in df.columns or df["distance_km"].dropna().empty):
+            x_axis = "time_min"
+        if metric_key not in df.columns or df[metric_key].dropna().empty:
+            # Fallback to altitude if selected stream is absent.
+            metric_key = "altitude_m" if "altitude_m" in df.columns and not df["altitude_m"].dropna().empty else metric_key
+        if x_axis not in df.columns or df[x_axis].dropna().empty:
+            return self._route_message_document("No usable x-axis data", "This activity has no distance/time stream.")
+
+        # Keep graph responsive for long activities.
+        df_plot = df.copy()
+        if len(df_plot) > 1800:
+            idx = np.linspace(0, len(df_plot) - 1, 1800).round().astype(int)
+            df_plot = df_plot.iloc[idx].reset_index(drop=True)
+
+        x_label = "Distance (km)" if x_axis == "distance_km" else "Time (min)"
+        metric_label = self._metric_label(metric_key)
+        metric_unit = self._metric_unit(metric_key)
+        vmin, vmax = self._metric_color_range(df_plot.get(metric_key, pd.Series(dtype=float)).tolist())
+        colors = [self._color_for_value(v, vmin, vmax, metric_key) for v in df_plot.get(metric_key, pd.Series([None] * len(df_plot))).tolist()]
+
+        fig = go.Figure()
+        if "altitude_m" in df_plot.columns and not df_plot["altitude_m"].dropna().empty:
+            fig.add_trace(go.Scatter(
+                x=df_plot[x_axis], y=df_plot["altitude_m"], mode="lines", name="Altitude",
+                line=dict(color="rgba(80,80,80,0.55)", width=2), yaxis="y1",
+                hovertemplate=f"{x_label}: %{{x:.2f}}<br>Altitude: %{{y:.1f}} m<extra></extra>",
+            ))
+        if metric_key in df_plot.columns and not df_plot[metric_key].dropna().empty:
+            fig.add_trace(go.Scatter(
+                x=df_plot[x_axis], y=df_plot[metric_key], mode="lines+markers", name=metric_label,
+                line=dict(color="rgba(30,90,200,0.35)", width=1),
+                marker=dict(size=4, color=colors), yaxis="y2",
+                customdata=np.stack([
+                    df_plot.get("time_min", pd.Series([np.nan] * len(df_plot))).to_numpy(),
+                    df_plot.get("distance_km", pd.Series([np.nan] * len(df_plot))).to_numpy(),
+                    df_plot.get("altitude_m", pd.Series([np.nan] * len(df_plot))).to_numpy(),
+                ], axis=-1),
+                hovertemplate=(
+                    "Time: %{customdata[0]:.1f} min<br>Distance: %{customdata[1]:.2f} km<br>"
+                    "Altitude: %{customdata[2]:.1f} m<br>" + html_lib.escape(metric_label) + ": %{y:.2f} " + html_lib.escape(metric_unit) + "<extra></extra>"
+                ),
+            ))
+        fig.update_layout(
+            template="plotly_white",
+            margin=dict(l=45, r=55, t=35, b=35),
+            height=285,
+            title=f"Workout profile · {html_lib.escape(str(row.get('name') or activity_id))}",
+            xaxis=dict(title=x_label),
+            yaxis=dict(title="Altitude (m)", side="left", showgrid=True),
+            yaxis2=dict(title=f"{metric_label} ({metric_unit})", overlaying="y", side="right", showgrid=False),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        )
+        return fig.to_html(include_plotlyjs=True, full_html=True, config={"responsive": True, "displaylogo": False})
 
     def _route_message_document(self, title: str, message: str) -> str:
         return (
@@ -1810,11 +2190,18 @@ def create_app_instance() -> WorkOutBuddyWeb:
 
 
     @app.get("/api/activity_map/{activity_id}")
-    def activity_map(activity_id: str):
+    def activity_map(activity_id: str, metric: str = "pace_min_km"):
         try:
-            return HTMLResponse(web.make_activity_map_document(activity_id), headers={"Cache-Control": "no-store"})
+            return HTMLResponse(web.make_activity_map_document(activity_id, metric_key=metric), headers={"Cache-Control": "no-store"})
         except Exception as e:
             return HTMLResponse(web._route_message_document("Route map error", str(e)), status_code=500, headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/activity_profile/{activity_id}")
+    def activity_profile(activity_id: str, metric: str = "pace_min_km", x_axis: str = "distance_km"):
+        try:
+            return HTMLResponse(web.make_activity_profile_document(activity_id, metric_key=metric, x_axis=x_axis), headers={"Cache-Control": "no-store"})
+        except Exception as e:
+            return HTMLResponse(web._route_message_document("Workout profile error", str(e)), status_code=500, headers={"Cache-Control": "no-store"})
 
     @app.post("/api/tcx_upload")
     async def tcx_upload(files: List[UploadFile] = File(...)):
