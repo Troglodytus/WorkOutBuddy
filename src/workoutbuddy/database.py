@@ -110,6 +110,7 @@ class WorkoutDatabase:
             "bike_equivalent_power_w": "REAL",
             "power_hr_efficiency": "REAL",
             "power_hr_efficiency_drift_pct": "REAL",
+            "effective_power_w": "REAL",
         }
         existing = {row[1] for row in conn.execute("PRAGMA table_info(metrics)").fetchall()}
         for col, typ in manual_columns.items():
@@ -171,6 +172,7 @@ class WorkoutDatabase:
                        age_years_at_activity, gender,
                        bike_inferred_power_w, cycling_power_w, run_equivalent_power_w,
                        bike_equivalent_power_w, power_hr_efficiency, power_hr_efficiency_drift_pct,
+                       effective_power_w,
                        source
                 FROM metrics LEFT JOIN activities USING(activity_id)
                 WHERE metrics.activity_id = ?
@@ -182,6 +184,7 @@ class WorkoutDatabase:
                 "age_years_at_activity", "gender",
                 "bike_inferred_power_w", "cycling_power_w", "run_equivalent_power_w",
                 "bike_equivalent_power_w", "power_hr_efficiency", "power_hr_efficiency_drift_pct",
+                "effective_power_w",
             ]
             for col in manual_preserve_cols:
                 if existing is not None and col in existing.keys() and existing[col] is not None:
@@ -260,6 +263,182 @@ class WorkoutDatabase:
             if col in df:
                 df[col.replace("_s", "_min")] = df[col] / 60.0
         return self._augment_profile_power_metrics(df)
+
+
+    def _augment_profile_power_metrics(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add profile-, BMI-, and power-derived columns to an activity DataFrame.
+
+        This method is deliberately non-destructive:
+        - manual DB fields such as body_weight_kg and apple_vo2max are not
+          overwritten in the database here;
+        - missing values are filled only in the returned DataFrame so the GUI,
+          recommendations, exports and statistics have usable columns;
+        - set_activity_body_weight(...) remains the explicit DB write path for
+          per-workout weight/BMI.
+
+        It also fixes compatibility for older databases where these columns may
+        not have existed when the app started.
+        """
+        if df is None or df.empty:
+            return df
+
+        df = df.copy()
+
+        birthdate = self.get_setting("profile_birthdate", "1993-06-16") or "1993-06-16"
+        gender_default = self.get_setting("profile_gender", "Male") or "Male"
+        height_cm = self.get_float_setting("profile_height_cm", 178.0)
+        profile_weight_kg = self.get_float_setting("profile_current_weight_kg", 75.0)
+
+        def _missing(value: Any) -> bool:
+            try:
+                return value is None or (isinstance(value, float) and math.isnan(value)) or bool(pd.isna(value))
+            except Exception:
+                return value is None
+
+        def _row_float(row: Any, *keys: str) -> Optional[float]:
+            for key in keys:
+                if key in row.index:
+                    val = _safe_float(row.get(key))
+                    if val is not None:
+                        return val
+            return None
+
+        def _is_ride_sport(sport: Any) -> bool:
+            s = _norm_sport(sport)
+            return s in {
+                "ride", "cycling", "bike", "virtualride", "gravelride",
+                "mountainbikeride", "ebikeride", "indoorcycling", "workout"
+            } or "ride" in s or "cycling" in s or "bike" in s
+
+        def _is_virtual_ride_sport(sport: Any) -> bool:
+            s = _norm_sport(sport)
+            return "virtualride" in s or "indoor" in s or "ergo" in s or "trainer" in s
+
+        def _is_run_sport(sport: Any) -> bool:
+            s = _norm_sport(sport)
+            return s in {"run", "running", "trailrun", "virtualrun"} or "run" in s
+
+        # Ensure the columns exist before assignment. These may be virtual
+        # DataFrame-only columns even if not persisted in SQLite.
+        for col in [
+            "body_weight_kg_effective",
+            "bmi", "bmi_category", "age_years_at_activity", "gender",
+            "bike_inferred_power_w", "cycling_power_w", "run_equivalent_power_w",
+            "bike_equivalent_power_w", "effective_power_w",
+            "power_hr_efficiency", "power_hr_efficiency_drift_pct",
+        ]:
+            if col not in df.columns:
+                df[col] = None
+
+        # Row-wise augmentation is easier and safer here because each activity can
+        # have different sport type, manually entered weight and start time.
+        for idx, row in df.iterrows():
+            sport = row.get("sport_type")
+            weight = _row_float(row, "body_weight_kg")
+            if weight is None:
+                weight = profile_weight_kg
+
+            if weight is not None:
+                df.at[idx, "body_weight_kg_effective"] = round(float(weight), 2)
+
+            # Age/gender at activity.
+            if _missing(row.get("gender")):
+                df.at[idx, "gender"] = gender_default
+            if _missing(row.get("age_years_at_activity")):
+                df.at[idx, "age_years_at_activity"] = _age_years_at(birthdate, row.get("start_date_local"))
+
+            # BMI. Do not overwrite an existing manually stored BMI if it exists.
+            bmi = _safe_float(row.get("bmi"))
+            if bmi is None:
+                bmi = _calc_bmi(weight, height_cm)
+                if bmi is not None:
+                    df.at[idx, "bmi"] = bmi
+            if _missing(row.get("bmi_category")):
+                df.at[idx, "bmi_category"] = _bmi_category(bmi)
+
+            # Source power. Keep this list broad because TCX/Strava versions
+            # can name average power differently.
+            avg_power = _row_float(
+                row,
+                "avg_power", "average_power", "average_power_w", "power_w",
+                "weighted_average_watts", "weighted_average_power",
+            )
+            norm_power = _row_float(row, "normalized_power", "xpower", "weighted_power")
+            best_power = _row_float(row, "best_5min_power", "best_20min_power")
+            source_power = avg_power or norm_power or best_power
+
+            inferred_bike_power = _safe_float(row.get("bike_inferred_power_w"))
+            if inferred_bike_power is None:
+                inferred_bike_power = _infer_bike_power_w(dict(row), default_weight_kg=float(weight or profile_weight_kg or 75.0))
+                if inferred_bike_power is not None:
+                    df.at[idx, "bike_inferred_power_w"] = inferred_bike_power
+
+            cycling_power = _safe_float(row.get("cycling_power_w"))
+            run_equiv = _safe_float(row.get("run_equivalent_power_w"))
+            bike_equiv = _safe_float(row.get("bike_equivalent_power_w"))
+
+            if _is_ride_sport(sport):
+                # For virtual/ergometer rides the measured watts are the main
+                # performance signal. For outdoor rides use measured power if
+                # available, otherwise infer from speed/elevation/mass.
+                if cycling_power is None:
+                    cycling_power = source_power if source_power is not None else inferred_bike_power
+                if cycling_power is not None:
+                    df.at[idx, "cycling_power_w"] = round(float(cycling_power), 1)
+                if bike_equiv is None and cycling_power is not None:
+                    bike_equiv = float(cycling_power)
+                    df.at[idx, "bike_equivalent_power_w"] = round(bike_equiv, 1)
+                if run_equiv is None and cycling_power is not None:
+                    # User-specific equivalence: 175 W running ~= 210 W cycling.
+                    run_equiv = float(cycling_power) * (175.0 / 210.0)
+                    df.at[idx, "run_equivalent_power_w"] = round(run_equiv, 1)
+
+            elif _is_run_sport(sport):
+                if run_equiv is None and source_power is not None:
+                    run_equiv = float(source_power)
+                    df.at[idx, "run_equivalent_power_w"] = round(run_equiv, 1)
+                if bike_equiv is None and run_equiv is not None:
+                    bike_equiv = float(run_equiv) * (210.0 / 175.0)
+                    df.at[idx, "bike_equivalent_power_w"] = round(bike_equiv, 1)
+                if cycling_power is None and bike_equiv is not None:
+                    # For plotting comparison only; not meant as measured cycling power.
+                    df.at[idx, "cycling_power_w"] = round(bike_equiv, 1)
+
+            else:
+                # Unknown sport: keep source power as effective if present.
+                if run_equiv is None and source_power is not None:
+                    run_equiv = float(source_power)
+                    df.at[idx, "run_equivalent_power_w"] = round(run_equiv, 1)
+
+            effective = _safe_float(row.get("effective_power_w"))
+            if effective is None:
+                effective = run_equiv
+                if effective is None and _is_ride_sport(sport):
+                    effective = (cycling_power * (175.0 / 210.0)) if cycling_power is not None else None
+                if effective is None:
+                    effective = source_power
+                if effective is not None:
+                    df.at[idx, "effective_power_w"] = round(float(effective), 1)
+
+            # Power/HR efficiency.
+            phr = _safe_float(row.get("power_hr_efficiency"))
+            hr = _row_float(row, "avg_hr", "average_hr", "average_heartrate")
+            if phr is None and effective is not None and hr is not None and hr > 0:
+                phr = float(effective) / float(hr)
+                df.at[idx, "power_hr_efficiency"] = round(phr, 4)
+
+            # If no explicit power drift exists, expose the existing HR-efficiency
+            # drift as a conservative fallback so the column is plottable.
+            pdrift = _safe_float(row.get("power_hr_efficiency_drift_pct"))
+            if pdrift is None:
+                for key in ("hr_efficiency_drift_pct", "gap_hr_efficiency_drift_pct", "km_gap_hr_efficiency_drift_pct"):
+                    val = _safe_float(row.get(key))
+                    if val is not None:
+                        df.at[idx, "power_hr_efficiency_drift_pct"] = val
+                        break
+
+        return df
+
 
     def read_activity_row(self, activity_id: str) -> Optional[Dict[str, Any]]:
         with self.connect() as conn:
