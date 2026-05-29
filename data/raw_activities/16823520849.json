@@ -1,0 +1,144 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Felsklettern am Nachmittag",
+    "distance": 0.0,
+    "moving_time": 5700,
+    "elapsed_time": 5700,
+    "total_elevation_gain": 0,
+    "type": "RockClimbing",
+    "sport_type": "RockClimbing",
+    "workout_type": 28,
+    "id": 16823520849,
+    "start_date": "2025-12-23T16:45:00Z",
+    "start_date_local": "2025-12-23T17:45:00Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16823520849",
+      "summary_polyline": "",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": true,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 0.0,
+    "max_speed": 0,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "upload_id": null,
+    "external_id": null,
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Felsklettern am Nachmittag",
+    "distance": 0.0,
+    "moving_time": 5700,
+    "elapsed_time": 5700,
+    "total_elevation_gain": 0,
+    "type": "RockClimbing",
+    "sport_type": "RockClimbing",
+    "workout_type": 28,
+    "id": 16823520849,
+    "start_date": "2025-12-23T16:45:00Z",
+    "start_date_local": "2025-12-23T17:45:00Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16823520849",
+      "polyline": "",
+      "resource_state": 3,
+      "summary_polyline": ""
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": true,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 0.0,
+    "max_speed": 0,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "upload_id": null,
+    "external_id": null,
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 0,
+    "perceived_exertion": 6.0,
+    "prefer_perceived_exertion": false,
+    "segment_efforts": [],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "c0e1be5a2aa7377d792b7a4fc8932c3ddb07b4eb",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

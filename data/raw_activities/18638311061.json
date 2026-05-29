@@ -1,0 +1,1054 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Hala G\u0105sienicowa - Hohe Tatra",
+    "distance": 10838.2,
+    "moving_time": 11925,
+    "elapsed_time": 14594,
+    "total_elevation_gain": 640.5,
+    "type": "Hike",
+    "sport_type": "Hike",
+    "device_name": "Apple Watch Series 10",
+    "id": 18638311061,
+    "start_date": "2026-05-24T13:12:32Z",
+    "start_date_local": "2026-05-24T15:12:32Z",
+    "timezone": "(GMT+01:00) Europe/Warsaw",
+    "utc_offset": 7200.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 4,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a18638311061",
+      "summary_polyline": "}rukH{e}xBX?~@\\SSi@GSSs@SgAcAa@GsBoA[a@[GUa@NZEANHEHBFLyB\\g@\\[ZMGFDJKJE_@Dg@MeCO_Au@uBM{@GuBKwBFg@BwBCa@Qi@i@w@q@a@Os@AQTV^Cn@a@N[\\Yv@ADCECFBj@g@b@GPF\\KEKb@AhA\\P_@ZgBFQHE`@}@ROtCMvAFPNX?LRAKFXf@n@b@fA\\zAGR@j@L|ELLLCFKPwANUBFCU`@eDEgBFAQiAHeBC[F]Ck@A}@FKG@J_AGq@Fc@AGGHAKNSHaAD?Ty@@_@Nk@JSNwAE_@BaAJW?a@JQh@qBCCN}@LYb@D^UJBb@[DIEAhAZFAAK\\@XSDHNMPW@RP@TO?QLQ@DHWD@n@iAIJFAHo@RG^kAf@w@f@i@FOECJK^KbAkBPc@ECLOH[D@Jc@LOt@uCVWn@_BFA~AyCn@}BDq@j@}A`@y@hAsAb@oAj@e@p@iBFAj@gAl@Gh@e@~AAf@[bCNf@KZTd@MIMj@[fAwAbAgCl@_@v@OtAq@t@K\\UfAoAXi@|@iB`@e@jAq@rGu@zBQ`@QZm@j@c@l@FbBQn@Lj@h@XDAL|@f@rAlAzAp@f@Ed@Jz@l@fAXZGb@q@Pc@ASFWLUtAElA]NNPh@ZVNQ`@GMaADGi@lAOA@HSYMi@UOmAd@uALg@rBY`@]FDEEEy@IcAk@SE@RIWu@Ck@a@oAc@{@eAwAcAaAg@eBN{@Cm@f@Yh@a@TeBNiHx@kAp@e@f@iBfDaA~@oAZiDxAkBpDmAlAERSJg@Wg@F{BQu@\\sABy@r@OFKOKH_BxC@Jo@x@Uj@EP[\\w@bA[p@e@pA{@rCE`@e@x@yA`De@t@q@fCsAbDkAjBaApAu@|@Or@_@Z_@`AWP_@hAa@C]T_@Ak@XeAWg@d@iAJMLY`BKT?Nc@fAQhADz@EhASt@Gl@[lAMNMl@AfADHG^Fj@Cb@Ib@DLGd@FRGNEnDRfCIl@QlCi@dB?`@OJGY?oBKmDUuAK_@Q[MBKe@i@u@[Bu@c@uAC]P_BC]PCXm@jASfBOJOBo@c@WBiAd@k@@GLQDGRu@AKTe@ZETIFQEo@@YJBTPR?Ph@b@NBRVD`@PPCjDFREbABpAF?ZfD",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      49.26965,
+      19.979908
+    ],
+    "end_latlng": [
+      49.269161,
+      19.981245
+    ],
+    "average_speed": 0.909,
+    "max_speed": 3.14,
+    "average_cadence": 40.3,
+    "has_heartrate": true,
+    "average_heartrate": 110.8,
+    "max_heartrate": 141.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 1561.5,
+    "elev_low": 1017.9,
+    "upload_id": 19745747735,
+    "upload_id_str": "19745747735",
+    "external_id": "Kuznicka-HalaGasienicowa.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 1,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Hala G\u0105sienicowa - Hohe Tatra",
+    "distance": 10838.2,
+    "moving_time": 11925,
+    "elapsed_time": 14594,
+    "total_elevation_gain": 640.5,
+    "type": "Hike",
+    "sport_type": "Hike",
+    "device_name": "Apple Watch Series 10",
+    "id": 18638311061,
+    "start_date": "2026-05-24T13:12:32Z",
+    "start_date_local": "2026-05-24T15:12:32Z",
+    "timezone": "(GMT+01:00) Europe/Warsaw",
+    "utc_offset": 7200.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 4,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a18638311061",
+      "polyline": "i~ukHki}xB@FFDFEHQB?@D@@?CDFHA?GRVD?JKF]?OHWTRD?FHH?`@Z@ABDHDABH?FHJARN@D@CEG?CZRJRD@@E?DFDDLFHJ@JHRFX?BDJ@FHN?JJD@DAII@?C?CEABAGW?QGMIEII?III?ACE?MEWYKEMOOGEKEAEBUIIMC@CEA@IEKKKEEGOGGI_@MGQSO[GKM@EAEC??A?@@AGEBLJLEADC?FFF@AAB?CCH@HDW?_@BGAIFq@LIN]TOFKD?NM@?C??@FAGFDJGNCCCOAODQ?UG_BK}@Ig@}@mCEc@MoBDEGeBCQ@EAODC@M?MCEBKAS@ACG@C@Y@@CUDGCa@Qi@i@w@E??EIIE?KKOE?KGI@GIU@MCCDH@?@FJDBCZ?JEDKDCD@HOBBBAJMBMNELSDD@CFA?BD@HCF@BGJ@DCECFB@ID@HI?ETIBEHAHHHADMD@BBF@\\KEKJFLE@@?AD@@Ex@\\N?FGHWJe@@QLe@?IBGDAAGD??EB?`@}@FIJEd@EtAA@E@BD?J@BEBD|@BHB@AD@?CBA@BD??ABF@AB@?DBA@BBC@BD?@CD@FF?FDBAE?EFXFBNXB?DLDBFTAABC@LPb@DD?DBDADFF@HFPAH@AH\\AHEHDL?RCL?CD`@@rCBL@XDHEGLJB?HCCBFGBGBg@FQD]NW@@?F@?CUBA@WDKBi@DM?UJq@??AE@SAO@KAa@CO?AF?Cc@IW?ICCDa@A[Dg@C[DY@C?WCSBMAICe@FKG@BMACBMAGFM?IGq@Fc@AGGH@CCGDM@DFKAG@WHO?Q?B@CB?Ty@@_@JS?CDGAKJS?WFSCF@??BA@BI?WDI@MCc@ABBaABC@@DUAMDCCOB?FQDYDGAE@?@GFEDWB?Da@BA?CA@AAFWBSBC?MLYDFDCD@JCDBPEAEBA@@BEB@@EJBLQD@NKDIEABBJBFCFHF@BAFBHAFBBFFAAG?CB@@ABBPE?B@?HCFKFCDHHQ@BB?HK?EFEBDCB@H@GD?@DD?@BJEHI@EAKFCDM@DHWD@DQD@NW?GFCJUIJB@AADA?EDGBa@JIF@DO?IHG?IN_@BBRc@B?BGDA@MB@BCP]LIBMBACC?@AABAA@B@DE@?AGTAHI?ER[NYBC@K?BHINYPc@?ECDACLOHS?GD@HQ@QDCFK?MPo@DG@KBAFW@BLm@FC@EDA@IDAFQZo@AC?B?ELWFABKFGTk@?B@?BKFGV_@Vi@P{@\\aA?Q@?BMAE@KVk@@KNU@O\\k@BM\\a@NKZe@DOFG@G?B@CFWD??MBIF?FOHABMF@DGFUHQ?ADE@GAADCRk@@AD?@MBA@GD?BMHINWDCJFDGDBHGD?HI?CCD@EFAJELON@BCBDAEBAHBF?BCBB@AH@FA@@TAXW?@CA@B?AD?HEDDFG@BD?CABBFAHDLAJDFEBBFA@BHAXDBAB@NC@@DGFBFA?CDFTLREBIL@@CCIG?FED@LOBBJKn@y@NWFERg@DQP]HYFGDMRMLEJKXCJIPAt@a@D?XOJ?FEF?FCPA\\UfAoADSNUB?HSr@uA`@e@jAq@vASXAfAML?`AKHEA@f@CFBTED@f@QH@DERCFGJKFUFKLG?CDAFMHADE\\@D@DABDFGVADEJANBDCPBHCLDFA@BJ?B@@DDAFJF?FLNHBDDADBLBALD?LD@DJB?DFBDFLDBF^^n@d@H?FBBDB?PHJJLBTLDCH@?CA@BB@ALA?@DC?@TJNABDD?@BRHZXL@HDJADDPDBDF@FC?AA@HBJG@IDCBGDGA@DALS@MFE@IDEASFWLUH@HEPEX@DENFLGD@VCVUH@NNPh@NH@DHFFEACHGR?LGMaADGi@lAOA@HEAGUEAMi@UOYPWDKDE?IF?CU?GBO@B@IDMASDSr@CXOd@?CYd@GBUB@EB??@EGADEE?AG?ECI@SGE@AAOGCE]Ua@K?FBHA?A@@A?AA@IUGBBB@ASGUCI@SIGKICEG[Ii@YI?SQGOICIKKSYKEIMMKAEMMCIKWGGGOC?CGCIKIAKFS?CEGBGGIDUDGFICK@MCW@OFOTMHYh@a@TE?WHCAQHq@AIFU?ODmAHc@F{@FkAPkAp@e@f@i@fAC@MRCJ_@h@IRMHs@t@KD[DEDG?YHq@\\IBCAGFC?KFQFGAGDKBc@XCFKHGLCJCBKZUf@SVUd@SXGBGJMHCHG@GJG@ERCECFE@EFUMGCA@GGIDACGBMAEBECOCW@CCWCG@ECODIAIEMFECQPOFI@MAUBWCMBKJSJYZG?GFKOGHC?KRC@ENEBEFENIJAJIHSh@MJBBAF]f@QPETEF?FID@FGHC?OXGBGRa@`@ILC?IZQTMf@CHC?AHMTE^ILANMXAFEHIZIL?PENEBO\\AFMN@HOZE@Sf@]b@Sl@SXKVEBCLCB@DGFI^MX?DITAPE@Kb@KJOf@GF]`AIDALGBCJKHKP?FI@ENEDEJEBABE@U`@KFQ\\QJS^C@CHGDCRGLCPIJUNCNMXE@GTKLC??@G@CNOXCJCBCNCEGFMGG@OHI@?FC@@EI?WBIFGHYFCA?AOE@?CCIBUKOAELIB?BIBMJS@IFMA]BMLS|@Eb@KT?NEFCLYp@QhAAZBBANDJCDBJEVBRCJSt@@FEF?NEL@?GJOb@C\\MN?HEDG\\AfAB@@FAB?PEHB`@BHGVBJEHCXDLCZCHDP@@GN?p@@PEv@@j@CFB\\FTALBJ@^BF?PIl@BRIj@AVI`@?R[bACNCD@A?DGFATBHA@IDACAHEA@GEOCUDa@Aw@Cc@@OAA?c@GW?{@CYCEA@EUEa@MW@GQ[?DAGKDAOKO@EQOAIC?II?IGG[BCEI?GIGAEIE?CEGAM@ADKAOGOB@@EEQ@C@?ECBAAWNCCQ@ACM@?AG@ABGEIFCG@@EAE@GCGBCFK@MFCXMRCJGB?FS^CL@HKZATCD?VAAIBCHOBMGEKE?MKCBCGWBg@NADAAMJODEACEG@ABACA?MJECGLAAIFE??FGJI@ECGBCAE@GEK@KTMDMPIBCFALIFIB?EGCKJI?ECCBCCG@?CCCABO?GF?FBD?FDB@DB?DH?PVVF?FB@FJDBABF@?LND`@JBDLCDBL@@APBVGjBFRCJBNCHA\\@N@`AF?VzCl@bBLb@NfADp@DfAAh@AFQ@UTJB@AA@",
+      "resource_state": 3,
+      "summary_polyline": "}rukH{e}xBX?~@\\SSi@GSSs@SgAcAa@GsBoA[a@[GUa@NZEANHEHBFLyB\\g@\\[ZMGFDJKJE_@Dg@MeCO_Au@uBM{@GuBKwBFg@BwBCa@Qi@i@w@q@a@Os@AQTV^Cn@a@N[\\Yv@ADCECFBj@g@b@GPF\\KEKb@AhA\\P_@ZgBFQHE`@}@ROtCMvAFPNX?LRAKFXf@n@b@fA\\zAGR@j@L|ELLLCFKPwANUBFCU`@eDEgBFAQiAHeBC[F]Ck@A}@FKG@J_AGq@Fc@AGGHAKNSHaAD?Ty@@_@Nk@JSNwAE_@BaAJW?a@JQh@qBCCN}@LYb@D^UJBb@[DIEAhAZFAAK\\@XSDHNMPW@RP@TO?QLQ@DHWD@n@iAIJFAHo@RG^kAf@w@f@i@FOECJK^KbAkBPc@ECLOH[D@Jc@LOt@uCVWn@_BFA~AyCn@}BDq@j@}A`@y@hAsAb@oAj@e@p@iBFAj@gAl@Gh@e@~AAf@[bCNf@KZTd@MIMj@[fAwAbAgCl@_@v@OtAq@t@K\\UfAoAXi@|@iB`@e@jAq@rGu@zBQ`@QZm@j@c@l@FbBQn@Lj@h@XDAL|@f@rAlAzAp@f@Ed@Jz@l@fAXZGb@q@Pc@ASFWLUtAElA]NNPh@ZVNQ`@GMaADGi@lAOA@HSYMi@UOmAd@uALg@rBY`@]FDEEEy@IcAk@SE@RIWu@Ck@a@oAc@{@eAwAcAaAg@eBN{@Cm@f@Yh@a@TeBNiHx@kAp@e@f@iBfDaA~@oAZiDxAkBpDmAlAERSJg@Wg@F{BQu@\\sABy@r@OFKOKH_BxC@Jo@x@Uj@EP[\\w@bA[p@e@pA{@rCE`@e@x@yA`De@t@q@fCsAbDkAjBaApAu@|@Or@_@Z_@`AWP_@hAa@C]T_@Ak@XeAWg@d@iAJMLY`BKT?Nc@fAQhADz@EhASt@Gl@[lAMNMl@AfADHG^Fj@Cb@Ib@DLGd@FRGNEnDRfCIl@QlCi@dB?`@OJGY?oBKmDUuAK_@Q[MBKe@i@u@[Bu@c@uAC]P_BC]PCXm@jASfBOJOBo@c@WBiAd@k@@GLQDGRu@AKTe@ZETIFQEo@@YJBTPR?Ph@b@NBRVD`@PPCjDFREbABpAF?ZfD"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      49.26965,
+      19.979908
+    ],
+    "end_latlng": [
+      49.269161,
+      19.981245
+    ],
+    "average_speed": 0.909,
+    "max_speed": 3.14,
+    "average_cadence": 40.3,
+    "has_heartrate": true,
+    "average_heartrate": 110.8,
+    "max_heartrate": 141.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 1561.5,
+    "elev_low": 1017.9,
+    "upload_id": 19745747735,
+    "upload_id_str": "19745747735",
+    "external_id": "Kuznicka-HalaGasienicowa.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 1,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 1525.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [
+      {
+        "id": 3493679757626984764,
+        "resource_state": 2,
+        "name": "Droga Brata Alberta Climb",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1709,
+        "moving_time": 1545,
+        "start_date": "2026-05-24T13:24:37Z",
+        "start_date_local": "2026-05-24T15:24:37Z",
+        "distance": 1084.07,
+        "start_index": 693,
+        "end_index": 2317,
+        "average_cadence": 37.0,
+        "device_watts": false,
+        "average_heartrate": 120.3,
+        "max_heartrate": 131.0,
+        "segment": {
+          "id": 2031069,
+          "resource_state": 2,
+          "name": "Droga Brata Alberta Climb",
+          "activity_type": "Hike",
+          "distance": 1084.07,
+          "average_grade": 17.6,
+          "maximum_grade": 37.1,
+          "elevation_high": 1215.7,
+          "elevation_low": 1024.4,
+          "start_latlng": [
+            49.26910535,
+            19.98152443
+          ],
+          "end_latlng": [
+            49.26543674,
+            19.9872351
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 2,
+          "city": "Zakopane",
+          "state": "ma\u0142opolskie",
+          "country": "Poland",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3493679757628608828,
+        "resource_state": 2,
+        "name": "Niebieski i zielony ",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 522,
+        "moving_time": 515,
+        "start_date": "2026-05-24T13:25:13Z",
+        "start_date_local": "2026-05-24T15:25:13Z",
+        "distance": 349.8,
+        "start_index": 729,
+        "end_index": 1251,
+        "average_cadence": 39.8,
+        "device_watts": false,
+        "average_heartrate": 121.8,
+        "max_heartrate": 131.0,
+        "segment": {
+          "id": 21355642,
+          "resource_state": 2,
+          "name": "Niebieski i zielony ",
+          "activity_type": "Hike",
+          "distance": 349.8,
+          "average_grade": 19.1,
+          "maximum_grade": 44.0,
+          "elevation_high": 1085.8,
+          "elevation_low": 1018.9,
+          "start_latlng": [
+            49.269109,
+            19.982206
+          ],
+          "end_latlng": [
+            49.270097,
+            19.986529
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": "Zakopane",
+          "state": "ma\u0142opolskie",
+          "country": "Poland",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3493679757627147580,
+        "resource_state": 2,
+        "name": "Ku\u017anice - Hala G\u0105sienicowa",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 6805,
+        "moving_time": 5860,
+        "start_date": "2026-05-24T13:25:22Z",
+        "start_date_local": "2026-05-24T15:25:22Z",
+        "distance": 4460.9,
+        "start_index": 738,
+        "end_index": 7221,
+        "average_cadence": 37.1,
+        "device_watts": false,
+        "average_heartrate": 116.3,
+        "max_heartrate": 136.0,
+        "segment": {
+          "id": 9666817,
+          "resource_state": 2,
+          "name": "Ku\u017anice - Hala G\u0105sienicowa",
+          "activity_type": "Hike",
+          "distance": 4460.9,
+          "average_grade": 10.7,
+          "maximum_grade": 32.6,
+          "elevation_high": 1543.8,
+          "elevation_low": 1016.2,
+          "start_latlng": [
+            49.269056,
+            19.982301
+          ],
+          "end_latlng": [
+            49.245037,
+            20.006226
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": "Zakopane",
+          "state": "ma\u0142opolskie",
+          "country": "Poland",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3493679757629645116,
+        "resource_state": 2,
+        "name": "Droga Brata Alberta Climb",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 4240,
+        "moving_time": 3531,
+        "start_date": "2026-05-24T13:57:44Z",
+        "start_date_local": "2026-05-24T15:57:44Z",
+        "distance": 2725.61,
+        "start_index": 2556,
+        "end_index": 6598,
+        "average_cadence": 36.6,
+        "device_watts": false,
+        "average_heartrate": 117.2,
+        "max_heartrate": 136.0,
+        "segment": {
+          "id": 2031071,
+          "resource_state": 2,
+          "name": "Droga Brata Alberta Climb",
+          "activity_type": "Hike",
+          "distance": 2725.61,
+          "average_grade": 14.4,
+          "maximum_grade": 48.1,
+          "elevation_high": 1569.3,
+          "elevation_low": 1178.1,
+          "start_latlng": [
+            49.26509783,
+            19.98585591
+          ],
+          "end_latlng": [
+            49.24931455,
+            20.00727027
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": "Zakopane",
+          "state": "ma\u0142opolskie",
+          "country": "Poland",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3493679757628972348,
+        "resource_state": 2,
+        "name": "Z Hali G\u0105sienicowej Na Brzyzek ",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 388,
+        "moving_time": 388,
+        "start_date": "2026-05-24T16:03:02Z",
+        "start_date_local": "2026-05-24T18:03:02Z",
+        "distance": 362.4,
+        "start_index": 7981,
+        "end_index": 8369,
+        "average_cadence": 40.6,
+        "device_watts": false,
+        "average_heartrate": 127.6,
+        "max_heartrate": 139.0,
+        "segment": {
+          "id": 25713454,
+          "resource_state": 2,
+          "name": "Z Hali G\u0105sienicowej Na Brzyzek ",
+          "activity_type": "Hike",
+          "distance": 362.4,
+          "average_grade": 12.4,
+          "maximum_grade": 27.0,
+          "elevation_high": 1545.0,
+          "elevation_low": 1500.0,
+          "start_latlng": [
+            49.246079,
+            20.006659
+          ],
+          "end_latlng": [
+            49.248995,
+            20.007488
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": "Zakopane",
+          "state": "Ma\u0142opolskie",
+          "country": "Poland",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3493679757628755260,
+        "resource_state": 2,
+        "name": "Niebieskim w d\u00f3\u0142 do Ku\u017anic ",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 3780,
+        "moving_time": 3681,
+        "start_date": "2026-05-24T16:11:36Z",
+        "start_date_local": "2026-05-24T18:11:36Z",
+        "distance": 3678.4,
+        "start_index": 8495,
+        "end_index": 12205,
+        "average_cadence": 46.5,
+        "device_watts": false,
+        "average_heartrate": 102.5,
+        "max_heartrate": 121.0,
+        "segment": {
+          "id": 25355667,
+          "resource_state": 2,
+          "name": "Niebieskim w d\u00f3\u0142 do Ku\u017anic ",
+          "activity_type": "Hike",
+          "distance": 3678.4,
+          "average_grade": -14.4,
+          "maximum_grade": 4.9,
+          "elevation_high": 1552.4,
+          "elevation_low": 1021.4,
+          "start_latlng": [
+            49.250199,
+            20.007101
+          ],
+          "end_latlng": [
+            49.268913,
+            19.981886
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": "Zakopane",
+          "state": "Ma\u0142opolskie",
+          "country": "Poland",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "only_me",
+        "hidden": false
+      }
+    ],
+    "splits_metric": [
+      {
+        "distance": 1000.1,
+        "elapsed_time": 1043,
+        "elevation_difference": 36.4,
+        "moving_time": 1040,
+        "split": 1,
+        "average_speed": 0.96,
+        "average_grade_adjusted_speed": 1.22,
+        "average_heartrate": 108.87218045112782,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.4,
+        "elapsed_time": 1435,
+        "elevation_difference": 142.1,
+        "moving_time": 1320,
+        "split": 2,
+        "average_speed": 0.76,
+        "average_grade_adjusted_speed": 1.35,
+        "average_heartrate": 120.17319749216301,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.7,
+        "elapsed_time": 1383,
+        "elevation_difference": 99.1,
+        "moving_time": 1383,
+        "split": 3,
+        "average_speed": 0.72,
+        "average_grade_adjusted_speed": 1.08,
+        "average_heartrate": 115.35337124289195,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.4,
+        "elapsed_time": 1600,
+        "elevation_difference": 122.7,
+        "moving_time": 1429,
+        "split": 4,
+        "average_speed": 0.7,
+        "average_grade_adjusted_speed": 1.14,
+        "average_heartrate": 116.17109634551495,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.6,
+        "elapsed_time": 1295,
+        "elevation_difference": 128.4,
+        "moving_time": 1295,
+        "split": 5,
+        "average_speed": 0.77,
+        "average_grade_adjusted_speed": 1.29,
+        "average_heartrate": 120.17333333333333,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 1093,
+        "elevation_difference": -47.0,
+        "moving_time": 1093,
+        "split": 6,
+        "average_speed": 0.91,
+        "average_grade_adjusted_speed": 0.94,
+        "average_heartrate": 103.83972468043264,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.4,
+        "elapsed_time": 2957,
+        "elevation_difference": 49.5,
+        "moving_time": 1067,
+        "split": 7,
+        "average_speed": 0.94,
+        "average_grade_adjusted_speed": 1.24,
+        "average_heartrate": 115.28758829465187,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.8,
+        "elapsed_time": 905,
+        "elevation_difference": -135.9,
+        "moving_time": 905,
+        "split": 8,
+        "average_speed": 1.1,
+        "average_grade_adjusted_speed": 1.09,
+        "average_heartrate": 103.28539823008849,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.6,
+        "elapsed_time": 965,
+        "elevation_difference": -148.0,
+        "moving_time": 965,
+        "split": 9,
+        "average_speed": 1.04,
+        "average_grade_adjusted_speed": 0.99,
+        "average_heartrate": 105.79149377593362,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.1,
+        "elapsed_time": 1086,
+        "elevation_difference": -112.1,
+        "moving_time": 1026,
+        "split": 10,
+        "average_speed": 0.98,
+        "average_grade_adjusted_speed": 0.93,
+        "average_heartrate": 101.34040404040404,
+        "pace_zone": 0
+      },
+      {
+        "distance": 833.8,
+        "elapsed_time": 832,
+        "elevation_difference": -135.7,
+        "moving_time": 832,
+        "split": 11,
+        "average_speed": 1.0,
+        "average_grade_adjusted_speed": 1.03,
+        "average_heartrate": 99.32635467980296,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1609.7,
+        "elapsed_time": 1873,
+        "elevation_difference": 134.7,
+        "moving_time": 1870,
+        "split": 1,
+        "average_speed": 0.86,
+        "average_grade_adjusted_speed": 1.31,
+        "average_heartrate": 114.85185185185185,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1609.5,
+        "elapsed_time": 2444,
+        "elevation_difference": 171.9,
+        "moving_time": 2209,
+        "split": 2,
+        "average_speed": 0.73,
+        "average_grade_adjusted_speed": 1.12,
+        "average_heartrate": 116.37393483709273,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1608.9,
+        "elapsed_time": 2241,
+        "elevation_difference": 199.8,
+        "moving_time": 2190,
+        "split": 3,
+        "average_speed": 0.73,
+        "average_grade_adjusted_speed": 1.21,
+        "average_heartrate": 117.1777896422851,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1609.9,
+        "elapsed_time": 3681,
+        "elevation_difference": -10.5,
+        "moving_time": 1791,
+        "split": 4,
+        "average_speed": 0.9,
+        "average_grade_adjusted_speed": 1.03,
+        "average_heartrate": 107.35987841945288,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1609.3,
+        "elapsed_time": 1525,
+        "elevation_difference": -107.8,
+        "moving_time": 1525,
+        "split": 5,
+        "average_speed": 1.06,
+        "average_grade_adjusted_speed": 1.2,
+        "average_heartrate": 110.18050065876153,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1609.5,
+        "elapsed_time": 1585,
+        "elevation_difference": -208.0,
+        "moving_time": 1585,
+        "split": 6,
+        "average_speed": 1.02,
+        "average_grade_adjusted_speed": 0.98,
+        "average_heartrate": 104.53553299492386,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1178.1,
+        "elapsed_time": 1245,
+        "elevation_difference": -180.6,
+        "moving_time": 1185,
+        "split": 7,
+        "average_speed": 0.99,
+        "average_grade_adjusted_speed": 0.99,
+        "average_heartrate": 98.80562884784521,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 66684525631,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1046,
+        "moving_time": 1027,
+        "start_date": "2026-05-24T13:12:32Z",
+        "start_date_local": "2026-05-24T15:12:32Z",
+        "distance": 1000.0,
+        "average_speed": 0.97,
+        "max_speed": 3.14,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 756,
+        "total_elevation_gain": 56.7,
+        "average_cadence": 39.9,
+        "device_watts": false,
+        "average_heartrate": 108.9,
+        "max_heartrate": 129.0
+      },
+      {
+        "id": 66684525639,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1429,
+        "moving_time": 1394,
+        "start_date": "2026-05-24T13:30:00Z",
+        "start_date_local": "2026-05-24T15:30:00Z",
+        "distance": 1000.0,
+        "average_speed": 0.72,
+        "max_speed": 1.66,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 757,
+        "end_index": 2062,
+        "total_elevation_gain": 141.0,
+        "average_cadence": 35.8,
+        "device_watts": false,
+        "average_heartrate": 120.2,
+        "max_heartrate": 131.0
+      },
+      {
+        "id": 66684525649,
+        "resource_state": 2,
+        "name": "Lap 3",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1392,
+        "moving_time": 1374,
+        "start_date": "2026-05-24T13:53:50Z",
+        "start_date_local": "2026-05-24T15:53:50Z",
+        "distance": 1000.0,
+        "average_speed": 0.73,
+        "max_speed": 1.7,
+        "lap_index": 3,
+        "split": 3,
+        "start_index": 2063,
+        "end_index": 3448,
+        "total_elevation_gain": 102.8,
+        "average_cadence": 35.9,
+        "device_watts": false,
+        "average_heartrate": 115.4,
+        "max_heartrate": 131.0
+      },
+      {
+        "id": 66684525652,
+        "resource_state": 2,
+        "name": "Lap 4",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1592,
+        "moving_time": 1565,
+        "start_date": "2026-05-24T14:17:01Z",
+        "start_date_local": "2026-05-24T16:17:01Z",
+        "distance": 1000.0,
+        "average_speed": 0.64,
+        "max_speed": 1.9,
+        "lap_index": 4,
+        "split": 4,
+        "start_index": 3449,
+        "end_index": 4848,
+        "total_elevation_gain": 121.8,
+        "average_cadence": 34.6,
+        "device_watts": false,
+        "average_heartrate": 116.1,
+        "max_heartrate": 134.0
+      },
+      {
+        "id": 66684525659,
+        "resource_state": 2,
+        "name": "Lap 5",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1298,
+        "moving_time": 1292,
+        "start_date": "2026-05-24T14:43:34Z",
+        "start_date_local": "2026-05-24T16:43:34Z",
+        "distance": 1000.0,
+        "average_speed": 0.77,
+        "max_speed": 2.44,
+        "lap_index": 5,
+        "split": 5,
+        "start_index": 4849,
+        "end_index": 6146,
+        "total_elevation_gain": 129.0,
+        "average_cadence": 37.0,
+        "device_watts": false,
+        "average_heartrate": 120.2,
+        "max_heartrate": 136.0
+      },
+      {
+        "id": 66684525666,
+        "resource_state": 2,
+        "name": "Lap 6",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1091,
+        "moving_time": 1094,
+        "start_date": "2026-05-24T15:05:12Z",
+        "start_date_local": "2026-05-24T17:05:12Z",
+        "distance": 1000.0,
+        "average_speed": 0.91,
+        "max_speed": 2.1,
+        "lap_index": 6,
+        "split": 6,
+        "start_index": 6147,
+        "end_index": 7237,
+        "total_elevation_gain": 19.2,
+        "average_cadence": 41.9,
+        "device_watts": false,
+        "average_heartrate": 103.8,
+        "max_heartrate": 125.0
+      },
+      {
+        "id": 66684525672,
+        "resource_state": 2,
+        "name": "Lap 7",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 2959,
+        "moving_time": 1312,
+        "start_date": "2026-05-24T15:24:40Z",
+        "start_date_local": "2026-05-24T17:24:40Z",
+        "distance": 1000.0,
+        "average_speed": 0.76,
+        "max_speed": 1.6,
+        "lap_index": 7,
+        "split": 7,
+        "start_index": 7238,
+        "end_index": 8301,
+        "total_elevation_gain": 66.9,
+        "average_cadence": 37.8,
+        "device_watts": false,
+        "average_heartrate": 115.3,
+        "max_heartrate": 141.0
+      },
+      {
+        "id": 66684525680,
+        "resource_state": 2,
+        "name": "Lap 8",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 901,
+        "moving_time": 904,
+        "start_date": "2026-05-24T16:12:42Z",
+        "start_date_local": "2026-05-24T18:12:42Z",
+        "distance": 1000.0,
+        "average_speed": 1.11,
+        "max_speed": 2.28,
+        "lap_index": 8,
+        "split": 8,
+        "start_index": 8302,
+        "end_index": 9202,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 46.8,
+        "device_watts": false,
+        "average_heartrate": 103.3,
+        "max_heartrate": 110.0
+      },
+      {
+        "id": 66684525686,
+        "resource_state": 2,
+        "name": "Lap 9",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 968,
+        "moving_time": 966,
+        "start_date": "2026-05-24T16:27:43Z",
+        "start_date_local": "2026-05-24T18:27:43Z",
+        "distance": 1000.0,
+        "average_speed": 1.04,
+        "max_speed": 2.22,
+        "lap_index": 9,
+        "split": 9,
+        "start_index": 9203,
+        "end_index": 10170,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 46.8,
+        "device_watts": false,
+        "average_heartrate": 105.8,
+        "max_heartrate": 116.0
+      },
+      {
+        "id": 66684525690,
+        "resource_state": 2,
+        "name": "Lap 10",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1084,
+        "moving_time": 1049,
+        "start_date": "2026-05-24T16:43:51Z",
+        "start_date_local": "2026-05-24T18:43:51Z",
+        "distance": 1000.0,
+        "average_speed": 0.95,
+        "max_speed": 2.12,
+        "lap_index": 10,
+        "split": 10,
+        "start_index": 10171,
+        "end_index": 11184,
+        "total_elevation_gain": 2.6,
+        "average_cadence": 43.5,
+        "device_watts": false,
+        "average_heartrate": 101.3,
+        "max_heartrate": 121.0
+      },
+      {
+        "id": 66684525696,
+        "resource_state": 2,
+        "name": "Lap 11",
+        "activity": {
+          "id": 18638311061,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 833,
+        "moving_time": 833,
+        "start_date": "2026-05-24T17:01:55Z",
+        "start_date_local": "2026-05-24T19:01:55Z",
+        "distance": 838.23,
+        "average_speed": 1.01,
+        "max_speed": 1.84,
+        "lap_index": 11,
+        "split": 11,
+        "start_index": 11185,
+        "end_index": 11853,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 49.3,
+        "device_watts": false,
+        "average_heartrate": 99.3,
+        "max_heartrate": 113.0
+      }
+    ],
+    "photos": {
+      "primary": {
+        "unique_id": "95F2B0A7-ABEF-441F-9DA8-8608519EA9A3",
+        "urls": {
+          "600": "https://dgtzuqphqg23d.cloudfront.net/MjQ8h0teLpwJp85lt_nNm-nw4fh-ND03QrXsWmodRzk-768x576.jpg",
+          "100": "https://dgtzuqphqg23d.cloudfront.net/MjQ8h0teLpwJp85lt_nNm-nw4fh-ND03QrXsWmodRzk-128x96.jpg"
+        },
+        "source": 1,
+        "media_type": 1
+      },
+      "use_primary_photo": true,
+      "count": 1
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "fbe278b54e6cb58f01d7e4d85c7fae887e5e85b6",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

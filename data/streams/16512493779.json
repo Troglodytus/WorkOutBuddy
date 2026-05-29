@@ -1,0 +1,47 @@
+{
+  "altitude": {
+    "data": [
+      0.0,
+      0.0
+    ],
+    "series_type": "distance",
+    "original_size": 2,
+    "resolution": "high"
+  },
+  "moving": {
+    "data": [
+      true,
+      true
+    ],
+    "series_type": "distance",
+    "original_size": 2,
+    "resolution": "high"
+  },
+  "velocity_smooth": {
+    "data": [
+      0.0,
+      0.0
+    ],
+    "series_type": "distance",
+    "original_size": 2,
+    "resolution": "high"
+  },
+  "time": {
+    "data": [
+      0,
+      1733
+    ],
+    "series_type": "distance",
+    "original_size": 2,
+    "resolution": "high"
+  },
+  "grade_smooth": {
+    "data": [
+      0.0,
+      0.0
+    ],
+    "series_type": "distance",
+    "original_size": 2,
+    "resolution": "high"
+  }
+}

@@ -1,0 +1,531 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Col de Peyresourde - Ergo",
+    "distance": 10915.0,
+    "moving_time": 2449,
+    "elapsed_time": 2449,
+    "total_elevation_gain": 643.0,
+    "type": "VirtualRide",
+    "sport_type": "VirtualRide",
+    "device_name": "Kinomap Ride",
+    "id": 16538303834,
+    "start_date": "2025-11-22T21:37:41Z",
+    "start_date_local": "2025-11-22T22:37:41Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 2,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16538303834",
+      "summary_polyline": "}}edGewnAqD_Ca@o@c@gAIc@MaAD]MUEQMkAIMMKQI{@UyCg@[@}A^}AVc@Fy@?u@Km@O}BmAs@WWES?mAH[AYKeA}@OGUGeBOk@C}@UM?QDoBlBoBvAa@V}@`@yBtBgD|Ag@ZiA`Ay@Zs@H}@GgAOWYAWNu@r@cCj@iAEc@SBiAtCmCfFMHUD{A}@{Ae@]e@[cGCuA_@sEBwAAi@Mk@Sk@KK]Ow@SOAwBAg@LYPeAzA]Pi@H_A?QMYeAKOIEy@M_@H_@NOEEIEYA_@LmDAWESIOMGYDc@RQD[Bm@N{@h@[HSGIIEKAoACSEKQSQEYAaCXg@JgAB_AEc@GKEy@s@QKqAa@a@IS?o@Ng@V{@p@oCnA_@XaAfAKDK?ECEGEYf@SPOV[lA{BTSdEkC`@SrBoAfEsBx@u@t@g@lAq@NMv@aALKlAo@|CcAbDmA\\Sb@_@fBkB^i@NOfBg@tBu@d@WZWZ]b@q@~BmGR[RQRIPAf@LnB|@lExArE|CdAd@`@D`BFNBLJ^x@HHF@HCFGBG?UEKQUqAsAsAeA[c@W{@sBmFOg@C[AkACSOUKIoAS_@YSW]}@I_@QmAMqAQw@Ug@gAcBa@[KEy@GMGIKEKA]HWFIZChAHjCbAbCdB\\P|@Zt@PTJrB|Ap@VPJz@hAb@v@b@j@p@`@|@ZpElApCXnBJtCH~CRd@CVEp@Uv@a@lCmBLMJUj@aD`@}AHy@P{C`@uBT}CEiCBy@BQX}ARo@PmAPYHG\\Gj@TFJDP@RC|@WfC?VJzBZpCJjBFRdBrBnApAdE|D^f@ZXfA^f@FjC?dBEd@K^Sf@e@Va@Pc@tCwJ`@_CL{A^aCDgA@kAQuDQsBq@mFKg@QOK?KDIPEZFzFAZK`@IJMHMAKEGKKUMe@{@iEYaBaAaAEIG[j@s[",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      42.79791,
+      0.40835
+    ],
+    "end_latlng": [
+      42.79662,
+      0.43893
+    ],
+    "average_speed": 4.457,
+    "max_speed": 15.4,
+    "average_cadence": 80.5,
+    "average_watts": 274.7,
+    "max_watts": 388,
+    "weighted_average_watts": 280,
+    "device_watts": true,
+    "kilojoules": 672.6,
+    "has_heartrate": true,
+    "average_heartrate": 151.2,
+    "max_heartrate": 167.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 1561.0,
+    "elev_low": 940.0,
+    "upload_id": 17625469626,
+    "upload_id_str": "17625469626",
+    "external_id": "GOTOES_9537215527496082.tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Col de Peyresourde - Ergo",
+    "distance": 10915.0,
+    "moving_time": 2449,
+    "elapsed_time": 2449,
+    "total_elevation_gain": 643.0,
+    "type": "VirtualRide",
+    "sport_type": "VirtualRide",
+    "device_name": "Kinomap Ride",
+    "id": 16538303834,
+    "start_date": "2025-11-22T21:37:41Z",
+    "start_date_local": "2025-11-22T22:37:41Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 2,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16538303834",
+      "polyline": "}}edGewnAqD_Ca@o@c@gAIc@MaAD]MUEQMkAIMMKQI{@UyCg@[@}A^}AVc@Fy@?u@Km@O}BmAs@WWES?mAH[AYKeA}@OGUGeBOk@C}@UM?QDoBlBoBvAa@V}@`@yBtBgD|Ag@ZiA`Ay@Zs@H}@GgAOWYAWNu@r@cCj@iAEc@SBiAtCmCfFMHUD{A}@{Ae@]e@[cGCuA_@sEBwAAi@Mk@Sk@KK]Ow@SOAwBAg@LYPeAzA]Pi@H_A?QMYeAKOIEy@M_@H_@NOEEIEYA_@LmDAWESIOMGYDc@RQD[Bm@N{@h@[HSGIIEKAoACSEKQSQEYAaCXg@JgAB_AEc@GKEy@s@QKqAa@a@IS?o@Ng@V{@p@oCnA_@XaAfAKDK?ECEGEYf@SPOV[lA{BTSdEkC`@SrBoAfEsBx@u@t@g@lAq@NMv@aALKlAo@|CcAbDmA\\Sb@_@fBkB^i@NOfBg@tBu@d@WZWZ]b@q@~BmGR[RQRIPAf@LnB|@lExArE|CdAd@`@D`BFNBLJ^x@HHF@HCFGBG?UEKQUqAsAsAeA[c@W{@sBmFOg@C[AkACSOUKIoAS_@YSW]}@I_@QmAMqAQw@Ug@gAcBa@[KEy@GMGIKEKA]HWFIZChAHjCbAbCdB\\P|@Zt@PTJrB|Ap@VPJz@hAb@v@b@j@p@`@|@ZpElApCXnBJtCH~CRd@CVEp@Uv@a@lCmBLMJUj@aD`@}AHy@P{C`@uBT}CEiCBy@BQX}ARo@PmAPYHG\\Gj@TFJDP@RC|@WfC?VJzBZpCJjBFRdBrBnApAdE|D^f@ZXfA^f@FjC?dBEd@K^Sf@e@Va@Pc@tCwJ`@_CL{A^aCDgA@kAQuDQsBq@mFKg@QOK?KDIPEZFzFAZK`@IJMHMAKEGKKUMe@{@iEYaBaAaAEIG[j@s[",
+      "resource_state": 3,
+      "summary_polyline": "}}edGewnAqD_Ca@o@c@gAIc@MaAD]MUEQMkAIMMKQI{@UyCg@[@}A^}AVc@Fy@?u@Km@O}BmAs@WWES?mAH[AYKeA}@OGUGeBOk@C}@UM?QDoBlBoBvAa@V}@`@yBtBgD|Ag@ZiA`Ay@Zs@H}@GgAOWYAWNu@r@cCj@iAEc@SBiAtCmCfFMHUD{A}@{Ae@]e@[cGCuA_@sEBwAAi@Mk@Sk@KK]Ow@SOAwBAg@LYPeAzA]Pi@H_A?QMYeAKOIEy@M_@H_@NOEEIEYA_@LmDAWESIOMGYDc@RQD[Bm@N{@h@[HSGIIEKAoACSEKQSQEYAaCXg@JgAB_AEc@GKEy@s@QKqAa@a@IS?o@Ng@V{@p@oCnA_@XaAfAKDK?ECEGEYf@SPOV[lA{BTSdEkC`@SrBoAfEsBx@u@t@g@lAq@NMv@aALKlAo@|CcAbDmA\\Sb@_@fBkB^i@NOfBg@tBu@d@WZWZ]b@q@~BmGR[RQRIPAf@LnB|@lExArE|CdAd@`@D`BFNBLJ^x@HHF@HCFGBG?UEKQUqAsAsAeA[c@W{@sBmFOg@C[AkACSOUKIoAS_@YSW]}@I_@QmAMqAQw@Ug@gAcBa@[KEy@GMGIKEKA]HWFIZChAHjCbAbCdB\\P|@Zt@PTJrB|Ap@VPJz@hAb@v@b@j@p@`@|@ZpElApCXnBJtCH~CRd@CVEp@Uv@a@lCmBLMJUj@aD`@}AHy@P{C`@uBT}CEiCBy@BQX}ARo@PmAPYHG\\Gj@TFJDP@RC|@WfC?VJzBZpCJjBFRdBrBnApAdE|D^f@ZXfA^f@FjC?dBEd@K^Sf@e@Va@Pc@tCwJ`@_CL{A^aCDgA@kAQuDQsBq@mFKg@QOK?KDIPEZFzFAZK`@IJMHMAKEGKKUMe@{@iEYaBaAaAEIG[j@s["
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      42.79791,
+      0.40835
+    ],
+    "end_latlng": [
+      42.79662,
+      0.43893
+    ],
+    "average_speed": 4.457,
+    "max_speed": 15.4,
+    "average_cadence": 80.5,
+    "average_watts": 274.7,
+    "max_watts": 388,
+    "weighted_average_watts": 280,
+    "device_watts": true,
+    "kilojoules": 672.6,
+    "has_heartrate": true,
+    "average_heartrate": 151.2,
+    "max_heartrate": 167.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 1561.0,
+    "elev_low": 940.0,
+    "upload_id": 17625469626,
+    "upload_id_str": "17625469626",
+    "external_id": "GOTOES_9537215527496082.tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 642.0,
+    "perceived_exertion": 7.0,
+    "prefer_perceived_exertion": false,
+    "segment_efforts": [
+      {
+        "id": 3427461997777070110,
+        "resource_state": 2,
+        "name": "Col d' Peyresourde Half way",
+        "activity": {
+          "id": 16538303834,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 828,
+        "moving_time": 828,
+        "start_date": "2025-11-22T21:46:23Z",
+        "start_date_local": "2025-11-22T22:46:23Z",
+        "distance": 2952.4,
+        "start_index": 874,
+        "end_index": 2271,
+        "average_cadence": 78.6,
+        "device_watts": true,
+        "average_watts": 287.3,
+        "average_heartrate": 156.7,
+        "max_heartrate": 162.0,
+        "segment": {
+          "id": 17094547,
+          "resource_state": 2,
+          "name": "Col d' Peyresourde Half way",
+          "activity_type": "VirtualRide",
+          "distance": 2952.4,
+          "average_grade": 10.9,
+          "maximum_grade": 47.0,
+          "elevation_high": 1297.0,
+          "elevation_low": 976.2,
+          "start_latlng": [
+            42.824001,
+            0.41462
+          ],
+          "end_latlng": [
+            42.812168,
+            0.42825
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": "Estarvielle",
+          "state": "Occitanie",
+          "country": "France",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3427461997776526366,
+        "resource_state": 2,
+        "name": "Peyresourde to Peragudes turn - FulGaz",
+        "activity": {
+          "id": 16538303834,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1287,
+        "moving_time": 1287,
+        "start_date": "2025-11-22T21:46:31Z",
+        "start_date_local": "2025-11-22T22:46:31Z",
+        "distance": 4539.9,
+        "start_index": 888,
+        "end_index": 3072,
+        "average_cadence": 78.8,
+        "device_watts": true,
+        "average_watts": 287.9,
+        "average_heartrate": 158.5,
+        "max_heartrate": 165.0,
+        "segment": {
+          "id": 35572917,
+          "resource_state": 2,
+          "name": "Peyresourde to Peragudes turn - FulGaz",
+          "activity_type": "VirtualRide",
+          "distance": 4539.9,
+          "average_grade": 7.6,
+          "maximum_grade": 11.0,
+          "elevation_high": 1352.2,
+          "elevation_low": 1008.6,
+          "start_latlng": [
+            42.823878,
+            0.414908
+          ],
+          "end_latlng": [
+            42.801392,
+            0.431713
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": "Estarvielle",
+          "state": "Hautes Pyrenees",
+          "country": "France",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      }
+    ],
+    "splits_metric": [
+      {
+        "distance": 1001.0,
+        "elapsed_time": 156,
+        "elevation_difference": 16.0,
+        "moving_time": 156,
+        "split": 1,
+        "average_speed": 6.42,
+        "average_grade_adjusted_speed": 6.75,
+        "average_heartrate": 100.0,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 88,
+        "elevation_difference": -20.5,
+        "moving_time": 88,
+        "split": 2,
+        "average_speed": 11.36,
+        "average_grade_adjusted_speed": 11.25,
+        "average_heartrate": 125.94318181818181,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.0,
+        "elapsed_time": 104,
+        "elevation_difference": 0.5,
+        "moving_time": 104,
+        "split": 3,
+        "average_speed": 9.63,
+        "average_grade_adjusted_speed": 9.93,
+        "average_heartrate": 123.11538461538461,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.0,
+        "elapsed_time": 181,
+        "elevation_difference": 46.0,
+        "moving_time": 181,
+        "split": 4,
+        "average_speed": 5.52,
+        "average_grade_adjusted_speed": 6.33,
+        "average_heartrate": 140.59116022099448,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.0,
+        "elapsed_time": 272,
+        "elevation_difference": 82.0,
+        "moving_time": 272,
+        "split": 5,
+        "average_speed": 3.67,
+        "average_grade_adjusted_speed": 4.65,
+        "average_heartrate": 155.41176470588235,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 296,
+        "elevation_difference": 85.5,
+        "moving_time": 296,
+        "split": 6,
+        "average_speed": 3.38,
+        "average_grade_adjusted_speed": 4.33,
+        "average_heartrate": 156.5168918918919,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 295,
+        "elevation_difference": 80.0,
+        "moving_time": 295,
+        "split": 7,
+        "average_speed": 3.39,
+        "average_grade_adjusted_speed": 4.28,
+        "average_heartrate": 158.8237288135593,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.0,
+        "elapsed_time": 284,
+        "elevation_difference": 76.5,
+        "moving_time": 284,
+        "split": 8,
+        "average_speed": 3.52,
+        "average_grade_adjusted_speed": 4.42,
+        "average_heartrate": 160.36267605633802,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1003.0,
+        "elapsed_time": 218,
+        "elevation_difference": 60.5,
+        "moving_time": 218,
+        "split": 9,
+        "average_speed": 4.6,
+        "average_grade_adjusted_speed": 5.49,
+        "average_heartrate": 161.91284403669724,
+        "pace_zone": 0
+      },
+      {
+        "distance": 996.0,
+        "elapsed_time": 317,
+        "elevation_difference": 98.9,
+        "moving_time": 317,
+        "split": 10,
+        "average_speed": 3.14,
+        "average_grade_adjusted_speed": 4.18,
+        "average_heartrate": 162.56782334384857,
+        "pace_zone": 0
+      },
+      {
+        "distance": 918.0,
+        "elapsed_time": 238,
+        "elevation_difference": 76.6,
+        "moving_time": 238,
+        "split": 11,
+        "average_speed": 3.86,
+        "average_grade_adjusted_speed": 4.79,
+        "average_heartrate": 157.85294117647058,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1615.5,
+        "elapsed_time": 219,
+        "elevation_difference": 6.0,
+        "moving_time": 219,
+        "split": 1,
+        "average_speed": 7.38,
+        "average_grade_adjusted_speed": 7.63,
+        "average_heartrate": 107.31506849315069,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1605.0,
+        "elapsed_time": 171,
+        "elevation_difference": 4.0,
+        "moving_time": 171,
+        "split": 2,
+        "average_speed": 9.39,
+        "average_grade_adjusted_speed": 9.78,
+        "average_heartrate": 125.60818713450293,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1609.5,
+        "elapsed_time": 362,
+        "elevation_difference": 100.0,
+        "moving_time": 362,
+        "split": 3,
+        "average_speed": 4.45,
+        "average_grade_adjusted_speed": 5.34,
+        "average_heartrate": 150.52209944751382,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1611.0,
+        "elapsed_time": 475,
+        "elevation_difference": 134.5,
+        "moving_time": 475,
+        "split": 4,
+        "average_speed": 3.39,
+        "average_grade_adjusted_speed": 4.31,
+        "average_heartrate": 156.9221052631579,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1606.0,
+        "elapsed_time": 461,
+        "elevation_difference": 126.2,
+        "moving_time": 461,
+        "split": 5,
+        "average_speed": 3.48,
+        "average_grade_adjusted_speed": 4.39,
+        "average_heartrate": 160.2754880694143,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1611.0,
+        "elapsed_time": 425,
+        "elevation_difference": 127.3,
+        "moving_time": 425,
+        "split": 6,
+        "average_speed": 3.79,
+        "average_grade_adjusted_speed": 4.79,
+        "average_heartrate": 162.19529411764705,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1260.0,
+        "elapsed_time": 336,
+        "elevation_difference": 104.0,
+        "moving_time": 336,
+        "split": 7,
+        "average_speed": 3.75,
+        "average_grade_adjusted_speed": 4.67,
+        "average_heartrate": 159.23511904761904,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 58955310790,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 16538303834,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 2452,
+        "moving_time": 2449,
+        "start_date": "2025-11-22T21:37:41Z",
+        "start_date_local": "2025-11-22T22:37:41Z",
+        "distance": 10918.0,
+        "average_speed": 4.46,
+        "max_speed": 15.4,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 4143,
+        "total_elevation_gain": 643.0,
+        "average_cadence": 80.5,
+        "device_watts": true,
+        "average_watts": 274.7,
+        "average_heartrate": 151.2,
+        "max_heartrate": 167.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "35360923b966ee189d232e7b658f4d91910dd698",
+    "private_note": "",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

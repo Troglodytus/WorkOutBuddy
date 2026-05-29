@@ -1,0 +1,287 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Tuesday Afternoon Outdoor Swim",
+    "distance": 2383.6,
+    "moving_time": 26,
+    "elapsed_time": 354,
+    "total_elevation_gain": 0.0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "id": 15830866873,
+    "start_date": "2025-09-16T12:18:49Z",
+    "start_date_local": "2025-09-16T15:18:49Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15830866873",
+      "summary_polyline": "}_`eFayj~BNA@AC?TIF?G?cBkAB??D@EAI",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.688477,
+      20.868179
+    ],
+    "end_latlng": [
+      37.688777,
+      20.868674
+    ],
+    "average_speed": 91.677,
+    "max_speed": 8.421,
+    "average_cadence": 41.0,
+    "has_heartrate": true,
+    "average_heartrate": 124.0,
+    "max_heartrate": 124.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 0.0,
+    "elev_low": 0.0,
+    "upload_id": 16908688800,
+    "upload_id_str": "16908688800",
+    "external_id": "Tuesday Afternoon Outdoor Swim.tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Tuesday Afternoon Outdoor Swim",
+    "distance": 2383.6,
+    "moving_time": 26,
+    "elapsed_time": 354,
+    "total_elevation_gain": 0.0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "id": 15830866873,
+    "start_date": "2025-09-16T12:18:49Z",
+    "start_date_local": "2025-09-16T15:18:49Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15830866873",
+      "polyline": "}_`eFayj~BNA@AC?TIF?G?cBkAB??D@EAI",
+      "resource_state": 3,
+      "summary_polyline": "}_`eFayj~BNA@AC?TIF?G?cBkAB??D@EAI"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.688477,
+      20.868179
+    ],
+    "end_latlng": [
+      37.688777,
+      20.868674
+    ],
+    "average_speed": 91.677,
+    "max_speed": 8.421,
+    "average_cadence": 41.0,
+    "has_heartrate": true,
+    "average_heartrate": 124.0,
+    "max_heartrate": 124.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 0.0,
+    "elev_low": 0.0,
+    "upload_id": 16908688800,
+    "upload_id_str": "16908688800",
+    "external_id": "Tuesday Afternoon Outdoor Swim.tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 63.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 1111.5,
+        "elapsed_time": 22,
+        "elevation_difference": 0.0,
+        "moving_time": 22,
+        "split": 1,
+        "average_speed": 50.52,
+        "average_grade_adjusted_speed": 50.52,
+        "average_heartrate": 124.0,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1264.5,
+        "elapsed_time": 4,
+        "elevation_difference": 0.0,
+        "moving_time": 4,
+        "split": 2,
+        "average_speed": 316.13,
+        "average_grade_adjusted_speed": 316.13,
+        "average_heartrate": 124.0,
+        "pace_zone": 0
+      },
+      {
+        "distance": 7.6,
+        "elapsed_time": 328,
+        "elevation_difference": 0.0,
+        "moving_time": 0,
+        "split": 3,
+        "average_speed": 7.6,
+        "average_grade_adjusted_speed": 7.6,
+        "average_heartrate": 0,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 2376.0,
+        "elapsed_time": 26,
+        "elevation_difference": 0.0,
+        "moving_time": 26,
+        "split": 1,
+        "average_speed": 91.38,
+        "average_grade_adjusted_speed": 91.38,
+        "average_heartrate": 124.0,
+        "pace_zone": 0
+      },
+      {
+        "distance": 7.6,
+        "elapsed_time": 328,
+        "elevation_difference": 0.0,
+        "moving_time": 0,
+        "split": 2,
+        "average_speed": 7.6,
+        "average_grade_adjusted_speed": 7.6,
+        "average_heartrate": 0,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56381765257,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15830866873,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 18,
+        "moving_time": 23,
+        "start_date": "2025-09-16T12:18:49Z",
+        "start_date_local": "2025-09-16T15:18:49Z",
+        "distance": 2376.0,
+        "average_speed": 103.3,
+        "max_speed": 8.421,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 10,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 41.0,
+        "device_watts": false,
+        "average_heartrate": 124.0,
+        "max_heartrate": 124.0
+      },
+      {
+        "id": 56381765264,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 15830866873,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 342,
+        "moving_time": 0,
+        "start_date": "2025-09-16T12:19:15Z",
+        "start_date_local": "2025-09-16T15:19:15Z",
+        "distance": 384.0,
+        "average_speed": 0.0,
+        "max_speed": 8.421,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 11,
+        "end_index": 100,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 0.0,
+        "device_watts": false,
+        "average_heartrate": 0.0,
+        "max_heartrate": 124.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "bebf37d7c851df65a261da2d18aaf16cb0c87cae",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

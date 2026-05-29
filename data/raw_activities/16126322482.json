@@ -1,0 +1,215 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Spaziergang am Nachmittag",
+    "distance": 630.7,
+    "moving_time": 513,
+    "elapsed_time": 767,
+    "total_elevation_gain": 20.6,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch SE",
+    "id": 16126322482,
+    "start_date": "2025-10-11T15:41:48Z",
+    "start_date_local": "2025-10-11T17:41:48Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 7200.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16126322482",
+      "summary_polyline": "igceHisqbBa@YUGMI[Kc@_@sAm@KCI?KESQG[Ii@EcASo@Uk@IwAo@sBSeBk@kBQgAUo@WsAEIMIO_@c@a@EFEdAMr@d@?IM",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      48.190774,
+      16.315574
+    ],
+    "end_latlng": [
+      48.19374,
+      16.320471
+    ],
+    "average_speed": 1.229,
+    "max_speed": 2.28,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 215.6,
+    "elev_low": 198.0,
+    "upload_id": 17209615635,
+    "upload_id_str": "17209615635",
+    "external_id": "stripped_accepted_tag_from_17191026494.fit",
+    "from_accepted_tag": true,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Spaziergang am Nachmittag",
+    "distance": 630.7,
+    "moving_time": 513,
+    "elapsed_time": 767,
+    "total_elevation_gain": 20.6,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch SE",
+    "id": 16126322482,
+    "start_date": "2025-10-11T15:41:48Z",
+    "start_date_local": "2025-10-11T17:41:48Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 7200.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16126322482",
+      "polyline": "igceHisqbBa@YUGMI[Kc@_@sAm@KCI?KESQG[Ii@EcASo@Uk@IwAo@sBSeBk@kBQgAUo@WsAEIMIO_@c@a@EFEdAMr@d@?IM",
+      "resource_state": 3,
+      "summary_polyline": "igceHisqbBa@YUGMI[Kc@_@sAm@KCI?KESQG[Ii@EcASo@Uk@IwAo@sBSeBk@kBQgAUo@WsAEIMIO_@c@a@EFEdAMr@d@?IM"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      48.190774,
+      16.315574
+    ],
+    "end_latlng": [
+      48.19374,
+      16.320471
+    ],
+    "average_speed": 1.229,
+    "max_speed": 2.28,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 215.6,
+    "elev_low": 198.0,
+    "upload_id": 17209615635,
+    "upload_id_str": "17209615635",
+    "external_id": "stripped_accepted_tag_from_17191026494.fit",
+    "from_accepted_tag": true,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 632.1,
+        "elapsed_time": 767,
+        "elevation_difference": 15.2,
+        "moving_time": 513,
+        "split": 1,
+        "average_speed": 1.23,
+        "average_grade_adjusted_speed": 1.43,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 632.1,
+        "elapsed_time": 767,
+        "elevation_difference": 15.2,
+        "moving_time": 513,
+        "split": 1,
+        "average_speed": 1.23,
+        "average_grade_adjusted_speed": 1.43,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 57464217751,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 16126322482,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 766,
+        "moving_time": 766,
+        "start_date": "2025-10-11T15:41:48Z",
+        "start_date_local": "2025-10-11T17:41:48Z",
+        "distance": 632.11,
+        "average_speed": 0.83,
+        "max_speed": 2.28,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 644,
+        "total_elevation_gain": 20.6,
+        "device_watts": false
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "535eabc973dff321ee85228f30c6370cb7ec7d54",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

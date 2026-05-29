@@ -1,0 +1,215 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Schwimmen am Nachmittag",
+    "distance": 26.2,
+    "moving_time": 275,
+    "elapsed_time": 275,
+    "total_elevation_gain": 0.0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "device_name": "Apple Watch SE",
+    "id": 15842819218,
+    "start_date": "2025-09-16T11:13:26Z",
+    "start_date_local": "2025-09-16T14:13:26Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15842819218",
+      "summary_polyline": "qqydFyzg~BDAXHAEE?",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.655456,
+      20.853098
+    ],
+    "end_latlng": [
+      37.655333,
+      20.853081
+    ],
+    "average_speed": 0.095,
+    "max_speed": 1.006,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 57.6,
+    "elev_low": 16.4,
+    "upload_id": 16920945709,
+    "upload_id_str": "16920945709",
+    "external_id": "stripped_accepted_tag_from_16910560102.fit",
+    "from_accepted_tag": true,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Schwimmen am Nachmittag",
+    "distance": 26.2,
+    "moving_time": 275,
+    "elapsed_time": 275,
+    "total_elevation_gain": 0.0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "device_name": "Apple Watch SE",
+    "id": 15842819218,
+    "start_date": "2025-09-16T11:13:26Z",
+    "start_date_local": "2025-09-16T14:13:26Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15842819218",
+      "polyline": "qqydFyzg~BDAXHAEE?",
+      "resource_state": 3,
+      "summary_polyline": "qqydFyzg~BDAXHAEE?"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.655456,
+      20.853098
+    ],
+    "end_latlng": [
+      37.655333,
+      20.853081
+    ],
+    "average_speed": 0.095,
+    "max_speed": 1.006,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 57.6,
+    "elev_low": 16.4,
+    "upload_id": 16920945709,
+    "upload_id_str": "16920945709",
+    "external_id": "stripped_accepted_tag_from_16910560102.fit",
+    "from_accepted_tag": true,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 26.2,
+        "elapsed_time": 276,
+        "elevation_difference": -41.2,
+        "moving_time": 58,
+        "split": 1,
+        "average_speed": 0.45,
+        "average_grade_adjusted_speed": 0.49,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 26.2,
+        "elapsed_time": 276,
+        "elevation_difference": -41.2,
+        "moving_time": 58,
+        "split": 1,
+        "average_speed": 0.45,
+        "average_grade_adjusted_speed": 0.49,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56425019893,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15842819218,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 275,
+        "moving_time": 275,
+        "start_date": "2025-09-16T11:13:26Z",
+        "start_date_local": "2025-09-16T14:13:26Z",
+        "distance": 26.2,
+        "average_speed": 0.1,
+        "max_speed": 1.006,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 75,
+        "total_elevation_gain": 0.0,
+        "device_watts": false
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "ba3a07916e354a2bd0d2a609299549ff002734f1",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

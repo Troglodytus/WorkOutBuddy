@@ -1,0 +1,267 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Wednesday Afternoon Walk",
+    "distance": 1311.1,
+    "moving_time": 1132,
+    "elapsed_time": 1180,
+    "total_elevation_gain": 5.8,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 15842748918,
+    "start_date": "2025-09-17T13:40:38Z",
+    "start_date_local": "2025-09-17T16:40:38Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 2,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a15842748918",
+      "summary_polyline": "yqdeFs|h~BNJ_@[S[EOBCIBMSMK?IIBMA?BEAEBo@Ak@F[JE?a@PGHCNDfAFTBVGNaAL]?g@JG?CEM_@Ek@Ie@Ek@?]CKD{@HUBAD]\\eA\\GRBDCD@TIPAp@w@ACDMACAOECQe@O]GGIU@EOa@COWi@@GWi@IG?IMYAKSg@Mi@GI?KIUASGGAYEACG?KGQAYEG?KQUQ]QQICM@CAK?SNMVKHEJGBCb@MZSVIRSjAGLGRSVERKPWNQBWHYRCD_@LWNKBABa@BSESFCHBJ?V@GJC?CC?",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.711813,
+      20.858503
+    ],
+    "end_latlng": [
+      37.716802,
+      20.861222
+    ],
+    "average_speed": 1.158,
+    "max_speed": 2.72,
+    "average_cadence": 41.8,
+    "has_heartrate": true,
+    "average_heartrate": 101.2,
+    "max_heartrate": 124.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 9.6,
+    "elev_low": -0.3,
+    "upload_id": 16920872815,
+    "upload_id_str": "16920872815",
+    "external_id": "Wednesday Afternoon Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Wednesday Afternoon Walk",
+    "distance": 1311.1,
+    "moving_time": 1132,
+    "elapsed_time": 1180,
+    "total_elevation_gain": 5.8,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 15842748918,
+    "start_date": "2025-09-17T13:40:38Z",
+    "start_date_local": "2025-09-17T16:40:38Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 2,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a15842748918",
+      "polyline": "yqdeFs|h~BNJ_@[S[EOBCIBMSMK?IIBMA?BEAEBo@Ak@F[JE?a@PGHCNDfAFTBVGNaAL]?g@JG?CEM_@Ek@Ie@Ek@?]CKD{@HUBAD]\\eA\\GRBDCD@TIPAp@w@ACDMACAOECQe@O]GGIU@EOa@COWi@@GWi@IG?IMYAKSg@Mi@GI?KIUASGGAYEACG?KGQAYEG?KQUQ]QQICM@CAK?SNMVKHEJGBCb@MZSVIRSjAGLGRSVERKPWNQBWHYRCD_@LWNKBABa@BSESFCHBJ?VBGHC?CC?",
+      "resource_state": 3,
+      "summary_polyline": "yqdeFs|h~BNJ_@[S[EOBCIBMSMK?IIBMA?BEAEBo@Ak@F[JE?a@PGHCNDfAFTBVGNaAL]?g@JG?CEM_@Ek@Ie@Ek@?]CKD{@HUBAD]\\eA\\GRBDCD@TIPAp@w@ACDMACAOECQe@O]GGIU@EOa@COWi@@GWi@IG?IMYAKSg@Mi@GI?KIUASGGAYEACG?KGQAYEG?KQUQ]QQICM@CAK?SNMVKHEJGBCb@MZSVIRSjAGLGRSVERKPWNQBWHYRCD_@LWNKBABa@BSESFCHBJ?V@GJC?CC?"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.711813,
+      20.858503
+    ],
+    "end_latlng": [
+      37.716802,
+      20.861222
+    ],
+    "average_speed": 1.158,
+    "max_speed": 2.72,
+    "average_cadence": 41.8,
+    "has_heartrate": true,
+    "average_heartrate": 101.2,
+    "max_heartrate": 124.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 9.6,
+    "elev_low": -0.3,
+    "upload_id": 16920872815,
+    "upload_id_str": "16920872815",
+    "external_id": "Wednesday Afternoon Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 117.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 1000.3,
+        "elapsed_time": 891,
+        "elevation_difference": -3.2,
+        "moving_time": 882,
+        "split": 1,
+        "average_speed": 1.13,
+        "average_grade_adjusted_speed": 1.13,
+        "average_heartrate": 101.22699386503068,
+        "pace_zone": 0
+      },
+      {
+        "distance": 303.1,
+        "elapsed_time": 289,
+        "elevation_difference": 1.1,
+        "moving_time": 289,
+        "split": 2,
+        "average_speed": 1.05,
+        "average_grade_adjusted_speed": 1.06,
+        "average_heartrate": 101.25746268656717,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1303.4,
+        "elapsed_time": 1180,
+        "elevation_difference": -2.1,
+        "moving_time": 1171,
+        "split": 1,
+        "average_speed": 1.11,
+        "average_grade_adjusted_speed": 1.11,
+        "average_heartrate": 101.23453370267775,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56424774810,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15842748918,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 891,
+        "moving_time": 871,
+        "start_date": "2025-09-17T13:40:38Z",
+        "start_date_local": "2025-09-17T16:40:38Z",
+        "distance": 1000.0,
+        "average_speed": 1.15,
+        "max_speed": 2.72,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 867,
+        "total_elevation_gain": 5.8,
+        "average_cadence": 42.8,
+        "device_watts": false,
+        "average_heartrate": 101.2,
+        "max_heartrate": 113.0
+      },
+      {
+        "id": 56424774811,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 15842748918,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 268,
+        "moving_time": 290,
+        "start_date": "2025-09-17T13:55:29Z",
+        "start_date_local": "2025-09-17T16:55:29Z",
+        "distance": 311.06,
+        "average_speed": 1.07,
+        "max_speed": 1.82,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 868,
+        "end_index": 1157,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 38.8,
+        "device_watts": false,
+        "average_heartrate": 101.3,
+        "max_heartrate": 124.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "e3e94f940c8d67f8ed3df0f24ff9479fe2d5d3f3",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

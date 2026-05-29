@@ -1,0 +1,276 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Milky Way Walk",
+    "distance": 1445.4,
+    "moving_time": 1363,
+    "elapsed_time": 3751,
+    "total_elevation_gain": 88.7,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 15789210726,
+    "start_date": "2025-09-12T17:59:24Z",
+    "start_date_local": "2025-09-12T20:59:24Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 3,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a15789210726",
+      "summary_polyline": "amydF}w_~BEJDKB@LIFCd@Y\\]NSRa@FEJQZy@X{BFeAJaANi@@MAEFMJy@Pi@XuAHW@QDGBSBADIAG^_@JEFKFAZa@R@JFFEL?NFDAT@p@VPVAFLHAB?C?@CABAC@AAB@A@@ADD?KBAGBIHKE@GICELLMHFH@FWFGBGJCBCBDsD_@OGEEOAULKPQJSTGBELEBKPCP@FIXMx@ERE\\WhAMdAWfACf@Mz@MdBK`@c@dAe@n@UREHi@ZADMBm@j@G@Yl@INGBMv@C@@D?C@B@AAA?@",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.654734,
+      20.81167
+    ],
+    "end_latlng": [
+      37.655248,
+      20.810863
+    ],
+    "average_speed": 1.06,
+    "max_speed": 2.1,
+    "average_cadence": 38.7,
+    "has_heartrate": true,
+    "average_heartrate": 99.0,
+    "max_heartrate": 116.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 178.8,
+    "elev_low": 113.0,
+    "upload_id": 16865100775,
+    "upload_id_str": "16865100775",
+    "external_id": "Friday Evening Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 1,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Milky Way Walk",
+    "distance": 1445.4,
+    "moving_time": 1363,
+    "elapsed_time": 3751,
+    "total_elevation_gain": 88.7,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 15789210726,
+    "start_date": "2025-09-12T17:59:24Z",
+    "start_date_local": "2025-09-12T20:59:24Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 3,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a15789210726",
+      "polyline": "amydF}w_~BEJDKB@LIFCd@Y\\]NSRa@FEJQZy@X{BFeAJaANi@@MAEFMJy@Pi@XuAHW@QDGBSBADIAG^_@JEFKFAZa@R@JFFEL?NFDAT@p@VPVAFLHAB?C?@CABAC@AAB@A@@ADD?KBAGBIHKE@GICELLMHFH@FWFGBGNGBDsD_@OGEEOAULKPQJSTGBELEBKPCP@FIXMx@ERE\\WhAMdAWfACf@Mz@MdBK`@c@dAe@n@UREHi@ZADMBm@j@G@Yl@INGBMv@C@@D?C@B@AAA?@",
+      "resource_state": 3,
+      "summary_polyline": "amydF}w_~BEJDKB@LIFCd@Y\\]NSRa@FEJQZy@X{BFeAJaANi@@MAEFMJy@Pi@XuAHW@QDGBSBADIAG^_@JEFKFAZa@R@JFFEL?NFDAT@p@VPVAFLHAB?C?@CABAC@AAB@A@@ADD?KBAGBIHKE@GICELLMHFH@FWFGBGJCBCBDsD_@OGEEOAULKPQJSTGBELEBKPCP@FIXMx@ERE\\WhAMdAWfACf@Mz@MdBK`@c@dAe@n@UREHi@ZADMBm@j@G@Yl@INGBMv@C@@D?C@B@AAA?@"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.654734,
+      20.81167
+    ],
+    "end_latlng": [
+      37.655248,
+      20.810863
+    ],
+    "average_speed": 1.06,
+    "max_speed": 2.1,
+    "average_cadence": 38.7,
+    "has_heartrate": true,
+    "average_heartrate": 99.0,
+    "max_heartrate": 116.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 178.8,
+    "elev_low": 113.0,
+    "upload_id": 16865100775,
+    "upload_id_str": "16865100775",
+    "external_id": "Friday Evening Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 1,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 162.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 1000.5,
+        "elapsed_time": 3274,
+        "elevation_difference": 13.1,
+        "moving_time": 1014,
+        "split": 1,
+        "average_speed": 0.99,
+        "average_grade_adjusted_speed": 1.32,
+        "average_heartrate": 101.32083333333334,
+        "pace_zone": 0
+      },
+      {
+        "distance": 393.2,
+        "elapsed_time": 477,
+        "elevation_difference": -18.9,
+        "moving_time": 477,
+        "split": 2,
+        "average_speed": 0.82,
+        "average_grade_adjusted_speed": 0.77,
+        "average_heartrate": 92.88858695652173,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1393.7,
+        "elapsed_time": 3751,
+        "elevation_difference": -5.8,
+        "moving_time": 1491,
+        "split": 1,
+        "average_speed": 0.93,
+        "average_grade_adjusted_speed": 1.15,
+        "average_heartrate": 98.98418674698796,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56226851815,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15789210726,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 3275,
+        "moving_time": 1377,
+        "start_date": "2025-09-12T17:59:24Z",
+        "start_date_local": "2025-09-12T20:59:24Z",
+        "distance": 1000.0,
+        "average_speed": 0.73,
+        "max_speed": 2.1,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 1010,
+        "total_elevation_gain": 88.7,
+        "average_cadence": 36.1,
+        "device_watts": false,
+        "average_heartrate": 101.3,
+        "max_heartrate": 116.0
+      },
+      {
+        "id": 56226851820,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 15789210726,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 370,
+        "moving_time": 464,
+        "start_date": "2025-09-12T18:54:00Z",
+        "start_date_local": "2025-09-12T21:54:00Z",
+        "distance": 445.35,
+        "average_speed": 0.96,
+        "max_speed": 1.48,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 1011,
+        "end_index": 1472,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 45.3,
+        "device_watts": false,
+        "average_heartrate": 92.9,
+        "max_heartrate": 97.0
+      }
+    ],
+    "photos": {
+      "primary": {
+        "unique_id": "61602391-0E40-455A-9189-1DD39EA6F4AE",
+        "urls": {
+          "600": "https://dgtzuqphqg23d.cloudfront.net/v2hy7KIrIdxG0XwHrTXfzimDr69fGoIlx9oOYJ5sVzM-531x768.jpg",
+          "100": "https://dgtzuqphqg23d.cloudfront.net/v2hy7KIrIdxG0XwHrTXfzimDr69fGoIlx9oOYJ5sVzM-88x128.jpg"
+        },
+        "source": 1,
+        "media_type": 1
+      },
+      "use_primary_photo": true,
+      "count": 1
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "d87d2c16d601f5772342ba243ad4e1038be56521",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

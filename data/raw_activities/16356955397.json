@@ -1,0 +1,1662 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Passo dello Stelvio (2757m) - Ergometer",
+    "distance": 28028.0,
+    "moving_time": 5017,
+    "elapsed_time": 5017,
+    "total_elevation_gain": 1123.1,
+    "type": "VirtualRide",
+    "sport_type": "VirtualRide",
+    "device_name": "Kinomap Ride",
+    "id": 16356955397,
+    "start_date": "2025-11-04T18:00:42Z",
+    "start_date_local": "2025-11-04T19:00:42Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 4,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16356955397",
+      "summary_polyline": "g{b{Gwkc_AxBxGz@nAxBx@vDbCbAHdGyAzJp@|FnCwGs@kBJQ`@pCF~@jArDxAhBtAr@zAf@^dABdA_AbBYlCnBDP]GuBiAc@d@SjEv@wDNEkAtJL@xAsFOhFDPJKTcEAl@FvC[hBwB~CAZvEwEnE_BpDe@lEGBTw@E}DhAwClD@TdD_BxEDx@f@hAhCbAv@xA`CbAfGfDfGtE|L~ApJQCgAkD]e@GPf@hAh@`DxArCnBrFx@bGv@lDMNa@oAiD_H_DwEATz@jBfArGr@xB~@|Hn@zCS@sDeLsB}C`ArCbCjNIDqBqGs@iA|A`HJfACxBp@tBz@rHAPMIgAyEQCTjAQ_AbAlD@]w@uCOGb@jCCnCZ~BMRcBuJI]M?XxB?jCd@fHNtHIzEhAjHiCwHn@tFD|@I?}AqHOHd@|DDxDb@hGzA~E`BjMINYmBiBcGSEdArFj@fGHbY~CbL^hC[Eg@}B}@iBOQIN`AbCtAfIp@dBfCtDKDcEgDkB{EuA{EKQERpBlMz@~C~BfCtDhBl@r@gAU}CWkCgA}AaBoAgDQI@R|ClJl@l@tCv@bBfAfDfEZx@OBoAoA{ByAgCw@MLbClAlCpE~@l@WLkAo@cCgDMB`B~DfCvCh@XvAO?RgBb@EZxBEiC`@eAy@qCaAkA}BA^n@rBnEjE|ElAbBzCLjAIqAoAeCgGoBmCkCeAuBOaAx@tBfC~@pA|@vBIKg@o@NC[~@QTa@_AF{Au@uB}BaAyCtBrCbBP}A{AuAgCiCyAtB`@|ElDc@_BuBoCiAaA_E{A{@q@aDuJhAlCfBvBrClAjFd@eGuDaByBq@aCkBqMpArE~AbEp@`AfChB`@KuCqEm@kBu@_FmAwDdAbBd@lBl@d@Eu@sDqNOwYu@qHu@qDjBpFZhBTLkByNqAoEg@iKg@gFtA~FXl@CqAm@{EdCnHcAcIH_EQcJu@{MjBdJFgAc@}I`AdEV^m@eHu@oCGyDkAmG~BfHHm@mBeLiA_DxBzDzClJf@Ho@{CcAaIc@mA_AqF{@mCXJlArBbFbKLq@iBmKaBuE{AyCgA}EnBzC_BaJgEiLaCcE_A}Bc@sDc@gA_FwH]UgESmAPsBnAAW|CmDpEw@Dc@{Jp@wEfBmElE`CyDTcDIiC_@jELeES[gAlEKAjAcJIMMf@i@xCB}B\\}AbDjAw@eAkAaA{@?oBjA{@JiA{@w@sAsAaAoEwBY_@cDe@vBS~Gl@yG_DsJi@kFtAoAIiHyDeA}AqBeGB^",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      46.55044,
+      10.50828
+    ],
+    "end_latlng": [
+      46.55039,
+      10.50811
+    ],
+    "average_speed": 5.587,
+    "max_speed": 20.6,
+    "average_cadence": 77.6,
+    "average_watts": 229.7,
+    "max_watts": 331,
+    "weighted_average_watts": 249,
+    "device_watts": true,
+    "kilojoules": 1152.2,
+    "has_heartrate": true,
+    "average_heartrate": 142.5,
+    "max_heartrate": 159.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 2751.4,
+    "elev_low": 1638.5,
+    "upload_id": 17442574256,
+    "upload_id_str": "17442574256",
+    "external_id": "GOTOES_8014815786276689 (2).tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Passo dello Stelvio (2757m) - Ergometer",
+    "distance": 28028.0,
+    "moving_time": 5017,
+    "elapsed_time": 5017,
+    "total_elevation_gain": 1123.1,
+    "type": "VirtualRide",
+    "sport_type": "VirtualRide",
+    "device_name": "Kinomap Ride",
+    "id": 16356955397,
+    "start_date": "2025-11-04T18:00:42Z",
+    "start_date_local": "2025-11-04T19:00:42Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 4,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16356955397",
+      "polyline": "g{b{Gwkc_ARx@b@rA`AjCT`@d@l@^TxAb@|@j@dAv@r@^LDh@DJArEoAp@I`@?tEb@hBFXDtFfCFFEJwBa@q@?UCk@Qe@Gi@?o@DQDIDGH@VJ@l@Ex@?ZDTXR\\TRXJb@Dr@f@`A^hBtANNJPFXN^PRTJ`@FT?LC\\SPWTS\\Mb@I`@AL@JFTV`@V\\`@\\RHHCFG@u@YaAu@SCOBKJGTG^G`BGv@BPFAFSZ_CJa@FOD@@FOn@WhCYfBK~@@RL@x@wDJ[R_@D?@DKf@Kz@@b@AzADPF?BKBg@?iAFm@Hc@FBIh@FvCIz@Ql@y@tA}@hACF@RF?h@u@xAoANOT]d@c@JE`@G|@a@bBo@v@QxBSbA?`AE^GR?RDFNCDI?WGU@w@X}AVg@VaBxBu@r@AHBJRCzAcAVM\\IZAbBFxA?`@RVRVd@p@bBRRb@TJLxA`CJ\\Jp@\\rCLb@Xf@h@jAbBrCTj@lAtDd@dAZz@b@|@JZr@xEf@vBB^KBEGCWKe@w@mBU_@GEGPf@hARbABl@Pn@`AfBVj@nBrFR~@RtBPlAh@tBLv@CLI@EW[w@o@eA[a@a@w@a@oAYo@_C{DSWKCCJ@Hb@v@Vr@^nBf@bDPl@Th@J`@^pC^jDXbBTn@CPC?KGUy@_AmCgAqDUk@Q][[Yc@Yu@IMGBALNXr@jBZfCd@nBf@bDXnAIDc@eBmAkDe@cAGGE@?TJP\\`ANn@b@fCJfAG`ABv@J^Zv@H\\h@fFPjAAPKCO}@e@mBSs@CEGCEDAJV~@Q_ANLb@dBNx@@]m@}BQc@GBAJXlAJp@CnCFt@RhA?JEFG?CEO_AWeAWyB_@oBI]ECGBALNr@Jv@?jCd@fHNtH?dAKxB@ZJ`A^nB^|A@HCPIGGOMe@}@cCK]M{@IYGACJDh@l@~DD|@EBCCEIO_Ae@mBW{AI]EGGBALZ|BH~@Bl@AhAB`ADr@RtBH~AJf@P^b@hAXlA`BjM?HIDYmBe@mAa@eBSo@M_@KKGDZnAh@bD`@zDHjA@`CBt@E|B?nABpADjJRhAjCxIN~@Nh@@TAHEDK?IKg@}B}@iBOQID?H`AbCl@pENt@V~@b@lALVnA`Bn@~@FRCFGA}@w@sA{@WUY]y@qBq@iBk@kBMi@Qe@I_@EMECEB?NZdBR`Bj@xCTjBl@bCLZVd@fB`B~@n@dA\\n@Z\\VLP@HCHC?ICc@UQEk@EeAGq@ImAe@w@a@g@][]Ye@w@sBY{@CEEAED@RXhAjApDZ|@Zr@Z^PL`@L|A\\TJj@Zv@j@n@j@l@t@hAdBZn@?HIFy@}@wAeAe@YYOaCu@O?AB?PFDPBj@Rf@XXPXZV^`@t@b@bANTNLn@^?FEFQAi@Wa@W_@_@e@o@Uc@g@s@ECGF@L^n@j@|ARb@~A`Bf@t@NLXJvAOBHCHmARYNGP@HN@vAUH@FJINQFa@?{@JOAc@a@a@WmBi@c@WOQo@eBCEG?ELBPTn@XbA^d@vAfARPb@p@LNPHvATvA\\l@XVXjA`CHXBp@DWCYK_@oAeC{@e@mBg@}@O_@QkAyAaAq@eAuBOaAd@xARZXRlBj@pA|@v@A~@GKg@o@NC[~@QTa@_AF{Au@uB}By@wBGa@fAdBl@l@ZRfAAg@Uu@eAk@oAi@w@qA}@w@[XCzAd@bAl@fAv@`A`ANDc@_BkAaBi@m@iAaA}@k@cB_@]Oa@UY[k@sAg@{AmAeEPTv@vBr@jAr@j@nAn@bA\\d@HjAJf@HpADs@q@eAe@k@QUOiA{@q@q@o@gAa@sAOm@UkBu@_EYmBEw@pArE~AbEp@`AnBrAVT`@K{AoBy@aBm@kBYyA[eCc@_Bi@wAdAbBd@lBl@d@Eu@u@_DsBiHIg@Co@IyLBcB?gBEaDM}Ag@sE]iBWgANPt@jCd@rAZhBTLGw@s@sFo@mEQm@i@uAUkAGyAO_BIcBEkBg@gFJFV|Ap@xCXl@CqAe@_DG{@n@bCRd@b@pA\\r@K}As@}DCg@H_EQcJW_EKkEQoAH?|@xFb@jBFgAE[OmFKc@Ao@`AdEV^O}B]gDu@oC?oCGi@a@_C[sAQk@BMb@dAbA|CVbAHm@o@yD_@aB]iCiA_DxBzD`A~CxAlEf@HW{@W_B[sCg@mDc@mA_AqF{@mCXJlArBx@`Bd@rAjAhBv@bBLq@s@eDOiAEk@_@qBaBuEm@qAm@gAQk@Ei@o@gCLBt@jBj@j@y@eEe@{CuBiFqA_EkAmBu@uAUe@i@wAc@sDc@gAi@w@Sc@UWWSsBoD]UgESmAPsBnAAWd@a@vBkC~Bg@ZMt@ADc@{EL_CX_@HwEfBo@t@}CvCfA{Ax@}ALi@FyBAyAGo@G\\GjBO`ADaDFc@S[gAlEKAd@eDd@}DIM[lA[rBGWJeB\\}Aj@LRRbBh@w@eAkAaA{@?_@FoAbA{@JiA{@I]m@u@sAaAy@]uCyAY_@s@U}A@QQ|@Qx@A|@N`BJb@FzAHa@]_EkBw@UcACkE_@cBE_B\\kCv@[Ds@OYMiCeBi@U{@Y_@UOQu@kAk@{AeAiD?TBH",
+      "resource_state": 3,
+      "summary_polyline": "g{b{Gwkc_AxBxGz@nAxBx@vDbCbAHdGyAzJp@|FnCwGs@kBJQ`@pCF~@jArDxAhBtAr@zAf@^dABdA_AbBYlCnBDP]GuBiAc@d@SjEv@wDNEkAtJL@xAsFOhFDPJKTcEAl@FvC[hBwB~CAZvEwEnE_BpDe@lEGBTw@E}DhAwClD@TdD_BxEDx@f@hAhCbAv@xA`CbAfGfDfGtE|L~ApJQCgAkD]e@GPf@hAh@`DxArCnBrFx@bGv@lDMNa@oAiD_H_DwEATz@jBfArGr@xB~@|Hn@zCS@sDeLsB}C`ArCbCjNIDqBqGs@iA|A`HJfACxBp@tBz@rHAPMIgAyEQCTjAQ_AbAlD@]w@uCOGb@jCCnCZ~BMRcBuJI]M?XxB?jCd@fHNtHIzEhAjHiCwHn@tFD|@I?}AqHOHd@|DDxDb@hGzA~E`BjMINYmBiBcGSEdArFj@fGHbY~CbL^hC[Eg@}B}@iBOQIN`AbCtAfIp@dBfCtDKDcEgDkB{EuA{EKQERpBlMz@~C~BfCtDhBl@r@gAU}CWkCgA}AaBoAgDQI@R|ClJl@l@tCv@bBfAfDfEZx@OBoAoA{ByAgCw@MLbClAlCpE~@l@WLkAo@cCgDMB`B~DfCvCh@XvAO?RgBb@EZxBEiC`@eAy@qCaAkA}BA^n@rBnEjE|ElAbBzCLjAIqAoAeCgGoBmCkCeAuBOaAx@tBfC~@pA|@vBIKg@o@NC[~@QTa@_AF{Au@uB}BaAyCtBrCbBP}A{AuAgCiCyAtB`@|ElDc@_BuBoCiAaA_E{A{@q@aDuJhAlCfBvBrClAjFd@eGuDaByBq@aCkBqMpArE~AbEp@`AfChB`@KuCqEm@kBu@_FmAwDdAbBd@lBl@d@Eu@sDqNOwYu@qHu@qDjBpFZhBTLkByNqAoEg@iKg@gFtA~FXl@CqAm@{EdCnHcAcIH_EQcJu@{MjBdJFgAc@}I`AdEV^m@eHu@oCGyDkAmG~BfHHm@mBeLiA_DxBzDzClJf@Ho@{CcAaIc@mA_AqF{@mCXJlArBbFbKLq@iBmKaBuE{AyCgA}EnBzC_BaJgEiLaCcE_A}Bc@sDc@gA_FwH]UgESmAPsBnAAW|CmDpEw@Dc@{Jp@wEfBmElE`CyDTcDIiC_@jELeES[gAlEKAjAcJIMMf@i@xCB}B\\}AbDjAw@eAkAaA{@?oBjA{@JiA{@w@sAsAaAoEwBY_@cDe@vBS~Gl@yG_DsJi@kFtAoAIiHyDeA}AqBeGB^"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      46.55044,
+      10.50828
+    ],
+    "end_latlng": [
+      46.55039,
+      10.50811
+    ],
+    "average_speed": 5.587,
+    "max_speed": 20.6,
+    "average_cadence": 77.6,
+    "average_watts": 229.7,
+    "max_watts": 331,
+    "weighted_average_watts": 249,
+    "device_watts": true,
+    "kilojoules": 1152.2,
+    "has_heartrate": true,
+    "average_heartrate": 142.5,
+    "max_heartrate": 159.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 2751.4,
+    "elev_low": 1638.5,
+    "upload_id": 17442574256,
+    "upload_id_str": "17442574256",
+    "external_id": "GOTOES_8014815786276689 (2).tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 967.0,
+    "perceived_exertion": 7.0,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [
+      {
+        "id": 3420907452808368056,
+        "resource_state": 2,
+        "name": "first attempt. very intens",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 57,
+        "moving_time": 57,
+        "start_date": "2025-11-04T18:00:46Z",
+        "start_date_local": "2025-11-04T19:00:46Z",
+        "distance": 438.7,
+        "start_index": 7,
+        "end_index": 97,
+        "average_cadence": 78.6,
+        "device_watts": true,
+        "average_watts": 173.0,
+        "average_heartrate": 86.8,
+        "max_heartrate": 99.0,
+        "segment": {
+          "id": 15472795,
+          "resource_state": 2,
+          "name": "first attempt. very intens",
+          "activity_type": "VirtualRide",
+          "distance": 438.7,
+          "average_grade": 0.5,
+          "maximum_grade": 9.6,
+          "elevation_high": 1641.0,
+          "elevation_low": 1638.5,
+          "start_latlng": [
+            46.550421,
+            10.508202
+          ],
+          "end_latlng": [
+            46.547244,
+            10.505631
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": "Trafoi",
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452809627576,
+        "resource_state": 2,
+        "name": "RGT Couch to 5k",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1475,
+        "moving_time": 1472,
+        "start_date": "2025-11-04T18:00:47Z",
+        "start_date_local": "2025-11-04T19:00:47Z",
+        "distance": 4976.2,
+        "start_index": 9,
+        "end_index": 2471,
+        "average_cadence": 74.9,
+        "device_watts": true,
+        "average_watts": 251.8,
+        "average_heartrate": 138.6,
+        "max_heartrate": 155.0,
+        "segment": {
+          "id": 20049747,
+          "resource_state": 2,
+          "name": "RGT Couch to 5k",
+          "activity_type": "VirtualRide",
+          "distance": 4976.2,
+          "average_grade": 7.6,
+          "maximum_grade": 15.5,
+          "elevation_high": 2018.0,
+          "elevation_low": 1638.5,
+          "start_latlng": [
+            46.550373,
+            10.508094
+          ],
+          "end_latlng": [
+            46.532421,
+            10.489511
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": "Trafoi",
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452809862072,
+        "resource_state": 2,
+        "name": "Stelvio  part two on tacx",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 4268,
+        "moving_time": 4265,
+        "start_date": "2025-11-04T18:01:23Z",
+        "start_date_local": "2025-11-04T19:01:23Z",
+        "distance": 13353.3,
+        "start_index": 66,
+        "end_index": 7199,
+        "average_cadence": 75.3,
+        "device_watts": true,
+        "average_watts": 259.2,
+        "average_heartrate": 147.2,
+        "max_heartrate": 159.0,
+        "segment": {
+          "id": 11137475,
+          "resource_state": 2,
+          "name": "Stelvio  part two on tacx",
+          "activity_type": "VirtualRide",
+          "distance": 13353.3,
+          "average_grade": 8.8,
+          "maximum_grade": 49.6,
+          "elevation_high": 2762.0,
+          "elevation_low": 1591.4,
+          "start_latlng": [
+            46.548717,
+            10.506063
+          ],
+          "end_latlng": [
+            46.528656,
+            10.45309
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 5,
+          "city": "Trafoi",
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452809232312,
+        "resource_state": 2,
+        "name": "RGT - Climb 1st 100m",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 384,
+        "moving_time": 381,
+        "start_date": "2025-11-04T18:01:38Z",
+        "start_date_local": "2025-11-04T19:01:38Z",
+        "distance": 1254.7,
+        "start_index": 90,
+        "end_index": 730,
+        "average_cadence": 73.2,
+        "device_watts": true,
+        "average_watts": 244.8,
+        "average_heartrate": 123.1,
+        "max_heartrate": 133.0,
+        "segment": {
+          "id": 19335574,
+          "resource_state": 2,
+          "name": "RGT - Climb 1st 100m",
+          "activity_type": "VirtualRide",
+          "distance": 1254.7,
+          "average_grade": 8.0,
+          "maximum_grade": 14.4,
+          "elevation_high": 1738.9,
+          "elevation_low": 1638.8,
+          "start_latlng": [
+            46.54754,
+            10.505515
+          ],
+          "end_latlng": [
+            46.541144,
+            10.503493
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 1,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452807769016,
+        "resource_state": 2,
+        "name": "Road Grand Tours 1st Half",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 2233,
+        "moving_time": 2230,
+        "start_date": "2025-11-04T18:02:02Z",
+        "start_date_local": "2025-11-04T19:02:02Z",
+        "distance": 7114.0,
+        "start_index": 126,
+        "end_index": 3865,
+        "average_cadence": 74.6,
+        "device_watts": true,
+        "average_watts": 254.6,
+        "average_heartrate": 143.7,
+        "max_heartrate": 155.0,
+        "segment": {
+          "id": 13561991,
+          "resource_state": 2,
+          "name": "Road Grand Tours 1st Half",
+          "activity_type": "VirtualRide",
+          "distance": 7114.0,
+          "average_grade": 7.9,
+          "maximum_grade": 50.0,
+          "elevation_high": 2200.9,
+          "elevation_low": 1635.4,
+          "start_latlng": [
+            46.546531,
+            10.505889
+          ],
+          "end_latlng": [
+            46.53353,
+            10.481843
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": "Trafoi",
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452807593912,
+        "resource_state": 2,
+        "name": "RGT - Passo dello Stelvio - Tornante 44 > 33",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 874,
+        "moving_time": 871,
+        "start_date": "2025-11-04T18:02:48Z",
+        "start_date_local": "2025-11-04T19:02:48Z",
+        "distance": 2879.6,
+        "start_index": 204,
+        "end_index": 1655,
+        "average_cadence": 74.7,
+        "device_watts": true,
+        "average_watts": 255.4,
+        "average_heartrate": 137.4,
+        "max_heartrate": 154.0,
+        "segment": {
+          "id": 16547623,
+          "resource_state": 2,
+          "name": "RGT - Passo dello Stelvio - Tornante 44 > 33",
+          "activity_type": "VirtualRide",
+          "distance": 2879.6,
+          "average_grade": 8.0,
+          "maximum_grade": 14.9,
+          "elevation_high": 1889.7,
+          "elevation_low": 1659.0,
+          "start_latlng": [
+            46.545066,
+            10.50575
+          ],
+          "end_latlng": [
+            46.539128,
+            10.500132
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 2,
+          "city": "Trafoi",
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452808212408,
+        "resource_state": 2,
+        "name": "RGT Cycling Official - Ortles Memoriale",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 722,
+        "moving_time": 722,
+        "start_date": "2025-11-04T18:07:12Z",
+        "start_date_local": "2025-11-04T19:07:12Z",
+        "distance": 2359.0,
+        "start_index": 647,
+        "end_index": 1846,
+        "average_cadence": 75.8,
+        "device_watts": true,
+        "average_watts": 261.0,
+        "average_heartrate": 144.4,
+        "max_heartrate": 154.0,
+        "segment": {
+          "id": 32983977,
+          "resource_state": 2,
+          "name": "RGT Cycling Official - Ortles Memoriale",
+          "activity_type": "VirtualRide",
+          "distance": 2359.0,
+          "average_grade": 8.2,
+          "maximum_grade": 19.3,
+          "elevation_high": 1904.3,
+          "elevation_low": 1710.9,
+          "start_latlng": [
+            46.542438,
+            10.503187
+          ],
+          "end_latlng": [
+            46.536736,
+            10.499515
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 2,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452806383544,
+        "resource_state": 2,
+        "name": "RGT - Passo dello Stelvio - Tornante 33 > Switchbacks",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 962,
+        "moving_time": 962,
+        "start_date": "2025-11-04T18:17:44Z",
+        "start_date_local": "2025-11-04T19:17:44Z",
+        "distance": 3237.8,
+        "start_index": 1693,
+        "end_index": 3318,
+        "average_cadence": 74.8,
+        "device_watts": true,
+        "average_watts": 255.4,
+        "average_heartrate": 148.6,
+        "max_heartrate": 155.0,
+        "segment": {
+          "id": 16573330,
+          "resource_state": 2,
+          "name": "RGT - Passo dello Stelvio - Tornante 33 > Switchbacks",
+          "activity_type": "VirtualRide",
+          "distance": 3237.8,
+          "average_grade": 8.7,
+          "maximum_grade": 18.6,
+          "elevation_high": 2163.6,
+          "elevation_low": 1883.3,
+          "start_latlng": [
+            46.539094,
+            10.500423
+          ],
+          "end_latlng": [
+            46.533623,
+            10.486311
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 2,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452808919992,
+        "resource_state": 2,
+        "name": "Segment 3",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 45,
+        "moving_time": 45,
+        "start_date": "2025-11-04T18:24:14Z",
+        "start_date_local": "2025-11-04T19:24:14Z",
+        "distance": 141.2,
+        "start_index": 2356,
+        "end_index": 2431,
+        "average_cadence": 73.2,
+        "device_watts": true,
+        "average_watts": 247.2,
+        "average_heartrate": 147.0,
+        "max_heartrate": 153.0,
+        "segment": {
+          "id": 11208505,
+          "resource_state": 2,
+          "name": "Segment 3",
+          "activity_type": "VirtualRide",
+          "distance": 141.2,
+          "average_grade": 1.8,
+          "maximum_grade": 14.0,
+          "elevation_high": 1965.0,
+          "elevation_low": 1959.6,
+          "start_latlng": [
+            46.533501,
+            10.491747
+          ],
+          "end_latlng": [
+            46.532738,
+            10.490336
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452807457720,
+        "resource_state": 2,
+        "name": "RGT Cycling Official - Escarp\u00e9e",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 447,
+        "moving_time": 447,
+        "start_date": "2025-11-04T18:25:21Z",
+        "start_date_local": "2025-11-04T19:25:21Z",
+        "distance": 1412.0,
+        "start_index": 2470,
+        "end_index": 3217,
+        "average_cadence": 74.4,
+        "device_watts": true,
+        "average_watts": 253.6,
+        "average_heartrate": 147.0,
+        "max_heartrate": 154.0,
+        "segment": {
+          "id": 32983986,
+          "resource_state": 2,
+          "name": "RGT Cycling Official - Escarp\u00e9e",
+          "activity_type": "VirtualRide",
+          "distance": 1412.0,
+          "average_grade": 10.6,
+          "maximum_grade": 16.0,
+          "elevation_high": 2130.5,
+          "elevation_low": 1980.7,
+          "start_latlng": [
+            46.532448,
+            10.489632
+          ],
+          "end_latlng": [
+            46.533173,
+            10.48598
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 1,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452807698360,
+        "resource_state": 2,
+        "name": "Road Grand Tours 2nd Half",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1922,
+        "moving_time": 1922,
+        "start_date": "2025-11-04T18:40:25Z",
+        "start_date_local": "2025-11-04T19:40:25Z",
+        "distance": 6378.5,
+        "start_index": 3985,
+        "end_index": 7191,
+        "average_cadence": 75.9,
+        "device_watts": true,
+        "average_watts": 265.2,
+        "average_heartrate": 152.2,
+        "max_heartrate": 159.0,
+        "segment": {
+          "id": 13562007,
+          "resource_state": 2,
+          "name": "Road Grand Tours 2nd Half",
+          "activity_type": "VirtualRide",
+          "distance": 6378.5,
+          "average_grade": 8.8,
+          "maximum_grade": 49.5,
+          "elevation_high": 2760.2,
+          "elevation_low": 2200.9,
+          "start_latlng": [
+            46.53353,
+            10.481843
+          ],
+          "end_latlng": [
+            46.528638,
+            10.453352
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 3,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452809528248,
+        "resource_state": 2,
+        "name": "RGT Cycling Official - Passo Dello Stelvio - Making Me Dizzy",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1202,
+        "moving_time": 1202,
+        "start_date": "2025-11-04T18:51:14Z",
+        "start_date_local": "2025-11-04T19:51:14Z",
+        "distance": 3993.0,
+        "start_index": 5068,
+        "end_index": 7070,
+        "average_cadence": 75.7,
+        "device_watts": true,
+        "average_watts": 260.4,
+        "average_heartrate": 151.3,
+        "max_heartrate": 158.0,
+        "segment": {
+          "id": 26381616,
+          "resource_state": 2,
+          "name": "RGT Cycling Official - Passo Dello Stelvio - Making Me Dizzy",
+          "activity_type": "VirtualRide",
+          "distance": 3993.0,
+          "average_grade": 8.0,
+          "maximum_grade": 16.8,
+          "elevation_high": 2735.2,
+          "elevation_low": 2415.6,
+          "start_latlng": [
+            46.532795,
+            10.466292
+          ],
+          "end_latlng": [
+            46.530418,
+            10.454818
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 2,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452807104440,
+        "resource_state": 2,
+        "name": "RGT switchbacks finish",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 478,
+        "moving_time": 478,
+        "start_date": "2025-11-04T19:03:50Z",
+        "start_date_local": "2025-11-04T20:03:50Z",
+        "distance": 1597.5,
+        "start_index": 6327,
+        "end_index": 7123,
+        "average_cadence": 75.8,
+        "device_watts": true,
+        "average_watts": 261.1,
+        "average_heartrate": 151.0,
+        "max_heartrate": 158.0,
+        "segment": {
+          "id": 17927881,
+          "resource_state": 2,
+          "name": "RGT switchbacks finish",
+          "activity_type": "VirtualRide",
+          "distance": 1597.5,
+          "average_grade": 8.0,
+          "maximum_grade": 16.5,
+          "elevation_high": 2744.9,
+          "elevation_low": 2617.2,
+          "start_latlng": [
+            46.530213,
+            10.457413
+          ],
+          "end_latlng": [
+            46.5295,
+            10.454484
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 1,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452808612792,
+        "resource_state": 2,
+        "name": "Passo dello Stelvio last km",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 303,
+        "moving_time": 303,
+        "start_date": "2025-11-04T19:07:28Z",
+        "start_date_local": "2025-11-04T20:07:28Z",
+        "distance": 1023.5,
+        "start_index": 6689,
+        "end_index": 7199,
+        "average_cadence": 75.7,
+        "device_watts": true,
+        "average_watts": 260.7,
+        "average_heartrate": 151.6,
+        "max_heartrate": 158.0,
+        "segment": {
+          "id": 19617774,
+          "resource_state": 2,
+          "name": "Passo dello Stelvio last km",
+          "activity_type": "VirtualRide",
+          "distance": 1023.5,
+          "average_grade": 6.6,
+          "maximum_grade": 10.1,
+          "elevation_high": 2757.8,
+          "elevation_low": 2690.6,
+          "start_latlng": [
+            46.530544,
+            10.456253
+          ],
+          "end_latlng": [
+            46.528823,
+            10.452709
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452810101688,
+        "resource_state": 2,
+        "name": "Stelvio Pass to Trafoi - Downhill sprint",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 698,
+        "moving_time": 698,
+        "start_date": "2025-11-04T19:12:31Z",
+        "start_date_local": "2025-11-04T20:12:31Z",
+        "distance": 14146.4,
+        "start_index": 7199,
+        "end_index": 8365,
+        "average_cadence": 91.3,
+        "device_watts": true,
+        "average_watts": 52.0,
+        "average_heartrate": 117.5,
+        "max_heartrate": 154.0,
+        "segment": {
+          "id": 14290019,
+          "resource_state": 2,
+          "name": "Stelvio Pass to Trafoi - Downhill sprint",
+          "activity_type": "VirtualRide",
+          "distance": 14146.4,
+          "average_grade": -7.9,
+          "maximum_grade": 1.8,
+          "elevation_high": 2751.6,
+          "elevation_low": 1638.5,
+          "start_latlng": [
+            46.5286,
+            10.453046
+          ],
+          "end_latlng": [
+            46.550078,
+            10.507404
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      },
+      {
+        "id": 3420907452808555448,
+        "resource_state": 2,
+        "name": "Pigeon Sprint",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 23,
+        "moving_time": 23,
+        "start_date": "2025-11-04T19:18:27Z",
+        "start_date_local": "2025-11-04T20:18:27Z",
+        "distance": 478.1,
+        "start_index": 7790,
+        "end_index": 7830,
+        "average_cadence": 89.5,
+        "device_watts": true,
+        "average_watts": 44.3,
+        "average_heartrate": 117.9,
+        "max_heartrate": 119.0,
+        "segment": {
+          "id": 23203545,
+          "resource_state": 2,
+          "name": "Pigeon Sprint",
+          "activity_type": "VirtualRide",
+          "distance": 478.1,
+          "average_grade": -8.4,
+          "maximum_grade": -7.7,
+          "elevation_high": 2171.2,
+          "elevation_low": 2131.0,
+          "start_latlng": [
+            46.532944,
+            10.483019
+          ],
+          "end_latlng": [
+            46.533073,
+            10.485232
+          ],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 0,
+          "city": null,
+          "state": "Trentino-Alto Adige",
+          "country": "Italy",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "followers_only",
+        "hidden": false
+      }
+    ],
+    "splits_metric": [
+      {
+        "distance": 1000.0,
+        "elapsed_time": 218,
+        "elevation_difference": 44.4,
+        "moving_time": 218,
+        "split": 1,
+        "average_speed": 4.59,
+        "average_grade_adjusted_speed": 5.47,
+        "average_heartrate": 109.41935483870968,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 325,
+        "elevation_difference": 82.1,
+        "moving_time": 325,
+        "split": 2,
+        "average_speed": 3.08,
+        "average_grade_adjusted_speed": 4.2,
+        "average_heartrate": 129.97826086956522,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1002.0,
+        "elapsed_time": 309,
+        "elevation_difference": 81.5,
+        "moving_time": 309,
+        "split": 3,
+        "average_speed": 3.24,
+        "average_grade_adjusted_speed": 4.43,
+        "average_heartrate": 144.38511326860842,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.0,
+        "elapsed_time": 311,
+        "elevation_difference": 83.8,
+        "moving_time": 311,
+        "split": 4,
+        "average_speed": 3.22,
+        "average_grade_adjusted_speed": 4.43,
+        "average_heartrate": 150.508038585209,
+        "pace_zone": 0
+      },
+      {
+        "distance": 997.0,
+        "elapsed_time": 317,
+        "elevation_difference": 87.5,
+        "moving_time": 317,
+        "split": 5,
+        "average_speed": 3.15,
+        "average_grade_adjusted_speed": 4.43,
+        "average_heartrate": 149.3564668769716,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1002.0,
+        "elapsed_time": 318,
+        "elevation_difference": 85.2,
+        "moving_time": 318,
+        "split": 6,
+        "average_speed": 3.15,
+        "average_grade_adjusted_speed": 4.39,
+        "average_heartrate": 146.25157232704402,
+        "pace_zone": 0
+      },
+      {
+        "distance": 998.0,
+        "elapsed_time": 315,
+        "elevation_difference": 85.2,
+        "moving_time": 315,
+        "split": 7,
+        "average_speed": 3.17,
+        "average_grade_adjusted_speed": 4.38,
+        "average_heartrate": 149.17777777777778,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.0,
+        "elapsed_time": 322,
+        "elevation_difference": 65.4,
+        "moving_time": 322,
+        "split": 8,
+        "average_speed": 3.11,
+        "average_grade_adjusted_speed": 4.16,
+        "average_heartrate": 148.84782608695653,
+        "pace_zone": 0
+      },
+      {
+        "distance": 999.0,
+        "elapsed_time": 306,
+        "elevation_difference": 82.4,
+        "moving_time": 306,
+        "split": 9,
+        "average_speed": 3.26,
+        "average_grade_adjusted_speed": 4.45,
+        "average_heartrate": 154.1437908496732,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.0,
+        "elapsed_time": 306,
+        "elevation_difference": 84.1,
+        "moving_time": 306,
+        "split": 10,
+        "average_speed": 3.27,
+        "average_grade_adjusted_speed": 4.5,
+        "average_heartrate": 154.87581699346404,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 294,
+        "elevation_difference": 75.6,
+        "moving_time": 294,
+        "split": 11,
+        "average_speed": 3.4,
+        "average_grade_adjusted_speed": 4.48,
+        "average_heartrate": 154.43537414965985,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.0,
+        "elapsed_time": 303,
+        "elevation_difference": 84.5,
+        "moving_time": 303,
+        "split": 12,
+        "average_speed": 3.3,
+        "average_grade_adjusted_speed": 4.59,
+        "average_heartrate": 150.92409240924093,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1002.0,
+        "elapsed_time": 305,
+        "elevation_difference": 74.2,
+        "moving_time": 305,
+        "split": 13,
+        "average_speed": 3.29,
+        "average_grade_adjusted_speed": 4.37,
+        "average_heartrate": 148.11147540983606,
+        "pace_zone": 0
+      },
+      {
+        "distance": 998.0,
+        "elapsed_time": 301,
+        "elevation_difference": 86.2,
+        "moving_time": 301,
+        "split": 14,
+        "average_speed": 3.32,
+        "average_grade_adjusted_speed": 4.66,
+        "average_heartrate": 151.68106312292358,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1012.0,
+        "elapsed_time": 110,
+        "elevation_difference": -54.0,
+        "moving_time": 110,
+        "split": 15,
+        "average_speed": 9.2,
+        "average_grade_adjusted_speed": 8.86,
+        "average_heartrate": 148.35454545454544,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1006.0,
+        "elapsed_time": 51,
+        "elevation_difference": -78.3,
+        "moving_time": 51,
+        "split": 16,
+        "average_speed": 19.73,
+        "average_grade_adjusted_speed": 17.54,
+        "average_heartrate": 125.11764705882354,
+        "pace_zone": 0
+      },
+      {
+        "distance": 990.0,
+        "elapsed_time": 50,
+        "elevation_difference": -79.0,
+        "moving_time": 50,
+        "split": 17,
+        "average_speed": 19.8,
+        "average_grade_adjusted_speed": 17.68,
+        "average_heartrate": 120.3,
+        "pace_zone": 0
+      },
+      {
+        "distance": 991.0,
+        "elapsed_time": 50,
+        "elevation_difference": -83.2,
+        "moving_time": 50,
+        "split": 18,
+        "average_speed": 19.82,
+        "average_grade_adjusted_speed": 17.62,
+        "average_heartrate": 114.82,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1019.0,
+        "elapsed_time": 51,
+        "elevation_difference": -86.6,
+        "moving_time": 51,
+        "split": 19,
+        "average_speed": 19.98,
+        "average_grade_adjusted_speed": 17.77,
+        "average_heartrate": 113.88235294117646,
+        "pace_zone": 0
+      },
+      {
+        "distance": 985.0,
+        "elapsed_time": 48,
+        "elevation_difference": -82.9,
+        "moving_time": 48,
+        "split": 20,
+        "average_speed": 20.52,
+        "average_grade_adjusted_speed": 18.16,
+        "average_heartrate": 117.625,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1007.0,
+        "elapsed_time": 49,
+        "elevation_difference": -81.3,
+        "moving_time": 49,
+        "split": 21,
+        "average_speed": 20.55,
+        "average_grade_adjusted_speed": 18.28,
+        "average_heartrate": 118.65306122448979,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1007.0,
+        "elapsed_time": 49,
+        "elevation_difference": -87.6,
+        "moving_time": 49,
+        "split": 22,
+        "average_speed": 20.55,
+        "average_grade_adjusted_speed": 18.53,
+        "average_heartrate": 116.10204081632654,
+        "pace_zone": 0
+      },
+      {
+        "distance": 987.0,
+        "elapsed_time": 48,
+        "elevation_difference": -85.9,
+        "moving_time": 48,
+        "split": 23,
+        "average_speed": 20.56,
+        "average_grade_adjusted_speed": 18.29,
+        "average_heartrate": 113.25,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1007.0,
+        "elapsed_time": 49,
+        "elevation_difference": -87.9,
+        "moving_time": 49,
+        "split": 24,
+        "average_speed": 20.55,
+        "average_grade_adjusted_speed": 18.3,
+        "average_heartrate": 110.73469387755102,
+        "pace_zone": 0
+      },
+      {
+        "distance": 988.0,
+        "elapsed_time": 48,
+        "elevation_difference": -85.5,
+        "moving_time": 48,
+        "split": 25,
+        "average_speed": 20.58,
+        "average_grade_adjusted_speed": 18.36,
+        "average_heartrate": 109.75,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1008.0,
+        "elapsed_time": 49,
+        "elevation_difference": -81.4,
+        "moving_time": 49,
+        "split": 26,
+        "average_speed": 20.57,
+        "average_grade_adjusted_speed": 18.29,
+        "average_heartrate": 111.73469387755102,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1007.0,
+        "elapsed_time": 49,
+        "elevation_difference": -85.0,
+        "moving_time": 49,
+        "split": 27,
+        "average_speed": 20.55,
+        "average_grade_adjusted_speed": 18.16,
+        "average_heartrate": 111.9795918367347,
+        "pace_zone": 0
+      },
+      {
+        "distance": 991.0,
+        "elapsed_time": 60,
+        "elevation_difference": -43.4,
+        "moving_time": 60,
+        "split": 28,
+        "average_speed": 16.52,
+        "average_grade_adjusted_speed": 15.48,
+        "average_heartrate": 114.96666666666667,
+        "pace_zone": 0
+      },
+      {
+        "distance": 22.0,
+        "elapsed_time": 6,
+        "elevation_difference": 0.0,
+        "moving_time": 6,
+        "split": 29,
+        "average_speed": 3.67,
+        "average_grade_adjusted_speed": 3.67,
+        "average_heartrate": 119.0,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1610.5,
+        "elapsed_time": 421,
+        "elevation_difference": 95.4,
+        "moving_time": 421,
+        "split": 1,
+        "average_speed": 3.83,
+        "average_grade_adjusted_speed": 4.83,
+        "average_heartrate": 117.77937649880096,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1610.5,
+        "elapsed_time": 499,
+        "elevation_difference": 127.6,
+        "moving_time": 499,
+        "split": 2,
+        "average_speed": 3.23,
+        "average_grade_adjusted_speed": 4.35,
+        "average_heartrate": 142.65531062124248,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1608.0,
+        "elapsed_time": 504,
+        "elevation_difference": 142.5,
+        "moving_time": 504,
+        "split": 3,
+        "average_speed": 3.19,
+        "average_grade_adjusted_speed": 4.51,
+        "average_heartrate": 150.13888888888889,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1612.0,
+        "elapsed_time": 513,
+        "elevation_difference": 136.7,
+        "moving_time": 513,
+        "split": 4,
+        "average_speed": 3.14,
+        "average_grade_adjusted_speed": 4.35,
+        "average_heartrate": 147.24366471734893,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1607.0,
+        "elapsed_time": 515,
+        "elevation_difference": 116.4,
+        "moving_time": 515,
+        "split": 5,
+        "average_speed": 3.12,
+        "average_grade_adjusted_speed": 4.22,
+        "average_heartrate": 149.18058252427184,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1611.0,
+        "elapsed_time": 489,
+        "elevation_difference": 134.8,
+        "moving_time": 489,
+        "split": 6,
+        "average_speed": 3.29,
+        "average_grade_adjusted_speed": 4.53,
+        "average_heartrate": 154.67075664621677,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1608.0,
+        "elapsed_time": 481,
+        "elevation_difference": 129.2,
+        "moving_time": 481,
+        "split": 7,
+        "average_speed": 3.34,
+        "average_grade_adjusted_speed": 4.51,
+        "average_heartrate": 153.63409563409564,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1609.0,
+        "elapsed_time": 490,
+        "elevation_difference": 123.2,
+        "moving_time": 490,
+        "split": 8,
+        "average_speed": 3.28,
+        "average_grade_adjusted_speed": 4.42,
+        "average_heartrate": 149.5,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1615.0,
+        "elapsed_time": 420,
+        "elevation_difference": 86.5,
+        "moving_time": 420,
+        "split": 9,
+        "average_speed": 3.85,
+        "average_grade_adjusted_speed": 4.96,
+        "average_heartrate": 151.54761904761904,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1607.0,
+        "elapsed_time": 83,
+        "elevation_difference": -126.4,
+        "moving_time": 83,
+        "split": 10,
+        "average_speed": 19.36,
+        "average_grade_adjusted_speed": 17.27,
+        "average_heartrate": 129.3012048192771,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1605.0,
+        "elapsed_time": 81,
+        "elevation_difference": -134.5,
+        "moving_time": 81,
+        "split": 11,
+        "average_speed": 19.81,
+        "average_grade_adjusted_speed": 17.65,
+        "average_heartrate": 118.55555555555556,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1623.0,
+        "elapsed_time": 81,
+        "elevation_difference": -131.8,
+        "moving_time": 81,
+        "split": 12,
+        "average_speed": 20.04,
+        "average_grade_adjusted_speed": 17.82,
+        "average_heartrate": 114.79012345679013,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1603.0,
+        "elapsed_time": 78,
+        "elevation_difference": -135.2,
+        "moving_time": 78,
+        "split": 13,
+        "average_speed": 20.55,
+        "average_grade_adjusted_speed": 18.23,
+        "average_heartrate": 117.48717948717949,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1603.0,
+        "elapsed_time": 78,
+        "elevation_difference": -140.3,
+        "moving_time": 78,
+        "split": 14,
+        "average_speed": 20.55,
+        "average_grade_adjusted_speed": 18.43,
+        "average_heartrate": 115.01282051282051,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1624.0,
+        "elapsed_time": 79,
+        "elevation_difference": -137.5,
+        "moving_time": 79,
+        "split": 15,
+        "average_speed": 20.56,
+        "average_grade_adjusted_speed": 18.32,
+        "average_heartrate": 111.69620253164557,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1605.0,
+        "elapsed_time": 78,
+        "elevation_difference": -138.9,
+        "moving_time": 78,
+        "split": 16,
+        "average_speed": 20.58,
+        "average_grade_adjusted_speed": 18.32,
+        "average_heartrate": 110.84615384615384,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1615.0,
+        "elapsed_time": 79,
+        "elevation_difference": -129.8,
+        "moving_time": 79,
+        "split": 17,
+        "average_speed": 20.44,
+        "average_grade_adjusted_speed": 18.14,
+        "average_heartrate": 112.07594936708861,
+        "pace_zone": 0
+      },
+      {
+        "distance": 652.0,
+        "elapsed_time": 48,
+        "elevation_difference": -17.8,
+        "moving_time": 48,
+        "split": 18,
+        "average_speed": 13.58,
+        "average_grade_adjusted_speed": 13.04,
+        "average_heartrate": 115.8409090909091,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 58296927285,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 16356955397,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 5013,
+        "moving_time": 5017,
+        "start_date": "2025-11-04T18:00:42Z",
+        "start_date_local": "2025-11-04T19:00:42Z",
+        "distance": 28028.0,
+        "average_speed": 5.59,
+        "max_speed": 20.6,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 8380,
+        "total_elevation_gain": 1123.1,
+        "average_cadence": 77.6,
+        "device_watts": true,
+        "average_watts": 229.7,
+        "average_heartrate": 142.5,
+        "max_heartrate": 159.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "5758a55ed629fb27c8bd3a1d2d096a402a695f3d",
+    "private_note": "",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

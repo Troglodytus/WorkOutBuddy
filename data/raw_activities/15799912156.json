@@ -1,0 +1,276 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Saturday Evening Walk",
+    "distance": 1230.6,
+    "moving_time": 1125,
+    "elapsed_time": 5881,
+    "total_elevation_gain": 343.9,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 15799912156,
+    "start_date": "2025-09-13T15:40:12Z",
+    "start_date_local": "2025-09-13T18:40:12Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 3,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a15799912156",
+      "summary_polyline": "{zafFkn{|BDIQVCTBJAA?FIQ]CGEq@J}@BO@IFO@Y?]CMBk@AO?CBAA@@A@[@@AAAE@EDEAODKJM@IFQD]TWTKN@B]^AFAAEDp@u@DMACAF?A@@?C?JEC@BOJQV[LAHGDK@GFK@CD@JQFBDA@?IFALMHG?B@EFGLAFOF?BEB?@CD?FKPOHMBGAAA??A@@@C?J?AAA?B@CBH@OBCv@a@JIXMrAQH@ZCABLIp@Dt@ELERAL@RCP?FCT?PDL?LIHMPIHU\\]b@oBJQBSCQGCCHECBDCG@D@CCB@ABBAAA??@@EC?",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.861743,
+      20.625827
+    ],
+    "end_latlng": [
+      37.86131,
+      20.62689
+    ],
+    "average_speed": 1.094,
+    "max_speed": 2.02,
+    "average_cadence": 33.7,
+    "has_heartrate": true,
+    "average_heartrate": 98.8,
+    "max_heartrate": 133.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 227.6,
+    "elev_low": -24.1,
+    "upload_id": 16876387941,
+    "upload_id_str": "16876387941",
+    "external_id": "Saturday Evening Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 1,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Saturday Evening Walk",
+    "distance": 1230.6,
+    "moving_time": 1125,
+    "elapsed_time": 5881,
+    "total_elevation_gain": 343.9,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 15799912156,
+    "start_date": "2025-09-13T15:40:12Z",
+    "start_date_local": "2025-09-13T18:40:12Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 3,
+    "comment_count": 0,
+    "athlete_count": 2,
+    "photo_count": 0,
+    "map": {
+      "id": "a15799912156",
+      "polyline": "{zafFkn{|BDIQVCTBJAA?FIQ]CGEq@J}@BO@IFO@Y?]CMBk@AO?CBAA@@A@[@@AAAE@EDEAODKJM@IFQD]TWTKN@B]^AF?AGDp@u@DMACAF?A@@?C?JEC@BOJQV[LAHGDK@GFK@CD@JQFBDA@?IFALMHG?B@EFGLAFOF?BEB?@CD?FKPOHMBGAAA??A@@@C?J?AAA?B@CBH@OBCv@a@JIXMrAQH@ZCABLIp@Dt@ELERAL@RCP?FCT?PDL?LIHMPIHU\\]b@oBJQBSCQGCCHECBDCG@D@CCB@ABBAAA??@@EC?",
+      "resource_state": 3,
+      "summary_polyline": "{zafFkn{|BDIQVCTBJAA?FIQ]CGEq@J}@BO@IFO@Y?]CMBk@AO?CBAA@@A@[@@AAAE@EDEAODKJM@IFQD]TWTKN@B]^AFAAEDp@u@DMACAF?A@@?C?JEC@BOJQV[LAHGDK@GFK@CD@JQFBDA@?IFALMHG?B@EFGLAFOF?BEB?@CD?FKPOHMBGAAA??A@@@C?J?AAA?B@CBH@OBCv@a@JIXMrAQH@ZCABLIp@Dt@ELERAL@RCP?FCT?PDL?LIHMPIHU\\]b@oBJQBSCQGCCHECBDCG@D@CCB@ABBAAA??@@EC?"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "followers_only",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.861743,
+      20.625827
+    ],
+    "end_latlng": [
+      37.86131,
+      20.62689
+    ],
+    "average_speed": 1.094,
+    "max_speed": 2.02,
+    "average_cadence": 33.7,
+    "has_heartrate": true,
+    "average_heartrate": 98.8,
+    "max_heartrate": 133.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 227.6,
+    "elev_low": -24.1,
+    "upload_id": 16876387941,
+    "upload_id_str": "16876387941",
+    "external_id": "Saturday Evening Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 1,
+    "has_kudoed": false,
+    "description": "",
+    "calories": 222.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 1000.8,
+        "elapsed_time": 5412,
+        "elevation_difference": -3.7,
+        "moving_time": 1906,
+        "split": 1,
+        "average_speed": 0.53,
+        "average_grade_adjusted_speed": 1.05,
+        "average_heartrate": 95.70683661645423,
+        "pace_zone": 0
+      },
+      {
+        "distance": 171.8,
+        "elapsed_time": 469,
+        "elevation_difference": 206.2,
+        "moving_time": 469,
+        "split": 2,
+        "average_speed": 0.37,
+        "average_grade_adjusted_speed": 0.79,
+        "average_heartrate": 113.96067415730337,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1172.6,
+        "elapsed_time": 5881,
+        "elevation_difference": 202.5,
+        "moving_time": 2375,
+        "split": 1,
+        "average_speed": 0.49,
+        "average_grade_adjusted_speed": 0.99,
+        "average_heartrate": 98.82804995196926,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56268445789,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15799912156,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 5410,
+        "moving_time": 2356,
+        "start_date": "2025-09-13T15:40:12Z",
+        "start_date_local": "2025-09-13T18:40:12Z",
+        "distance": 1000.0,
+        "average_speed": 0.42,
+        "max_speed": 2.02,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 1263,
+        "total_elevation_gain": 158.1,
+        "average_cadence": 31.5,
+        "device_watts": false,
+        "average_heartrate": 95.7,
+        "max_heartrate": 133.0
+      },
+      {
+        "id": 56268445805,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 15799912156,
+          "visibility": "followers_only",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 182,
+        "moving_time": 461,
+        "start_date": "2025-09-13T17:10:22Z",
+        "start_date_local": "2025-09-13T20:10:22Z",
+        "distance": 230.6,
+        "average_speed": 0.5,
+        "max_speed": 1.74,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 1264,
+        "end_index": 1724,
+        "total_elevation_gain": 185.8,
+        "average_cadence": 44.1,
+        "device_watts": false,
+        "average_heartrate": 113.7,
+        "max_heartrate": 130.0
+      }
+    ],
+    "photos": {
+      "primary": {
+        "unique_id": "74C9063D-5C97-4859-A3A8-7E45F45E7278",
+        "urls": {
+          "600": "https://dgtzuqphqg23d.cloudfront.net/wHNxqN6RuWMH7E-lPCrDrSU9B4vxMpDibcpkFSF4Tew-768x576.jpg",
+          "100": "https://dgtzuqphqg23d.cloudfront.net/wHNxqN6RuWMH7E-lPCrDrSU9B4vxMpDibcpkFSF4Tew-128x96.jpg"
+        },
+        "source": 1,
+        "media_type": 1
+      },
+      "use_primary_photo": true,
+      "count": 1
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "fa1e65f0bb065eba89ceae7fb30c2bf465548173",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

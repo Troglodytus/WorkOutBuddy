@@ -1,0 +1,250 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Wednesday Evening Strength Training",
+    "distance": 0.0,
+    "moving_time": 605,
+    "elapsed_time": 605,
+    "total_elevation_gain": 0,
+    "type": "WeightTraining",
+    "sport_type": "WeightTraining",
+    "workout_type": 30,
+    "device_name": "Apple Watch Series 10",
+    "id": 16770556945,
+    "start_date": "2025-12-17T19:49:38Z",
+    "start_date_local": "2025-12-17T20:49:38Z",
+    "timezone": "(GMT+01:00) Africa/Algiers",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16770556945",
+      "summary_polyline": "",
+      "resource_state": 2
+    },
+    "trainer": true,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 0.0,
+    "max_speed": 0.0,
+    "average_cadence": 113.0,
+    "has_heartrate": true,
+    "average_heartrate": 86.1,
+    "max_heartrate": 112.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 0.0,
+    "elev_low": 0.0,
+    "upload_id": 17861164441,
+    "upload_id_str": "17861164441",
+    "external_id": "Wednesday Evening Strength Training.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Wednesday Evening Strength Training",
+    "distance": 0.0,
+    "moving_time": 605,
+    "elapsed_time": 605,
+    "total_elevation_gain": 0,
+    "type": "WeightTraining",
+    "sport_type": "WeightTraining",
+    "workout_type": 30,
+    "device_name": "Apple Watch Series 10",
+    "id": 16770556945,
+    "start_date": "2025-12-17T19:49:38Z",
+    "start_date_local": "2025-12-17T20:49:38Z",
+    "timezone": "(GMT+01:00) Africa/Algiers",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16770556945",
+      "polyline": "",
+      "resource_state": 3,
+      "summary_polyline": ""
+    },
+    "trainer": true,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 0.0,
+    "max_speed": 0.0,
+    "average_cadence": 113.0,
+    "has_heartrate": true,
+    "average_heartrate": 86.1,
+    "max_heartrate": 112.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 0.0,
+    "elev_low": 0.0,
+    "upload_id": 17861164441,
+    "upload_id_str": "17861164441",
+    "external_id": "Wednesday Evening Strength Training.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 53.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "laps": [
+      {
+        "id": 59813083906,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 16770556945,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 300,
+        "moving_time": 300,
+        "start_date": "2025-12-17T19:49:38Z",
+        "start_date_local": "2025-12-17T20:49:38Z",
+        "distance": 0.0,
+        "average_speed": 0.0,
+        "max_speed": 0.0,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 193,
+        "total_elevation_gain": 0,
+        "average_cadence": 0.0,
+        "device_watts": false,
+        "average_heartrate": 85.2,
+        "max_heartrate": 112.0
+      },
+      {
+        "id": 59813083907,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 16770556945,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 300,
+        "moving_time": 300,
+        "start_date": "2025-12-17T19:54:40Z",
+        "start_date_local": "2025-12-17T20:54:40Z",
+        "distance": 0.0,
+        "average_speed": 0.0,
+        "max_speed": 0.0,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 194,
+        "end_index": 392,
+        "total_elevation_gain": 0,
+        "average_cadence": 113.0,
+        "device_watts": false,
+        "average_heartrate": 86.9,
+        "max_heartrate": 99.0
+      },
+      {
+        "id": 59813083908,
+        "resource_state": 2,
+        "name": "Lap 3",
+        "activity": {
+          "id": 16770556945,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 8,
+        "moving_time": 8,
+        "start_date": "2025-12-17T19:59:40Z",
+        "start_date_local": "2025-12-17T20:59:40Z",
+        "distance": 0.0,
+        "average_speed": 0.0,
+        "max_speed": 0.0,
+        "lap_index": 3,
+        "split": 3,
+        "start_index": 393,
+        "end_index": 395,
+        "total_elevation_gain": 0,
+        "average_cadence": 113.0,
+        "device_watts": false,
+        "average_heartrate": 90.0,
+        "max_heartrate": 90.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "1b0ca0cc21a736fe7338ffdc735c8ad8a537bf0a",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

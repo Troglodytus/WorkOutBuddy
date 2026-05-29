@@ -1,0 +1,224 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Monday Morning Outdoor Swim",
+    "distance": 42.6,
+    "moving_time": 84,
+    "elapsed_time": 1373,
+    "total_elevation_gain": 0.0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "id": 15816694702,
+    "start_date": "2025-09-15T07:20:46Z",
+    "start_date_local": "2025-09-15T10:20:46Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15816694702",
+      "summary_polyline": "yveeFiri~B@BACCHBKET?C?BFEAA?@@?GSBTBG@?EF?a@@DIRF@GAJx@CFD@?E@DC@CAF?@ME@?F",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.717734,
+      20.861972
+    ],
+    "end_latlng": [
+      37.717722,
+      20.861614
+    ],
+    "average_speed": 0.507,
+    "max_speed": 0.927,
+    "average_cadence": 30.7,
+    "has_heartrate": true,
+    "average_heartrate": 108.4,
+    "max_heartrate": 129.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 2.6,
+    "elev_low": 2.6,
+    "upload_id": 16894064622,
+    "upload_id_str": "16894064622",
+    "external_id": "Monday Morning Outdoor Swim.tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Monday Morning Outdoor Swim",
+    "distance": 42.6,
+    "moving_time": 84,
+    "elapsed_time": 1373,
+    "total_elevation_gain": 0.0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "id": 15816694702,
+    "start_date": "2025-09-15T07:20:46Z",
+    "start_date_local": "2025-09-15T10:20:46Z",
+    "timezone": "(GMT+02:00) Europe/Athens",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15816694702",
+      "polyline": "yveeFiri~B@BACCHBKET?C?BFEAA?@@?GSBTBG@?EF?a@@DIRF@GAJx@CFD@?E@DC@CAF?@ME@?F",
+      "resource_state": 3,
+      "summary_polyline": "yveeFiri~B@BACCHBKET?C?BFEAA?@@?GSBTBG@?EF?a@@DIRF@GAJx@CFD@?E@DC@CAF?@ME@?F"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      37.717734,
+      20.861972
+    ],
+    "end_latlng": [
+      37.717722,
+      20.861614
+    ],
+    "average_speed": 0.507,
+    "max_speed": 0.927,
+    "average_cadence": 30.7,
+    "has_heartrate": true,
+    "average_heartrate": 108.4,
+    "max_heartrate": 129.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 2.6,
+    "elev_low": 2.6,
+    "upload_id": 16894064622,
+    "upload_id_str": "16894064622",
+    "external_id": "Monday Morning Outdoor Swim.tcx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 120.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 42.6,
+        "elapsed_time": 1373,
+        "elevation_difference": 0.0,
+        "moving_time": 84,
+        "split": 1,
+        "average_speed": 0.51,
+        "average_grade_adjusted_speed": 0.51,
+        "average_heartrate": 108.42857142857143,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 42.6,
+        "elapsed_time": 1373,
+        "elevation_difference": 0.0,
+        "moving_time": 84,
+        "split": 1,
+        "average_speed": 0.51,
+        "average_grade_adjusted_speed": 0.51,
+        "average_heartrate": 108.42857142857143,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56333519207,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15816694702,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1394,
+        "moving_time": 84,
+        "start_date": "2025-09-15T07:20:46Z",
+        "start_date_local": "2025-09-15T10:20:46Z",
+        "distance": 43.0,
+        "average_speed": 0.51,
+        "max_speed": 0.927,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 148,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 30.7,
+        "device_watts": false,
+        "average_heartrate": 108.4,
+        "max_heartrate": 129.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "5f470e907123c3263debc333d9d20392c7107e69",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

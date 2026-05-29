@@ -1,0 +1,144 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Bike/Elliptical | Quick Start | iConsole+",
+    "distance": 400.0,
+    "moving_time": 75,
+    "elapsed_time": 75,
+    "total_elevation_gain": 0,
+    "type": "Ride",
+    "sport_type": "Ride",
+    "workout_type": null,
+    "id": 16750312072,
+    "start_date": "2025-12-15T17:16:17Z",
+    "start_date_local": "2025-12-15T18:16:17Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16750312072",
+      "summary_polyline": "",
+      "resource_state": 2
+    },
+    "trainer": true,
+    "commute": false,
+    "manual": true,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 5.333,
+    "max_speed": 0,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "upload_id": null,
+    "external_id": null,
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Bike/Elliptical | Quick Start | iConsole+",
+    "distance": 400.0,
+    "moving_time": 75,
+    "elapsed_time": 75,
+    "total_elevation_gain": 0,
+    "type": "Ride",
+    "sport_type": "Ride",
+    "workout_type": null,
+    "id": 16750312072,
+    "start_date": "2025-12-15T17:16:17Z",
+    "start_date_local": "2025-12-15T18:16:17Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 3600.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a16750312072",
+      "polyline": "",
+      "resource_state": 3,
+      "summary_polyline": ""
+    },
+    "trainer": true,
+    "commute": false,
+    "manual": true,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 5.333,
+    "max_speed": 0,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "upload_id": null,
+    "external_id": null,
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": "See all your iConsole+ workouts at https://web.iconsole.plus",
+    "calories": 0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "8c610aaadd4de95f9787b64e4d85d5bdb7a265c1",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

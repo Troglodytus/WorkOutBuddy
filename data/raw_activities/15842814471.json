@@ -1,0 +1,203 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Schwimmen am Nachmittag",
+    "distance": 68.0,
+    "moving_time": 351,
+    "elapsed_time": 351,
+    "total_elevation_gain": 0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "device_name": "Apple Watch SE",
+    "id": 15842814471,
+    "start_date": "2025-09-16T12:18:15Z",
+    "start_date_local": "2025-09-16T15:18:15Z",
+    "timezone": "(GMT+03:00) Africa/Addis_Ababa",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15842814471",
+      "summary_polyline": "",
+      "resource_state": 2
+    },
+    "trainer": true,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 0.194,
+    "max_speed": 2.267,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 0.0,
+    "elev_low": 0.0,
+    "upload_id": 16920940840,
+    "upload_id_str": "16920940840",
+    "external_id": "stripped_accepted_tag_from_16910560108.fit",
+    "from_accepted_tag": true,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Schwimmen am Nachmittag",
+    "distance": 68.0,
+    "moving_time": 351,
+    "elapsed_time": 351,
+    "total_elevation_gain": 0,
+    "type": "Swim",
+    "sport_type": "Swim",
+    "device_name": "Apple Watch SE",
+    "id": 15842814471,
+    "start_date": "2025-09-16T12:18:15Z",
+    "start_date_local": "2025-09-16T15:18:15Z",
+    "timezone": "(GMT+03:00) Africa/Addis_Ababa",
+    "utc_offset": 10800.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a15842814471",
+      "polyline": "",
+      "resource_state": 3,
+      "summary_polyline": ""
+    },
+    "trainer": true,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [],
+    "end_latlng": [],
+    "average_speed": 0.194,
+    "max_speed": 2.267,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 0.0,
+    "elev_low": 0.0,
+    "upload_id": 16920940840,
+    "upload_id_str": "16920940840",
+    "external_id": "stripped_accepted_tag_from_16910560108.fit",
+    "from_accepted_tag": true,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 68.0,
+        "elapsed_time": 352,
+        "elevation_difference": 0.0,
+        "moving_time": 352,
+        "split": 1,
+        "average_speed": 0.19,
+        "average_grade_adjusted_speed": 0.19,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 68.0,
+        "elapsed_time": 352,
+        "elevation_difference": 0.0,
+        "moving_time": 352,
+        "split": 1,
+        "average_speed": 0.19,
+        "average_grade_adjusted_speed": 0.19,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 56425003337,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 15842814471,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 145,
+        "moving_time": 145,
+        "start_date": "2025-09-16T12:18:15Z",
+        "start_date_local": "2025-09-16T15:18:15Z",
+        "distance": 68.02,
+        "average_speed": 0.47,
+        "max_speed": 2.26667,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 12,
+        "total_elevation_gain": 0,
+        "device_watts": false
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "be6e383226ba797ee2babde98579de73f6d264fe",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}
