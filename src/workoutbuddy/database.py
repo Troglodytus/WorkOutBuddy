@@ -14,7 +14,7 @@ import pandas as pd
 from .metrics import ActivityMetrics
 
 
-TEXT_COLUMNS = {"activity_id", "sport_type", "name", "start_date_local", "zones_json", "km_splits_json", "best_efforts_json", "flags_json", "weather_source", "weather_fetched_at"}
+TEXT_COLUMNS = {"activity_id", "sport_type", "name", "start_date_local", "zones_json", "km_splits_json", "best_efforts_json", "flags_json", "weather_source", "weather_fetched_at", "gender", "bmi_category"}
 INTEGER_COLUMNS = {"data_point_count", "gps_point_count", "has_gps", "has_altitude", "has_hr", "has_power"}
 
 
@@ -96,6 +96,26 @@ class WorkoutDatabase:
         if "apple_vo2max" not in existing:
             conn.execute("ALTER TABLE metrics ADD COLUMN apple_vo2max REAL")
 
+        # Manual per-activity/profile fields. They are intentionally outside
+        # ActivityMetrics because they must survive raw metric recalculation.
+        manual_columns = {
+            "body_weight_kg": "REAL",
+            "bmi": "REAL",
+            "bmi_category": "TEXT",
+            "age_years_at_activity": "REAL",
+            "gender": "TEXT",
+            "bike_inferred_power_w": "REAL",
+            "cycling_power_w": "REAL",
+            "run_equivalent_power_w": "REAL",
+            "bike_equivalent_power_w": "REAL",
+            "power_hr_efficiency": "REAL",
+            "power_hr_efficiency_drift_pct": "REAL",
+        }
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(metrics)").fetchall()}
+        for col, typ in manual_columns.items():
+            if col not in existing:
+                conn.execute(f"ALTER TABLE metrics ADD COLUMN {col} {typ}")
+
         # Weather archive fields are intentionally outside ActivityMetrics so older
         # metric recalculation code cannot accidentally erase them unless a new
         # archive lookup succeeds.
@@ -146,13 +166,28 @@ class WorkoutDatabase:
         m = metrics.to_db_dict()
         with self.connect() as conn:
             existing = conn.execute(
-                "SELECT apple_vo2max, source FROM metrics LEFT JOIN activities USING(activity_id) WHERE metrics.activity_id = ?",
+                """
+                SELECT apple_vo2max, body_weight_kg, bmi, bmi_category,
+                       age_years_at_activity, gender,
+                       bike_inferred_power_w, cycling_power_w, run_equivalent_power_w,
+                       bike_equivalent_power_w, power_hr_efficiency, power_hr_efficiency_drift_pct,
+                       source
+                FROM metrics LEFT JOIN activities USING(activity_id)
+                WHERE metrics.activity_id = ?
+                """,
                 (metrics.activity_id,),
             ).fetchone()
-            if existing is not None and existing["apple_vo2max"] is not None:
-                m["apple_vo2max"] = existing["apple_vo2max"]
-            else:
-                m["apple_vo2max"] = None
+            manual_preserve_cols = [
+                "apple_vo2max", "body_weight_kg", "bmi", "bmi_category",
+                "age_years_at_activity", "gender",
+                "bike_inferred_power_w", "cycling_power_w", "run_equivalent_power_w",
+                "bike_equivalent_power_w", "power_hr_efficiency", "power_hr_efficiency_drift_pct",
+            ]
+            for col in manual_preserve_cols:
+                if existing is not None and col in existing.keys() and existing[col] is not None:
+                    m[col] = existing[col]
+                else:
+                    m[col] = None
 
             # Prefer custom/richer TCX over Strava API if the same id is somehow reused.
             if existing is not None and str(existing["source"] or "").startswith("tcx") and source == "strava_api":
@@ -224,7 +259,7 @@ class WorkoutDatabase:
         for col in ["z1_s", "z2_s", "z3_s", "z4_s", "z5_s", "easy_zone_s", "hard_zone_s"]:
             if col in df:
                 df[col.replace("_s", "_min")] = df[col] / 60.0
-        return df
+        return self._augment_profile_power_metrics(df)
 
     def read_activity_row(self, activity_id: str) -> Optional[Dict[str, Any]]:
         with self.connect() as conn:
@@ -237,11 +272,54 @@ class WorkoutDatabase:
                 """,
                 (activity_id,),
             ).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        df = self._augment_profile_power_metrics(pd.DataFrame([dict(row)]))
+        return df.to_dict("records")[0] if not df.empty else dict(row)
 
     def set_activity_apple_vo2max(self, activity_id: str, value: Optional[float]) -> None:
         with self.connect() as conn:
             conn.execute("UPDATE metrics SET apple_vo2max = ? WHERE activity_id = ?", (value, activity_id))
+
+    def set_activity_body_weight(self, activity_id: str, weight_kg: Optional[float]) -> None:
+        """Store manually recorded body weight for one workout and calculate BMI.
+
+        BMI requires body height; this is taken from profile_height_cm. Age and
+        gender are stored alongside the row so historical exports are self-contained.
+        """
+        height_cm = self.get_float_setting("profile_height_cm", 178.0)
+        birthdate = self.get_setting("profile_birthdate", "1993-06-16") or "1993-06-16"
+        gender = self.get_setting("profile_gender", "Male") or "Male"
+        bmi = _calc_bmi(weight_kg, height_cm)
+        bmi_category = _bmi_category(bmi)
+        age_years = None
+        with self.connect() as conn:
+            row = conn.execute("SELECT start_date_local FROM metrics WHERE activity_id = ?", (activity_id,)).fetchone()
+            if row:
+                age_years = _age_years_at(birthdate, row["start_date_local"])
+            conn.execute(
+                """
+                UPDATE metrics
+                SET body_weight_kg = ?, bmi = ?, bmi_category = ?,
+                    age_years_at_activity = ?, gender = ?
+                WHERE activity_id = ?
+                """,
+                (weight_kg, bmi, bmi_category, age_years, gender, activity_id),
+            )
+
+    def get_profile(self) -> Dict[str, Any]:
+        birthdate = self.get_setting("profile_birthdate", "1993-06-16") or "1993-06-16"
+        gender = self.get_setting("profile_gender", "Male") or "Male"
+        height_cm = self.get_float_setting("profile_height_cm", 178.0)
+        weight_kg = self.get_float_setting("profile_current_weight_kg", 75.0)
+        return {
+            "birthdate": birthdate,
+            "gender": gender,
+            "height_cm": height_cm,
+            "current_weight_kg": weight_kg,
+            "age_years": _age_years_at(birthdate, datetime.now().isoformat()),
+            "bmi": _calc_bmi(weight_kg, height_cm),
+        }
 
     def read_recent_activities(self, limit: int = 30, before_iso: Optional[str] = None) -> List[Dict[str, Any]]:
         params: List[Any] = []
@@ -262,7 +340,11 @@ class WorkoutDatabase:
                 """,
                 tuple(params),
             ).fetchall()
-        return [dict(r) for r in rows]
+        records = [dict(r) for r in rows]
+        if not records:
+            return records
+        df = self._augment_profile_power_metrics(pd.DataFrame(records))
+        return df.to_dict("records")
 
     def read_all_activity_records_ordered(self) -> List[Dict[str, Any]]:
         with self.connect() as conn:
@@ -514,6 +596,79 @@ class WorkoutDatabase:
         df.to_excel(out_path, index=False)
         return out_path
 
+
+
+def _age_years_at(birthdate_iso: Optional[str], when_iso: Optional[str]) -> Optional[float]:
+    try:
+        if not birthdate_iso or not when_iso:
+            return None
+        b = date.fromisoformat(str(birthdate_iso)[:10])
+        w = datetime.fromisoformat(str(when_iso).replace("Z", "+00:00")).date()
+        years = w.year - b.year - ((w.month, w.day) < (b.month, b.day))
+        day_frac = ((w.month, w.day) >= (b.month, b.day))
+        return float(years)
+    except Exception:
+        return None
+
+
+def _calc_bmi(weight_kg: Optional[float], height_cm: Optional[float]) -> Optional[float]:
+    try:
+        w = float(weight_kg)
+        h = float(height_cm) / 100.0
+        if w <= 0 or h <= 0:
+            return None
+        return round(w / (h * h), 2)
+    except Exception:
+        return None
+
+
+def _bmi_category(bmi: Optional[float]) -> Optional[str]:
+    try:
+        x = float(bmi)
+    except Exception:
+        return None
+    if x < 18.5:
+        return "underweight"
+    if x < 25.0:
+        return "normal"
+    if x < 30.0:
+        return "overweight"
+    return "obesity"
+
+
+def _infer_bike_power_w(row: Dict[str, Any], default_weight_kg: float = 75.0) -> Optional[float]:
+    """Approximate outdoor cycling power from speed, elevation and mass.
+
+    Assumptions intentionally model a normal/older bike rather than a racing aero
+    setup: Crr=0.006, CdA=0.45, bike+gear=15 kg, drivetrain efficiency=0.97.
+    This is a rough estimate and should be treated as a trend feature, not a lab value.
+    """
+    try:
+        sport = _norm_sport(row.get("sport_type"))
+        if sport not in {"ride", "cycling", "bike", "gravelride", "mountainbikeride", "ebikeride"}:
+            return None
+        duration_s = _safe_float(row.get("moving_time_s")) or _safe_float(row.get("elapsed_time_s"))
+        dist_m = _safe_float(row.get("distance_m"))
+        if duration_s is None or duration_s <= 60 or dist_m is None or dist_m <= 500:
+            return None
+        v = dist_m / duration_s
+        if v <= 1.0:
+            return None
+        weight = _safe_float(row.get("body_weight_kg")) or _safe_float(row.get("body_weight_kg_effective")) or default_weight_kg
+        mass = float(weight) + 15.0
+        elev_gain = max(0.0, _safe_float(row.get("elevation_gain_m")) or 0.0)
+        g = 9.80665
+        rho = 1.225
+        crr = 0.006
+        cda = 0.45
+        eta = 0.97
+        p_roll = crr * mass * g * v
+        p_aero = 0.5 * rho * cda * (v ** 3)
+        p_climb = mass * g * elev_gain / duration_s
+        p_total = (p_roll + p_aero + p_climb) / eta
+        return round(max(0.0, min(600.0, p_total)), 1)
+    except Exception:
+        return None
 
 
 def _dt_variants(value: Optional[str]) -> List[datetime]:

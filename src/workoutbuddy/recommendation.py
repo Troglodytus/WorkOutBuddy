@@ -56,6 +56,12 @@ class TrainingContext:
     target_datetime: datetime
     considered_count: int
     profile_vo2max: float
+    profile_birthdate: str
+    profile_gender: str
+    profile_age_years: Optional[float]
+    profile_weight_kg: Optional[float]
+    profile_height_cm: Optional[float]
+    profile_bmi: Optional[float]
 
     last_activity: Optional[Dict[str, Any]]
     last_activity_hours_since_start: Optional[float]
@@ -110,10 +116,23 @@ class RecommendationEngine:
     rule sets: safety, balanced, and progression.
     """
 
-    def __init__(self, profile_vo2max: Optional[float] = None):
+    def __init__(
+        self,
+        profile_vo2max: Optional[float] = None,
+        birthdate: str = "1993-06-16",
+        gender: str = "Male",
+        weight_kg: Optional[float] = None,
+        height_cm: Optional[float] = None,
+    ):
         if profile_vo2max is None:
             profile_vo2max = _env_float("WORKOUTBUDDY_VO2MAX", 41.0)
         self.profile_vo2max = float(profile_vo2max)
+        self.birthdate = str(birthdate or "1993-06-16")
+        self.gender = str(gender or "Male")
+        self.weight_kg = _safe_float(weight_kg)
+        self.height_cm = _safe_float(height_cm)
+        self.bmi = _calc_bmi(self.weight_kg, self.height_cm)
+        self.age_years = _age_years_at(self.birthdate, datetime.now().isoformat())
 
     def recommend(
         self,
@@ -220,6 +239,12 @@ class RecommendationEngine:
             target_datetime=target_datetime,
             considered_count=len(activities),
             profile_vo2max=self.profile_vo2max,
+            profile_birthdate=self.birthdate,
+            profile_gender=self.gender,
+            profile_age_years=self.age_years,
+            profile_weight_kg=self.weight_kg,
+            profile_height_cm=self.height_cm,
+            profile_bmi=self.bmi,
             last_activity=last_activity,
             last_activity_hours_since_start=last_activity_hours_start,
             last_activity_hours_since_end=last_activity_hours_end,
@@ -320,6 +345,20 @@ class RecommendationEngine:
             elif dev >= 6.0:
                 score -= 1
                 reasons.append(f"Last workout temperature was {c.last_activity_temp_c:.1f} °C; small weather adjustment applied.")
+
+        if c.profile_bmi is not None:
+            if c.profile_bmi >= 30.0:
+                score -= 6
+                reasons.append(f"Current BMI estimate is {c.profile_bmi:.1f}; impact-heavy run intensity should be progressed carefully.")
+            elif c.profile_bmi >= 25.0:
+                score -= 2
+                reasons.append(f"Current BMI estimate is {c.profile_bmi:.1f}; keeping most sessions easy helps joint/load tolerance.")
+            elif 18.5 <= c.profile_bmi < 25.0:
+                reasons.append(f"Current BMI estimate is {c.profile_bmi:.1f}, in the normal range; no BMI load penalty applied.")
+
+        last_power_eff = _power_hr_efficiency(c.last_activity) if c.last_activity else None
+        if last_power_eff is not None and _is_ride(c.last_activity.get("sport_type")):
+            reasons.append(f"Last ride power/HR efficiency was {last_power_eff:.2f} run-equivalent W per bpm; cycling power is considered in load interpretation.")
 
         drift = c.last_run_hr_efficiency_drift_pct
         # Drift is noisy, especially on hills/heat/pauses. It should guide intensity, not automatically prescribe rest.
@@ -583,7 +622,17 @@ class RecommendationEngine:
         reasons.append(f"Last 7 days: {c.activities_7d} activities, load {c.load_7d:.0f}, run {c.run_km_7d:.1f} km, hard-zone time {c.hard_minutes_7d:.0f} min.")
         if c.recent_easy_gap_pace_min_km:
             reasons.append(f"Recent easy GAP pace estimate: {_pace_text(c.recent_easy_gap_pace_min_km)} min/km.")
-        reasons.append(f"Configured VO2max estimate: {c.profile_vo2max:.1f} ml/kg/min; used only as fallback when recent pace data are insufficient.")
+        profile_bits = []
+        if c.profile_age_years is not None:
+            profile_bits.append(f"age {c.profile_age_years:.0f}")
+        if c.profile_gender:
+            profile_bits.append(str(c.profile_gender))
+        if c.profile_weight_kg is not None:
+            profile_bits.append(f"{c.profile_weight_kg:.1f} kg")
+        if c.profile_bmi is not None:
+            profile_bits.append(f"BMI {c.profile_bmi:.1f}")
+        profile_suffix = "; " + ", ".join(profile_bits) if profile_bits else ""
+        reasons.append(f"Configured VO2max estimate: {c.profile_vo2max:.1f} ml/kg/min{profile_suffix}; used as profile context and fallback when recent workout data are insufficient.")
         return reasons
 
     def _llm_ready_summary(
@@ -596,7 +645,7 @@ class RecommendationEngine:
     ) -> Dict[str, Any]:
         return {
             "instruction": "Explain the recommendation, do not change it unless there is an obvious contradiction. Keep safety caveats concise.",
-            "profile": {"vo2max_estimate": c.profile_vo2max, "hr_zones_bpm": {"z1": "<134", "z2": "134-145", "z3": "146-155", "z4": "156-166", "z5": ">=167"}},
+            "profile": {"vo2max_estimate": c.profile_vo2max, "birthdate": c.profile_birthdate, "gender": c.profile_gender, "age_years": c.profile_age_years, "weight_kg": c.profile_weight_kg, "height_cm": c.profile_height_cm, "bmi": c.profile_bmi, "hr_zones_bpm": {"z1": "<134", "z2": "134-145", "z3": "146-155", "z4": "156-166", "z5": ">=167"}},
             "context": _context_to_dict(c),
             "selected": {"sport_type": selected_type, "workout_family": workout_family, "recovery_score": recovery_score, "workout": workout},
         }
@@ -906,6 +955,86 @@ def _zone_total_s(a: Dict[str, Any]) -> float:
 
 
 
+def _age_years_at(birthdate_iso: Optional[str], when_iso: Optional[str]) -> Optional[float]:
+    try:
+        if not birthdate_iso or not when_iso:
+            return None
+        b = datetime.fromisoformat(str(birthdate_iso)[:10]).date()
+        w = datetime.fromisoformat(str(when_iso).replace("Z", "+00:00")).date()
+        return float(w.year - b.year - ((w.month, w.day) < (b.month, b.day)))
+    except Exception:
+        return None
+
+
+def _calc_bmi(weight_kg: Optional[float], height_cm: Optional[float]) -> Optional[float]:
+    try:
+        w = float(weight_kg)
+        h = float(height_cm) / 100.0
+        if w <= 0 or h <= 0:
+            return None
+        return w / (h * h)
+    except Exception:
+        return None
+
+
+def _power_based_load(a: Optional[Dict[str, Any]], duration_min: float) -> float:
+    if not a or duration_min <= 0:
+        return 0.0
+    p = _bike_equivalent_power_w(a) if _is_ride(a.get("sport_type")) else _safe_float(a.get("avg_power"))
+    if p is None or p <= 0:
+        return 0.0
+    # Conservative pseudo-zone load from cycling-equivalent watts. For ergometer
+    # work, 210 W is treated as comparable to roughly 175 W running power.
+    if p < 130:
+        mult = 1.0
+    elif p < 170:
+        mult = 1.8
+    elif p < 210:
+        mult = 2.6
+    elif p < 250:
+        mult = 3.6
+    elif p < 300:
+        mult = 4.8
+    else:
+        mult = 6.0
+    return duration_min * mult
+
+
+def _bike_equivalent_power_w(a: Optional[Dict[str, Any]]) -> Optional[float]:
+    if not a:
+        return None
+    for key in ("bike_equivalent_power_w", "cycling_power_w", "avg_power", "normalized_power", "bike_inferred_power_w"):
+        val = _safe_float(a.get(key))
+        if val is not None and val > 0:
+            return val
+    return None
+
+
+def _run_equivalent_power_w(a: Optional[Dict[str, Any]]) -> Optional[float]:
+    if not a:
+        return None
+    val = _safe_float(a.get("run_equivalent_power_w"))
+    if val is not None and val > 0:
+        return val
+    bike = _bike_equivalent_power_w(a)
+    if bike is not None and _is_ride(a.get("sport_type")):
+        return bike * (175.0 / 210.0)
+    return _safe_float(a.get("avg_power"))
+
+
+def _power_hr_efficiency(a: Optional[Dict[str, Any]]) -> Optional[float]:
+    if not a:
+        return None
+    existing = _safe_float(a.get("power_hr_efficiency"))
+    if existing is not None:
+        return existing
+    p = _run_equivalent_power_w(a)
+    hr = _safe_float(a.get("avg_hr"))
+    if p is None or hr is None or hr <= 0:
+        return None
+    return p / hr
+
+
 def _activity_temp_c(a: Optional[Dict[str, Any]]) -> Optional[float]:
     if not a:
         return None
@@ -924,8 +1053,9 @@ def _training_load(a: Optional[Dict[str, Any]]) -> float:
 
     dur = _duration_min(a)
     avg_hr = _safe_float(a.get("avg_hr"))
+    p_load = _power_based_load(a, dur)
     if avg_hr is None:
-        return dur * 1.5
+        return max(dur * 1.5, p_load or 0.0)
     if avg_hr < HR_Z1_MAX:
         mult = 1.0
     elif avg_hr < HR_Z2_MAX:
@@ -936,7 +1066,8 @@ def _training_load(a: Optional[Dict[str, Any]]) -> float:
         mult = 4.5
     else:
         mult = 6.0
-    return dur * mult
+    hr_load = dur * mult
+    return max(hr_load, p_load or 0.0)
 
 
 def _hard_minutes(a: Dict[str, Any]) -> float:
@@ -1043,6 +1174,12 @@ def _context_to_dict(c: TrainingContext) -> Dict[str, Any]:
     return {
         "considered_count": c.considered_count,
         "profile_vo2max": c.profile_vo2max,
+        "profile_birthdate": c.profile_birthdate,
+        "profile_gender": c.profile_gender,
+        "profile_age_years": c.profile_age_years,
+        "profile_weight_kg": c.profile_weight_kg,
+        "profile_height_cm": c.profile_height_cm,
+        "profile_bmi": c.profile_bmi,
         "last_activity_name": c.last_activity.get("name") if c.last_activity else None,
         "last_activity_type": c.last_activity.get("sport_type") if c.last_activity else None,
         "last_activity_hours_since_start": c.last_activity_hours_since_start,

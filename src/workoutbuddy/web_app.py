@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import folium
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polyline
@@ -148,6 +149,72 @@ def _safe_filename(name: str) -> str:
 # ----------------------------- web application -----------------------------
 
 
+def _fit_trend_for_plot(x_values: pd.Series, y_values: pd.Series, mode: str):
+    """Return x, yfit, label, best_r2, linearity for trend overlays."""
+    try:
+        x = pd.Series(x_values).reset_index(drop=True)
+        y = pd.to_numeric(pd.Series(y_values).reset_index(drop=True), errors="coerce")
+        mask = y.notna()
+        x = x[mask]
+        y = y[mask].astype(float)
+        if len(y) < 3 or y.nunique() <= 1:
+            return None
+        if pd.api.types.is_datetime64_any_dtype(x):
+            x_num = x.astype("int64") / 1e9 / 86400.0
+        else:
+            x_num = pd.to_numeric(x, errors="coerce")
+        x_num = pd.Series(x_num).astype(float)
+        mask = x_num.notna() & np.isfinite(x_num) & np.isfinite(y)
+        x = x[mask]
+        y = y[mask]
+        x_num = x_num[mask]
+        if len(y) < 3 or x_num.nunique() <= 1:
+            return None
+        x0 = x_num - x_num.min()
+        if x0.max() > 0:
+            xs = x0 / x0.max()
+        else:
+            xs = x0
+
+        def r2_score(obs, pred):
+            obs = np.asarray(obs, dtype=float)
+            pred = np.asarray(pred, dtype=float)
+            ss_res = float(np.sum((obs - pred) ** 2))
+            ss_tot = float(np.sum((obs - np.mean(obs)) ** 2))
+            return 0.0 if ss_tot <= 0 else max(0.0, min(1.0, 1.0 - ss_res / ss_tot))
+
+        fits = []
+        # linear
+        coef = np.polyfit(xs, y, 1)
+        y_lin = np.polyval(coef, xs)
+        r2_lin = r2_score(y, y_lin)
+        fits.append(("linear", y_lin, r2_lin))
+        # exponential y=a*exp(b*x), only if positive y
+        if (y > 0).all():
+            coef_exp = np.polyfit(xs, np.log(y), 1)
+            y_exp = np.exp(np.polyval(coef_exp, xs))
+            fits.append(("exponential", y_exp, r2_score(y, y_exp)))
+        # auto-parametric: quadratic polynomial as simple parametric non-linear model
+        if len(y) >= 4:
+            coef_quad = np.polyfit(xs, y, 2)
+            y_quad = np.polyval(coef_quad, xs)
+            fits.append(("quadratic", y_quad, r2_score(y, y_quad)))
+        if mode == "linear":
+            label, yfit, r2 = fits[0]
+        elif mode == "exponential":
+            exp = [f for f in fits if f[0] == "exponential"]
+            if not exp:
+                return None
+            label, yfit, r2 = exp[0]
+        else:
+            label, yfit, r2 = sorted(fits, key=lambda f: f[2], reverse=True)[0]
+        linearity = r2_lin / r2 if r2 > 1e-9 else 0.0
+        order = np.argsort(x_num.to_numpy())
+        return x.iloc[order], pd.Series(yfit).iloc[order], label, float(r2), float(max(0.0, min(1.0, linearity)))
+    except Exception:
+        return None
+
+
 class WorkOutBuddyWeb:
     def __init__(self, config: AppConfig):
         self.config = config
@@ -170,6 +237,7 @@ class WorkOutBuddyWeb:
         self.map_status = None
         self.selected_activity_id: Optional[str] = None
         self.selected_apple_vo2_input = None
+        self.selected_body_weight_input = None
         self.sport_select = None
         self.recommendation_markdown = None
         self.projected_labels: Dict[str, Any] = {}
@@ -197,6 +265,10 @@ class WorkOutBuddyWeb:
         self.target_time = None
         self.desired_type = None
         self.vo2_input = None
+        self.profile_birthdate_input = None
+        self.profile_gender_select = None
+        self.profile_height_input = None
+        self.profile_weight_input = None
         self.aggression_select = None
         self.server_folder_input = None
 
@@ -207,6 +279,9 @@ class WorkOutBuddyWeb:
         self.stats_x_axis = None
         self.stats_y_axes = None
         self.stats_plot_kind = None
+        self.stats_color_by = None
+        self.stats_aggregate = None
+        self.stats_trend = None
         self.stats_plot = None
         self.stats_table = None
 
@@ -315,9 +390,11 @@ class WorkOutBuddyWeb:
                 with ui.card().classes("w-full"):
                     ui.label("Selected activity manual values").classes("font-semibold")
                     with ui.row().classes("w-full items-end"):
-                        self.selected_apple_vo2_input = ui.number("Apple VO₂max for selected workout", min=20, max=80, step=0.1).classes("w-64")
-                        ui.button("Save Apple VO₂max", on_click=self.save_selected_activity_apple_vo2).props("color=secondary")
-                        ui.button("Clear", on_click=self.clear_selected_activity_apple_vo2)
+                        self.selected_apple_vo2_input = ui.number("Apple VO₂max", min=20, max=80, step=0.1).classes("w-40")
+                        self.selected_body_weight_input = ui.number("Weight kg", min=35, max=160, step=0.1).classes("w-32")
+                        ui.button("Save VO₂/weight", on_click=self.save_selected_activity_manual_values).props("color=secondary")
+                        ui.button("Clear VO₂", on_click=self.clear_selected_activity_apple_vo2)
+                        ui.button("Clear weight", on_click=self.clear_selected_activity_body_weight)
 
                 ui.label("Selected activity").classes("text-lg font-semibold")
                 self.detail_markdown = ui.markdown("Select an activity row.").classes("w-full mono text-sm")
@@ -340,6 +417,9 @@ class WorkOutBuddyWeb:
             {"headerName": "GAP drift %", "field": "gap_hr_efficiency_drift_pct", "filter": num, "width": 115},
             {"headerName": "km GAP drift %", "field": "km_gap_hr_efficiency_drift_pct", "filter": num, "width": 130},
             {"headerName": "Apple VO2", "field": "apple_vo2max", "editable": True, "filter": num, "width": 110},
+            {"headerName": "Weight kg", "field": "body_weight_kg", "editable": True, "filter": num, "width": 110},
+            {"headerName": "BMI", "field": "bmi", "filter": num, "width": 80},
+            {"headerName": "Age", "field": "age_years_at_activity", "filter": num, "width": 80},
             {"headerName": "Weather °C", "field": "weather_temp_c", "filter": num, "width": 115},
             {"headerName": "Weather |°C-15|", "field": "weather_temp_deviation_from_15_c", "filter": num, "width": 135},
             {"headerName": "VO2 demand", "field": "vo2_demand_est_ml_kg_min", "filter": num, "width": 120},
@@ -356,6 +436,10 @@ class WorkOutBuddyWeb:
             {"headerName": "impact max", "field": "max_impact_bw", "filter": num, "width": 105},
             {"headerName": "impact load", "field": "impact_load_index", "filter": num, "width": 110},
             {"headerName": "NP/xPower", "field": "normalized_power", "filter": num, "width": 105},
+            {"headerName": "Bike W est", "field": "bike_inferred_power_w", "filter": num, "width": 110},
+            {"headerName": "Cycling W", "field": "cycling_power_w", "filter": num, "width": 105},
+            {"headerName": "Run-eq W", "field": "run_equivalent_power_w", "filter": num, "width": 105},
+            {"headerName": "W/HR", "field": "power_hr_efficiency", "filter": num, "width": 90},
             {"headerName": "VI", "field": "variability_index", "filter": num, "width": 80},
             {"headerName": "best 5m pace", "field": "best_5min_pace_min_km", "filter": num, "width": 120},
             {"headerName": "best 20m pace", "field": "best_20min_pace_min_km", "filter": num, "width": 125},
@@ -401,14 +485,21 @@ class WorkOutBuddyWeb:
         with ui.row().classes("w-full gap-4"):
             with ui.card().classes("w-full lg:w-1/3"):
                 ui.label("Profile and goals").classes("text-lg font-semibold")
+                profile = self.db.get_profile()
                 self.vo2_input = ui.number("Current Apple Watch VO₂max", value=self.db.get_float_setting("profile_vo2max", 41.0), min=20, max=80, step=0.1).classes("w-full")
+                with ui.row().classes("w-full items-end"):
+                    self.profile_birthdate_input = ui.input("Birthday", value=str(profile.get("birthdate") or "1993-06-16")).classes("w-36")
+                    self.profile_gender_select = ui.select(["Male", "Female", "Other"], value=str(profile.get("gender") or "Male"), label="Gender").classes("w-32")
+                with ui.row().classes("w-full items-end"):
+                    self.profile_height_input = ui.number("Height cm", value=_safe_float(profile.get("height_cm"), 178.0), min=120, max=230, step=0.5).classes("w-32")
+                    self.profile_weight_input = ui.number("Current weight kg", value=_safe_float(profile.get("current_weight_kg"), 75.0), min=35, max=160, step=0.1).classes("w-40")
                 current_agg = self.db.get_int_setting("training_aggressiveness", 3)
                 self.aggression_select = ui.select(
                     options={str(k): v for k, v in AGGRESSION_LABELS.items()},
                     value=str(current_agg if current_agg in AGGRESSION_LABELS else 3),
                     label="Progression speed",
                 ).classes("w-full")
-                ui.button("Save VO₂max / goals / progression", on_click=self.save_profile_and_goals)
+                ui.button("Save profile / goals / progression", on_click=self.save_profile_and_goals)
 
                 ui.separator()
                 ui.label("Goals").classes("font-semibold")
@@ -451,8 +542,12 @@ class WorkOutBuddyWeb:
                 self.stats_end_date = ui.input("end date", value=now.isoformat()).classes("w-36")
                 metric_options = self._stats_metric_options()
                 self.stats_x_axis = ui.select(options=metric_options, value="start_date_local", label="X axis").classes("w-56")
-                self.stats_y_axes = ui.select(options=metric_options, value=["avg_hr", "avg_gap_pace_min_km", "gap_hr_efficiency_drift_pct", "apple_vo2max"], multiple=True, label="Y metric(s)").classes("w-96")
+                self.stats_y_axes = ui.select(options=metric_options, value=["distance_km"], multiple=True, label="Y metric(s)").classes("w-96")
                 self.stats_plot_kind = ui.select(options=["line", "scatter", "bar"], value="line", label="plot").classes("w-32")
+                color_options = ["None"] + metric_options
+                self.stats_color_by = ui.select(options=color_options, value="sport_type" if "sport_type" in metric_options else "None", label="color/group").classes("w-44")
+                self.stats_aggregate = ui.select(options=["none", "mean", "median", "sum", "min", "max", "count"], value="none", label="aggregate").classes("w-32")
+                self.stats_trend = ui.select(options=["none", "linear", "exponential", "auto-parametric"], value="none", label="trend").classes("w-44")
                 ui.button("Update graph", on_click=self.refresh_statistics_plot).props("color=primary")
             self.stats_plot = ui.plotly(go.Figure()).classes("w-full h-[560px]")
         with ui.expansion("Statistics data table", icon="table_chart").classes("w-full"):
@@ -467,7 +562,8 @@ class WorkOutBuddyWeb:
         preferred = [
             "start_date_local", "distance_km", "moving_time_min", "avg_pace_min_km", "avg_gap_pace_min_km",
             "avg_hr", "max_hr", "hr_efficiency_drift_pct", "gap_hr_efficiency_drift_pct", "km_gap_hr_efficiency_drift_pct",
-            "apple_vo2max", "vo2_demand_est_ml_kg_min", "training_load_score", "trimp_score",
+            "apple_vo2max", "body_weight_kg", "bmi", "age_years_at_activity", "vo2_demand_est_ml_kg_min", "training_load_score", "trimp_score",
+            "weather_temp_c", "weather_temp_deviation_from_15_c", "cycling_power_w", "run_equivalent_power_w", "bike_inferred_power_w", "power_hr_efficiency",
             "easy_zone_fraction", "hard_zone_fraction", "run_step_frequency_spm", "estimated_total_steps",
             "avg_impact_bw", "max_impact_bw", "impact_load_index", "normalized_power", "variability_index",
             "best_5min_pace_min_km", "best_20min_pace_min_km", "best_5min_power", "elevation_gain_m",
@@ -482,10 +578,6 @@ class WorkOutBuddyWeb:
                 ui.notify("No activities available for statistics.", type="warning")
                 return
             df = df.copy()
-            # Normalize all activity datetimes to timezone-naive UTC-like pandas
-            # timestamps. The DB may contain ISO strings with +00:00/Z from TCX
-            # and naive strings from other imports; comparing mixed aware/naive
-            # datetimes causes "Invalid comparison between dtype=datetime64[...]".
             df["start_date_local_dt"] = pd.to_datetime(df["start_date_local"], errors="coerce", utc=True).dt.tz_convert(None)
             if self.stats_type_select is not None and self.stats_type_select.value:
                 wanted = set(str(x) for x in self.stats_type_select.value)
@@ -500,6 +592,7 @@ class WorkOutBuddyWeb:
                 if pd.notna(end):
                     end = pd.Timestamp(end).tz_localize(None)
                     df = df[df["start_date_local_dt"] <= end + pd.Timedelta(days=1)]
+
             x = str(self.stats_x_axis.value or "start_date_local")
             y_vals = self.stats_y_axes.value or []
             if isinstance(y_vals, str):
@@ -508,25 +601,82 @@ class WorkOutBuddyWeb:
             if not y_vals:
                 ui.notify("Select at least one Y metric.", type="warning")
                 return
-            plot_df = df.copy()
             x_plot = "start_date_local_dt" if x == "start_date_local" else x
-            kind = str(self.stats_plot_kind.value or "line")
-            if x_plot not in plot_df.columns:
+            if x_plot not in df.columns:
                 ui.notify(f"X axis not available: {x}", type="warning")
                 return
-            if kind == "scatter":
-                fig = px.scatter(plot_df, x=x_plot, y=y_vals, color="sport_type" if "sport_type" in plot_df.columns else None, hover_data=["name", "distance_km", "moving_time_min"])
-            elif kind == "bar":
-                fig = px.bar(plot_df, x=x_plot, y=y_vals, color="sport_type" if "sport_type" in plot_df.columns else None, hover_data=["name"])
-            else:
-                fig = px.line(plot_df.sort_values(x_plot), x=x_plot, y=y_vals, color="sport_type" if len(y_vals) == 1 and "sport_type" in plot_df.columns else None, markers=True, hover_data=["name", "distance_km", "moving_time_min"])
-            fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), legend_title_text="metric / type")
+
+            kind = str(self.stats_plot_kind.value or "line")
+            color_by = str(self.stats_color_by.value or "None") if self.stats_color_by is not None else "None"
+            if color_by == "None" or color_by not in df.columns:
+                color_by = None
+            agg = str(self.stats_aggregate.value or "none") if self.stats_aggregate is not None else "none"
+            trend = str(self.stats_trend.value or "none") if self.stats_trend is not None else "none"
+
+            plot_df = df.copy()
+            # Coerce selected Y metrics to numeric; silently dropping nonnumeric rows
+            # is much better than a hard plot failure for mixed DB columns.
+            for y in y_vals:
+                plot_df[y] = pd.to_numeric(plot_df[y], errors="coerce")
+            plot_df = plot_df.dropna(subset=[x_plot])
+
+            if agg != "none":
+                group_cols = [x_plot] + ([color_by] if color_by else [])
+                if pd.api.types.is_datetime64_any_dtype(plot_df[x_plot]):
+                    plot_df = plot_df.copy()
+                    plot_df[x_plot] = plot_df[x_plot].dt.floor("D")
+                agg_map = {"mean": "mean", "median": "median", "sum": "sum", "min": "min", "max": "max", "count": "count"}[agg]
+                plot_df = plot_df.groupby(group_cols, dropna=False)[y_vals].agg(agg_map).reset_index()
+
+            fig = go.Figure()
+            annotations = []
+            marker_symbols = ["circle", "square", "diamond", "cross", "x", "triangle-up", "triangle-down"]
+            group_values = [None]
+            if color_by:
+                group_values = list(plot_df[color_by].dropna().astype(str).unique()) or [None]
+
+            for yi, y in enumerate(y_vals):
+                for gi, group in enumerate(group_values):
+                    sub = plot_df
+                    name = y
+                    if color_by and group is not None:
+                        sub = plot_df[plot_df[color_by].astype(str) == str(group)]
+                        name = f"{y} · {group}"
+                    sub = sub[[x_plot, y] + ([color_by] if color_by else [])].dropna(subset=[x_plot, y]).copy()
+                    if sub.empty:
+                        continue
+                    sub = sub.sort_values(x_plot)
+                    symbol = marker_symbols[(yi + gi) % len(marker_symbols)]
+                    if kind == "bar":
+                        fig.add_trace(go.Bar(x=sub[x_plot], y=sub[y], name=name))
+                    else:
+                        mode = "markers" if kind == "scatter" else "lines+markers"
+                        fig.add_trace(go.Scatter(x=sub[x_plot], y=sub[y], mode=mode, name=name, marker={"symbol": symbol}))
+
+                    if trend != "none" and len(sub) >= 3:
+                        fit = _fit_trend_for_plot(sub[x_plot], sub[y], trend)
+                        if fit is not None:
+                            tx, ty, label, r2, linearity = fit
+                            fig.add_trace(go.Scatter(x=tx, y=ty, mode="lines", name=f"trend {name}: {label} R²={r2:.2f}, lin={linearity:.2f}", line={"dash": "dash"}, hoverinfo="skip"))
+                            annotations.append(f"{name}: {label} R²={r2:.3f}, linearity={linearity:.3f}")
+
+            if not fig.data:
+                ui.notify("No plottable numeric data for selected X/Y/filter combination.", type="warning")
+                return
+
+            title = f"{', '.join(y_vals)} vs {x}" + (f" · grouped by {color_by}" if color_by else "")
+            if annotations:
+                title += "<br><sup>" + " | ".join(annotations[:5]) + (" ..." if len(annotations) > 5 else "") + "</sup>"
+            fig.update_layout(title=title, margin=dict(l=20, r=20, t=80, b=20), legend_title_text="metric / group", barmode="group")
+            fig.update_xaxes(title=x)
+            fig.update_yaxes(title=", ".join(y_vals))
+
             if self.stats_plot is not None:
                 self.stats_plot.figure = fig
                 self.stats_plot.update()
             if self.stats_table is not None:
-                rows = _clean_rows(plot_df.tail(250).sort_values("start_date_local_dt", ascending=False))
-                cols = [{"headerName": c, "field": c, "sortable": True, "filter": True, "resizable": True} for c in plot_df.columns if c != "start_date_local_dt"]
+                rows = _clean_rows(plot_df.tail(500).sort_values("start_date_local_dt", ascending=False) if "start_date_local_dt" in plot_df.columns else plot_df.tail(500))
+                cols = [{"headerName": c, "field": c, "sortable": True, "filter": True, "resizable": True, "width": max(110, min(320, len(str(c)) * 9 + 40))} for c in plot_df.columns if c != "start_date_local_dt"]
                 self.stats_table.options["columnDefs"] = cols
                 self.stats_table.options["rowData"] = rows
                 self.stats_table.update()
@@ -610,10 +760,16 @@ class WorkOutBuddyWeb:
                     current = [current]
                 current = [v for v in current if v in metric_options]
                 if not current:
-                    current = [v for v in ["avg_hr", "avg_gap_pace_min_km", "gap_hr_efficiency_drift_pct", "apple_vo2max"] if v in metric_options]
+                    current = [v for v in ["distance_km"] if v in metric_options] or [v for v in ["avg_hr", "apple_vo2max"] if v in metric_options]
                 self.stats_y_axes.options = metric_options
                 self.stats_y_axes.value = current
                 self.stats_y_axes.update()
+            if self.stats_color_by is not None:
+                color_options = ["None"] + metric_options
+                cur = self.stats_color_by.value if self.stats_color_by.value in color_options else ("sport_type" if "sport_type" in metric_options else "None")
+                self.stats_color_by.options = color_options
+                self.stats_color_by.value = cur
+                self.stats_color_by.update()
         except Exception:
             pass
 
@@ -659,7 +815,7 @@ class WorkOutBuddyWeb:
                 or args.get("column", {}).get("colId")
                 or args.get("column", {}).get("colDef", {}).get("field")
             )
-            if col != "apple_vo2max":
+            if col not in {"apple_vo2max", "body_weight_kg"}:
                 return
             row = args.get("data") or {}
             activity_id = str(row.get("activity_id") or "")
@@ -667,24 +823,38 @@ class WorkOutBuddyWeb:
                 return
             raw_value = args.get("newValue", row.get("apple_vo2max"))
             val = _safe_float(raw_value, None)
-            if val is not None and not (20 <= val <= 80):
-                ui.notify("Apple VO₂max should be between 20 and 80; value ignored.", type="warning")
-                self.reload_activity_table()
-                return
-            self.db.set_activity_apple_vo2max(activity_id, val)
-            if self.selected_activity_id == activity_id and self.selected_apple_vo2_input is not None:
-                self.selected_apple_vo2_input.value = val
-                self.selected_apple_vo2_input.update()
-            self.update_projected_times()
-            ui.notify(f"Saved Apple VO₂max for activity: {val if val is not None else 'empty'}")
+            if col == "apple_vo2max":
+                if val is not None and not (20 <= val <= 80):
+                    ui.notify("Apple VO₂max should be between 20 and 80; value ignored.", type="warning")
+                    self.reload_activity_table()
+                    return
+                self.db.set_activity_apple_vo2max(activity_id, val)
+                if self.selected_activity_id == activity_id and self.selected_apple_vo2_input is not None:
+                    self.selected_apple_vo2_input.value = val
+                    self.selected_apple_vo2_input.update()
+                self.update_projected_times()
+                ui.notify(f"Saved Apple VO₂max for activity: {val if val is not None else 'empty'}")
+            elif col == "body_weight_kg":
+                if val is not None and not (35 <= val <= 160):
+                    ui.notify("Weight should be between 35 and 160 kg; value ignored.", type="warning")
+                    self.reload_activity_table()
+                    return
+                self.db.set_activity_body_weight(activity_id, val)
+                if self.selected_activity_id == activity_id and self.selected_body_weight_input is not None:
+                    self.selected_body_weight_input.value = val
+                    self.selected_body_weight_input.update()
+                ui.notify(f"Saved body weight for activity: {val if val is not None else 'empty'} kg")
         except Exception as ex:
-            ui.notify(f"Could not save Apple VO₂max: {ex}", type="negative", multi_line=True)
+            ui.notify(f"Could not save manual value: {ex}", type="negative", multi_line=True)
 
     def show_activity(self, row: Dict[str, Any]) -> None:
         self.selected_activity_id = str(row.get("activity_id") or "")
         if self.selected_apple_vo2_input is not None:
             self.selected_apple_vo2_input.value = _safe_float(row.get("apple_vo2max"), None)
             self.selected_apple_vo2_input.update()
+        if self.selected_body_weight_input is not None:
+            self.selected_body_weight_input.value = _safe_float(row.get("body_weight_kg"), None)
+            self.selected_body_weight_input.update()
         if self.detail_markdown is not None:
             self.detail_markdown.set_content(self.format_activity_detail(row))
         if self.map_frame is not None:
@@ -750,27 +920,41 @@ class WorkOutBuddyWeb:
             pts = self._load_points(row) if row else []
             self.map_status.set_text(f"Route endpoint: {url} · GPS points detected: {len(pts)}")
 
-    def save_selected_activity_apple_vo2(self) -> None:
+    def save_selected_activity_manual_values(self) -> None:
         if not self.selected_activity_id:
             ui.notify("Select an activity first.", type="warning")
             return
-        val = _safe_float(self.selected_apple_vo2_input.value if self.selected_apple_vo2_input is not None else None, None)
-        if val is not None and not (20 <= val <= 80):
+        vo2 = _safe_float(self.selected_apple_vo2_input.value if self.selected_apple_vo2_input is not None else None, None)
+        weight = _safe_float(self.selected_body_weight_input.value if self.selected_body_weight_input is not None else None, None)
+        if vo2 is not None and not (20 <= vo2 <= 80):
             ui.notify("Apple VO₂max should be between 20 and 80.", type="warning")
             return
-        self.db.set_activity_apple_vo2max(self.selected_activity_id, val)
+        if weight is not None and not (35 <= weight <= 160):
+            ui.notify("Weight should be between 35 and 160 kg.", type="warning")
+            return
+        self.db.set_activity_apple_vo2max(self.selected_activity_id, vo2)
+        self.db.set_activity_body_weight(self.selected_activity_id, weight)
         self.reload_activity_table()
         full = self.db.read_activity_row(self.selected_activity_id)
         if full:
             self.show_activity(full)
         self.update_projected_times()
-        ui.notify(f"Saved Apple VO₂max for selected activity: {val if val is not None else 'empty'}")
+        ui.notify(f"Saved manual values: VO₂max={vo2 if vo2 is not None else 'empty'}, weight={weight if weight is not None else 'empty'} kg")
+
+    def save_selected_activity_apple_vo2(self) -> None:
+        self.save_selected_activity_manual_values()
 
     def clear_selected_activity_apple_vo2(self) -> None:
         if self.selected_apple_vo2_input is not None:
             self.selected_apple_vo2_input.value = None
             self.selected_apple_vo2_input.update()
-        self.save_selected_activity_apple_vo2()
+        self.save_selected_activity_manual_values()
+
+    def clear_selected_activity_body_weight(self) -> None:
+        if self.selected_body_weight_input is not None:
+            self.selected_body_weight_input.value = None
+            self.selected_body_weight_input.update()
+        self.save_selected_activity_manual_values()
 
     def format_activity_detail(self, row: Dict[str, Any]) -> str:
         lines = [
@@ -792,6 +976,8 @@ class WorkOutBuddyWeb:
             f"- **Grade-adjusted HR efficiency drift:** {_fmt(row.get('gap_hr_efficiency_drift_pct'), 1, ' %')}",
             f"- **Estimated VO₂ demand:** {_fmt(row.get('vo2_demand_est_ml_kg_min'), 1, ' ml/kg/min')}",
             f"- **Manual Apple VO₂max for this workout:** {_fmt(row.get('apple_vo2max'), 1, ' ml/kg/min')}",
+            f"- **Manual body weight / BMI:** {_fmt(row.get('body_weight_kg'), 1, ' kg')} / {_fmt(row.get('bmi'), 1)} ({row.get('bmi_category') or '—'}), age {_fmt(row.get('age_years_at_activity'), 0)}",
+            f"- **Power normalization:** cycling {_fmt(row.get('cycling_power_w'), 0, ' W')}, run-equivalent {_fmt(row.get('run_equivalent_power_w'), 0, ' W')}, W/HR {_fmt(row.get('power_hr_efficiency'), 2)}",
             f"- **Weather archive temperature:** {_fmt(row.get('weather_temp_c') if row.get('weather_temp_c') is not None else row.get('avg_temp_c'), 1, ' °C')} (source: {row.get('weather_source') or 'stream/manual/unknown'})",
             f"- **Weather deviation from 15 °C:** {_fmt(row.get('weather_temp_deviation_from_15_c'), 1, ' °C')}",
             f"- **Training load score / TRIMP:** {_fmt(row.get('training_load_score'), 1)} / {_fmt(row.get('trimp_score'), 1)}",
@@ -1227,11 +1413,19 @@ class WorkOutBuddyWeb:
         try:
             vo2 = _safe_float(self.vo2_input.value, 41.0) or 41.0
             self.db.set_setting("profile_vo2max", vo2)
+            if self.profile_birthdate_input is not None:
+                self.db.set_setting("profile_birthdate", str(self.profile_birthdate_input.value or "1993-06-16"))
+            if self.profile_gender_select is not None:
+                self.db.set_setting("profile_gender", str(self.profile_gender_select.value or "Male"))
+            if self.profile_height_input is not None:
+                self.db.set_setting("profile_height_cm", _safe_float(self.profile_height_input.value, 178.0) or 178.0)
+            if self.profile_weight_input is not None:
+                self.db.set_setting("profile_current_weight_kg", _safe_float(self.profile_weight_input.value, 75.0) or 75.0)
             if self.aggression_select is not None:
                 self.db.set_setting("training_aggressiveness", int(str(self.aggression_select.value or "3")))
             self.db.set_json_setting("training_goals", self.read_goals_from_ui().to_dict())
             self.update_projected_times()
-            ui.notify("Saved VO₂max, goals and progression speed")
+            ui.notify("Saved profile, goals and progression speed")
         except Exception as e:
             ui.notify(f"Could not save profile/goals: {e}", type="negative")
 
@@ -1268,8 +1462,15 @@ class WorkOutBuddyWeb:
             self.save_profile_and_goals()
             target_dt = _parse_datetime(self.target_date.value, self.target_time.value)
             desired = None if self.desired_type.value == "Auto / none" else self.desired_type.value
+            profile = self.db.get_profile()
             vo2 = self.db.get_float_setting("profile_vo2max", 41.0)
-            engine = RecommendationEngine(profile_vo2max=vo2)
+            engine = RecommendationEngine(
+                profile_vo2max=vo2,
+                birthdate=str(profile.get("birthdate") or "1993-06-16"),
+                gender=str(profile.get("gender") or "Male"),
+                weight_kg=_safe_float(profile.get("current_weight_kg"), None),
+                height_cm=_safe_float(profile.get("height_cm"), None),
+            )
             recent = self.db.read_recent_activities(limit=120, before_iso=target_dt.isoformat(timespec="seconds"))
             rec = engine.recommend(target_dt, recent, desired)
             self.recommendation_markdown.set_content(self.format_recommendation(rec))
