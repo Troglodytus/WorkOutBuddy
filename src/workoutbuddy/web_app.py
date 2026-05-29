@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import html as html_lib
@@ -139,6 +140,37 @@ def _clean_rows(df: pd.DataFrame) -> List[Dict[str, Any]]:
                 clean[k] = v
         out.append(clean)
     return out
+
+
+
+def _parse_stats_datetime_series(series: pd.Series) -> pd.Series:
+    """Parse activity times for statistics without silently losing rows.
+
+    Mixed Strava/TCX data can contain naive local timestamps, explicit offsets,
+    and true Zulu/UTC timestamps. For plotting/filtering we only need a stable
+    naive timestamp. Explicit offsets/Z are converted to naive UTC-equivalent
+    timestamps; naive values remain as written. This avoids pandas failing on
+    mixed timezone strings and prevents the statistics table from dropping rows
+    just because one source stores times differently.
+    """
+    def parse_one(value: Any):
+        if value is None or str(value).strip() == "":
+            return pd.NaT
+        text = str(value).strip()
+        try:
+            if text.endswith("Z") or re.search(r"[+-]\d\d:?\d\d$", text):
+                dt = pd.to_datetime(text.replace("Z", "+00:00"), errors="coerce", utc=True)
+                if pd.isna(dt):
+                    return pd.NaT
+                return pd.Timestamp(dt).tz_convert(None)
+            dt = pd.to_datetime(text, errors="coerce")
+            if pd.isna(dt):
+                return pd.NaT
+            return pd.Timestamp(dt).tz_localize(None) if getattr(dt, "tzinfo", None) is not None else pd.Timestamp(dt)
+        except Exception:
+            return pd.NaT
+
+    return pd.Series([parse_one(v) for v in series], index=series.index)
 
 
 def _safe_filename(name: str) -> str:
@@ -284,6 +316,7 @@ class WorkOutBuddyWeb:
         self.stats_trend = None
         self.stats_plot = None
         self.stats_table = None
+        self.stats_count_label = None
 
     # ----------------------------- UI construction -----------------------------
 
@@ -538,8 +571,8 @@ class WorkOutBuddyWeb:
                 types = self.db.read_sport_types()
                 self.stats_type_select = ui.select(options=types, value=[], multiple=True, label="Filter sport types (empty = all)").classes("w-64")
                 now = date.today()
-                self.stats_start_date = ui.input("start date", value=(now - timedelta(days=180)).isoformat()).classes("w-36")
-                self.stats_end_date = ui.input("end date", value=now.isoformat()).classes("w-36")
+                self.stats_start_date = ui.input("start date (empty = all)", value="").classes("w-44")
+                self.stats_end_date = ui.input("end date (empty = all)", value="").classes("w-44")
                 metric_options = self._stats_metric_options()
                 self.stats_x_axis = ui.select(options=metric_options, value="start_date_local", label="X axis").classes("w-56")
                 self.stats_y_axes = ui.select(options=metric_options, value=["distance_km"], multiple=True, label="Y metric(s)").classes("w-96")
@@ -549,9 +582,32 @@ class WorkOutBuddyWeb:
                 self.stats_aggregate = ui.select(options=["none", "mean", "median", "sum", "min", "max", "count"], value="none", label="aggregate").classes("w-32")
                 self.stats_trend = ui.select(options=["none", "linear", "exponential", "auto-parametric"], value="none", label="trend").classes("w-44")
                 ui.button("Update graph", on_click=self.refresh_statistics_plot).props("color=primary")
+                ui.button("All dates", on_click=self._stats_all_dates)
+                ui.button("Last 180 d", on_click=self._stats_last_180_days)
+            self.stats_count_label = ui.label("Statistics use all dates by default. Set date filters only when needed.").classes("text-sm text-gray-600")
             self.stats_plot = ui.plotly(go.Figure()).classes("w-full h-[560px]")
         with ui.expansion("Statistics data table", icon="table_chart").classes("w-full"):
             self.stats_table = ui.aggrid({"columnDefs": [], "rowData": [], "pagination": True, "paginationPageSize": 25}).classes("w-full h-[420px]")
+
+
+    def _stats_all_dates(self) -> None:
+        if self.stats_start_date is not None:
+            self.stats_start_date.value = ""
+            self.stats_start_date.update()
+        if self.stats_end_date is not None:
+            self.stats_end_date.value = ""
+            self.stats_end_date.update()
+        self.refresh_statistics_plot()
+
+    def _stats_last_180_days(self) -> None:
+        today = date.today()
+        if self.stats_start_date is not None:
+            self.stats_start_date.value = (today - timedelta(days=180)).isoformat()
+            self.stats_start_date.update()
+        if self.stats_end_date is not None:
+            self.stats_end_date.value = today.isoformat()
+            self.stats_end_date.update()
+        self.refresh_statistics_plot()
 
     def _stats_metric_options(self) -> List[str]:
         df = self.db.read_activities_dataframe()
@@ -578,10 +634,14 @@ class WorkOutBuddyWeb:
                 ui.notify("No activities available for statistics.", type="warning")
                 return
             df = df.copy()
-            df["start_date_local_dt"] = pd.to_datetime(df["start_date_local"], errors="coerce", utc=True).dt.tz_convert(None)
+            total_count = len(df)
+            type_counts_all = df["sport_type"].astype(str).value_counts(dropna=False).to_dict() if "sport_type" in df.columns else {}
+            df["start_date_local_dt"] = _parse_stats_datetime_series(df["start_date_local"])
+            after_time_parse_count = int(df["start_date_local_dt"].notna().sum())
             if self.stats_type_select is not None and self.stats_type_select.value:
                 wanted = set(str(x) for x in self.stats_type_select.value)
                 df = df[df["sport_type"].astype(str).isin(wanted)]
+            after_type_count = len(df)
             if self.stats_start_date is not None and self.stats_start_date.value:
                 start = pd.to_datetime(str(self.stats_start_date.value), errors="coerce")
                 if pd.notna(start):
@@ -592,6 +652,7 @@ class WorkOutBuddyWeb:
                 if pd.notna(end):
                     end = pd.Timestamp(end).tz_localize(None)
                     df = df[df["start_date_local_dt"] <= end + pd.Timedelta(days=1)]
+            after_date_count = len(df)
 
             x = str(self.stats_x_axis.value or "start_date_local")
             y_vals = self.stats_y_axes.value or []
@@ -661,7 +722,14 @@ class WorkOutBuddyWeb:
                             annotations.append(f"{name}: {label} R²={r2:.3f}, linearity={linearity:.3f}")
 
             if not fig.data:
-                ui.notify("No plottable numeric data for selected X/Y/filter combination.", type="warning")
+                if self.stats_count_label is not None:
+                    selected_types = ", ".join(str(x) for x in (self.stats_type_select.value or [])) if self.stats_type_select is not None and self.stats_type_select.value else "all"
+                    top_counts = ", ".join(f"{k}: {v}" for k, v in list(type_counts_all.items())[:8])
+                    self.stats_count_label.set_text(
+                        f"DB rows: {total_count} | parsed dates: {after_time_parse_count} | after type filter ({selected_types}): {after_type_count} | "
+                        f"after date filter: {after_date_count} | plottable rows: 0 | sport counts: {top_counts}"
+                    )
+                ui.notify("No plottable numeric data for selected X/Y/filter combination. Check date/type filters and whether the chosen Y metric is populated.", type="warning")
                 return
 
             title = f"{', '.join(y_vals)} vs {x}" + (f" · grouped by {color_by}" if color_by else "")
@@ -671,11 +739,20 @@ class WorkOutBuddyWeb:
             fig.update_xaxes(title=x)
             fig.update_yaxes(title=", ".join(y_vals))
 
+            if self.stats_count_label is not None:
+                selected_types = ", ".join(str(x) for x in (self.stats_type_select.value or [])) if self.stats_type_select is not None and self.stats_type_select.value else "all"
+                top_counts = ", ".join(f"{k}: {v}" for k, v in list(type_counts_all.items())[:8])
+                self.stats_count_label.set_text(
+                    f"DB rows: {total_count} | parsed dates: {after_time_parse_count} | after type filter ({selected_types}): {after_type_count} | "
+                    f"after date filter: {after_date_count} | plotted table rows: {len(plot_df)} | sport counts: {top_counts}"
+                )
             if self.stats_plot is not None:
                 self.stats_plot.figure = fig
                 self.stats_plot.update()
             if self.stats_table is not None:
-                rows = _clean_rows(plot_df.tail(500).sort_values("start_date_local_dt", ascending=False) if "start_date_local_dt" in plot_df.columns else plot_df.tail(500))
+                # In non-aggregated mode, show the full filtered activity rows, not only the subset used by a trace.
+                table_source = plot_df
+                rows = _clean_rows(table_source.tail(1000).sort_values("start_date_local_dt", ascending=False) if "start_date_local_dt" in table_source.columns else table_source.tail(1000))
                 cols = [{"headerName": c, "field": c, "sortable": True, "filter": True, "resizable": True, "width": max(110, min(320, len(str(c)) * 9 + 40))} for c in plot_df.columns if c != "start_date_local_dt"]
                 self.stats_table.options["columnDefs"] = cols
                 self.stats_table.options["rowData"] = rows
@@ -1314,52 +1391,76 @@ class WorkOutBuddyWeb:
         except Exception as e:
             ui.notify(f"Folder import failed: {e}", type="negative", multi_line=True)
 
-    def recalculate_all_metrics(self) -> None:
-        """Recompute metrics for all existing raw/stream files while preserving manual Apple VO2max."""
+    async def recalculate_all_metrics(self) -> None:
+        """Recompute metrics without blocking the NiceGUI/uvicorn event loop.
+
+        On Windows, long synchronous callbacks can make the browser/websocket
+        disconnect and uvicorn may print WinError 10054. Running the heavy
+        recalculation in a worker thread keeps the UI server responsive.
+        """
+        ui.notify("Metric recalculation started in the background. This can take a while.")
+        self.set_status("Metric recalculation running...")
         try:
-            calc = MetricCalculator()
-            records = self.db.read_all_activity_records_ordered()
-            previous_start: Optional[datetime] = None
-            count = 0
-            skipped = 0
-            for rec in records:
-                raw_path = Path(str(rec.get("raw_json_path") or ""))
-                streams_path = Path(str(rec.get("streams_json_path") or ""))
-                if not raw_path.exists() or not streams_path.exists():
-                    skipped += 1
-                    continue
-                try:
-                    raw = json.loads(raw_path.read_text(encoding="utf-8"))
-                    streams = json.loads(streams_path.read_text(encoding="utf-8"))
-                    summary = raw.get("summary") if isinstance(raw, dict) else None
-                    detail = raw.get("detail") if isinstance(raw, dict) else None
-                    if not isinstance(summary, dict):
-                        summary = detail if isinstance(detail, dict) else {}
-                    if not isinstance(detail, dict):
-                        detail = summary
-                    metrics = calc.calculate(summary, detail, streams if isinstance(streams, dict) else {}, zones=None, previous_start=previous_start)
-                    # Preserve canonical activity id/path/source from DB if raw summary is old/weird.
-                    metrics.activity_id = str(rec.get("activity_id") or metrics.activity_id)
-                    source = str(rec.get("source") or "strava_api")
-                    self.db.upsert_activity(metrics, raw_path, streams_path, source=source)
-                    try:
-                        update_activity_weather_from_archive(self.db, metrics.activity_id)
-                    except Exception as weather_error:
-                        self.set_status(f"Weather archive skipped for {metrics.activity_id}: {weather_error}")
-                    start_str = metrics.start_date_local
-                    try:
-                        previous_start = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
-                    except Exception:
-                        pass
-                    count += 1
-                except Exception as ex:
-                    skipped += 1
-                    self.set_status(f"Skipped recalculation for {rec.get('activity_id')}: {ex}")
+            count, skipped, messages = await asyncio.to_thread(self._recalculate_all_metrics_worker)
+            for msg in messages[-5:]:
+                print(msg)
             self.reload_activity_table()
             self.update_projected_times()
-            ui.notify(f"Recalculated {count} activities; skipped {skipped}. Manual Apple VO₂max values were preserved.")
+            self.set_status(f"Metric recalculation complete: {count} recalculated, {skipped} skipped")
+            ui.notify(f"Recalculated {count} activities; skipped {skipped}. Manual Apple VO₂max/weight values were preserved.")
+        except (ConnectionResetError, BrokenPipeError) as e:
+            # Browser/client disconnected while the background job finished.
+            # Data operations are already complete or safely interrupted.
+            print(f"Client connection closed during metric recalculation: {e}")
         except Exception as e:
             ui.notify(f"Metric recalculation failed: {e}", type="negative", multi_line=True)
+
+    def _recalculate_all_metrics_worker(self) -> Tuple[int, int, List[str]]:
+        """Worker-thread implementation for metric recalculation.
+
+        This intentionally avoids direct NiceGUI element updates from the worker
+        thread. It returns a small message list for logging after completion.
+        """
+        calc = MetricCalculator()
+        records = self.db.read_all_activity_records_ordered()
+        previous_start: Optional[datetime] = None
+        count = 0
+        skipped = 0
+        messages: List[str] = []
+        for rec in records:
+            raw_path = Path(str(rec.get("raw_json_path") or ""))
+            streams_path = Path(str(rec.get("streams_json_path") or ""))
+            if not raw_path.exists() or not streams_path.exists():
+                skipped += 1
+                continue
+            try:
+                raw = json.loads(raw_path.read_text(encoding="utf-8"))
+                streams = json.loads(streams_path.read_text(encoding="utf-8"))
+                summary = raw.get("summary") if isinstance(raw, dict) else None
+                detail = raw.get("detail") if isinstance(raw, dict) else None
+                if not isinstance(summary, dict):
+                    summary = detail if isinstance(detail, dict) else {}
+                if not isinstance(detail, dict):
+                    detail = summary
+                metrics = calc.calculate(summary, detail, streams if isinstance(streams, dict) else {}, zones=None, previous_start=previous_start)
+                # Preserve canonical activity id/path/source from DB if raw summary is old/weird.
+                metrics.activity_id = str(rec.get("activity_id") or metrics.activity_id)
+                source = str(rec.get("source") or "strava_api")
+                self.db.upsert_activity(metrics, raw_path, streams_path, source=source)
+                try:
+                    update_activity_weather_from_archive(self.db, metrics.activity_id)
+                except Exception as weather_error:
+                    messages.append(f"Weather archive skipped for {metrics.activity_id}: {weather_error}")
+                start_str = metrics.start_date_local
+                try:
+                    previous_start = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                except Exception:
+                    pass
+                count += 1
+            except Exception as ex:
+                skipped += 1
+                messages.append(f"Skipped recalculation for {rec.get('activity_id')}: {ex}")
+        return count, skipped, messages
 
 
     def fetch_weather_archive(self) -> None:
