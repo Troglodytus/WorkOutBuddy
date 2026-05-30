@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import numpy as np
 
 from .metrics import ActivityMetrics
 
@@ -111,6 +112,15 @@ class WorkoutDatabase:
             "power_hr_efficiency": "REAL",
             "power_hr_efficiency_drift_pct": "REAL",
             "effective_power_w": "REAL",
+            "own_vo2max_estimate": "REAL",
+            "estimated_vo2max": "REAL",
+            "cardio_efficiency_index": "REAL",
+            "temp_adjusted_efficiency": "REAL",
+            "combined_fitness_score": "REAL",
+            "fitness_score_ma7": "REAL",
+            "fitness_score_ma14": "REAL",
+            "fitness_score_ma35": "REAL",
+            "vo2max_35d_trend": "REAL",
         }
         existing = {row[1] for row in conn.execute("PRAGMA table_info(metrics)").fetchall()}
         for col, typ in manual_columns.items():
@@ -172,7 +182,9 @@ class WorkoutDatabase:
                        age_years_at_activity, gender,
                        bike_inferred_power_w, cycling_power_w, run_equivalent_power_w,
                        bike_equivalent_power_w, power_hr_efficiency, power_hr_efficiency_drift_pct,
-                       effective_power_w,
+                       effective_power_w, own_vo2max_estimate, estimated_vo2max,
+                       cardio_efficiency_index, temp_adjusted_efficiency, combined_fitness_score,
+                       fitness_score_ma7, fitness_score_ma14, fitness_score_ma35, vo2max_35d_trend,
                        source
                 FROM metrics LEFT JOIN activities USING(activity_id)
                 WHERE metrics.activity_id = ?
@@ -185,6 +197,9 @@ class WorkoutDatabase:
                 "bike_inferred_power_w", "cycling_power_w", "run_equivalent_power_w",
                 "bike_equivalent_power_w", "power_hr_efficiency", "power_hr_efficiency_drift_pct",
                 "effective_power_w",
+                "own_vo2max_estimate", "estimated_vo2max",
+                "cardio_efficiency_index", "temp_adjusted_efficiency", "combined_fitness_score",
+                "fitness_score_ma7", "fitness_score_ma14", "fitness_score_ma35", "vo2max_35d_trend",
             ]
             for col in manual_preserve_cols:
                 if existing is not None and col in existing.keys() and existing[col] is not None:
@@ -326,6 +341,9 @@ class WorkoutDatabase:
             "bike_inferred_power_w", "cycling_power_w", "run_equivalent_power_w",
             "bike_equivalent_power_w", "effective_power_w",
             "power_hr_efficiency", "power_hr_efficiency_drift_pct",
+            "own_vo2max_estimate", "estimated_vo2max",
+            "cardio_efficiency_index", "temp_adjusted_efficiency",
+            "combined_fitness_score", "fitness_score_ma7", "fitness_score_ma14", "fitness_score_ma35", "vo2max_35d_trend",
         ]:
             if col not in df.columns:
                 df[col] = None
@@ -437,6 +455,23 @@ class WorkoutDatabase:
                         df.at[idx, "power_hr_efficiency_drift_pct"] = val
                         break
 
+        # Own VO2max estimate and combined fitness trend. This is a derived
+        # estimate from speed/grade/HR, separate from manually entered Apple VO2max.
+        for idx, row in df.iterrows():
+            own_vo2 = _safe_float(row.get("own_vo2max_estimate")) or _estimate_own_vo2max_from_row(dict(row))
+            if own_vo2 is not None:
+                df.at[idx, "own_vo2max_estimate"] = round(float(own_vo2), 2)
+                if _safe_float(row.get("estimated_vo2max")) is None:
+                    df.at[idx, "estimated_vo2max"] = round(float(own_vo2), 2)
+
+            eff_idx = _cardio_efficiency_index(dict(row))
+            if eff_idx is not None:
+                df.at[idx, "cardio_efficiency_index"] = round(eff_idx, 4)
+                temp_dev = _safe_float(row.get("weather_temp_deviation_from_15_c"))
+                temp_penalty = 1.0 + 0.012 * max(0.0, float(temp_dev or 0.0))
+                df.at[idx, "temp_adjusted_efficiency"] = round(eff_idx * temp_penalty, 4)
+
+        df = _calculate_combined_fitness_scores(df)
         return df
 
 
@@ -849,6 +884,125 @@ def _infer_bike_power_w(row: Dict[str, Any], default_weight_kg: float = 75.0) ->
     except Exception:
         return None
 
+
+
+def _is_run_sport_name(value: Any) -> bool:
+    s = _norm_sport(value)
+    return s in {"run", "running", "trailrun", "virtualrun"} or "run" in s
+
+
+def _is_hike_sport_name(value: Any) -> bool:
+    s = _norm_sport(value)
+    return s in {"hike", "hiking", "walk", "walking", "trek", "trekking"}
+
+
+def _estimate_hrmax(age_years: Optional[float], gender: Optional[str] = None) -> float:
+    # Tanaka-style estimate. Gender-specific formulas vary more than they help here;
+    # the point is a stable internal estimate for HR-normalized VO2.
+    age = float(age_years) if age_years is not None and age_years > 0 else 32.0
+    return max(160.0, min(205.0, 208.0 - 0.7 * age))
+
+
+def _estimate_own_vo2max_from_row(row: Dict[str, Any]) -> Optional[float]:
+    """Estimate VO2max for run activities from pace/grade/HR.
+
+    This is not a laboratory VO2max and is intentionally stored separately from
+    Apple VO2max. It uses ACSM running oxygen cost and scales it by the fraction
+    of estimated HRmax used during the activity.
+    """
+    try:
+        if not _is_run_sport_name(row.get("sport_type")):
+            return None
+        duration_s = _safe_float(row.get("moving_time_s")) or _safe_float(row.get("elapsed_time_s"))
+        dist_m = _safe_float(row.get("distance_m"))
+        if duration_s is None or duration_s <= 300 or dist_m is None or dist_m < 800:
+            return None
+        avg_hr = _safe_float(row.get("avg_hr")) or _safe_float(row.get("average_hr"))
+        if avg_hr is None or avg_hr < 80:
+            return None
+        age = _safe_float(row.get("age_years_at_activity"))
+        hrmax = _estimate_hrmax(age, row.get("gender"))
+        hr_frac = max(0.52, min(0.97, float(avg_hr) / hrmax))
+        speed_m_min = float(dist_m) / (float(duration_s) / 60.0)
+        elev_gain = max(0.0, _safe_float(row.get("elevation_gain_m")) or 0.0)
+        grade = max(0.0, min(0.12, elev_gain / max(float(dist_m), 1.0)))
+        vo2_demand = 3.5 + 0.2 * speed_m_min + 0.9 * speed_m_min * grade
+        # If an activity is very easy, this estimate can be noisy; keep it plausible.
+        est = vo2_demand / hr_frac
+        temp_dev = _safe_float(row.get("weather_temp_deviation_from_15_c"))
+        if temp_dev is not None and temp_dev > 0:
+            # Temperature away from 15 C can raise HR for the same mechanical output;
+            # compensate mildly so hot/cold runs do not look like pure fitness loss.
+            est *= 1.0 + min(0.10, 0.004 * float(temp_dev))
+        return round(max(20.0, min(75.0, est)), 2)
+    except Exception:
+        return None
+
+
+def _cardio_efficiency_index(row: Dict[str, Any]) -> Optional[float]:
+    try:
+        dur_s = _safe_float(row.get("moving_time_s")) or _safe_float(row.get("elapsed_time_s"))
+        dist_m = _safe_float(row.get("distance_m"))
+        avg_hr = _safe_float(row.get("avg_hr")) or _safe_float(row.get("average_hr"))
+        if dur_s is None or dur_s <= 60 or dist_m is None or dist_m <= 100 or avg_hr is None or avg_hr <= 0:
+            return None
+        speed_kmh = (dist_m / 1000.0) / (dur_s / 3600.0)
+        power_eff = _safe_float(row.get("power_hr_efficiency"))
+        base = speed_kmh / avg_hr * 100.0
+        if power_eff is not None:
+            base = 0.65 * base + 0.35 * float(power_eff)
+        return max(0.0, min(20.0, base))
+    except Exception:
+        return None
+
+
+def _calculate_combined_fitness_scores(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df
+    out = df.copy()
+    dt = pd.to_datetime(out.get("start_date_local"), errors="coerce", utc=True)
+    out["_sort_dt_for_fitness"] = dt
+    out = out.sort_values("_sort_dt_for_fitness").reset_index(drop=False)
+
+    vo2 = pd.to_numeric(out.get("own_vo2max_estimate"), errors="coerce")
+    apple = pd.to_numeric(out.get("apple_vo2max"), errors="coerce") if "apple_vo2max" in out else pd.Series(np.nan, index=out.index)
+    eff = pd.to_numeric(out.get("temp_adjusted_efficiency"), errors="coerce")
+    drift = pd.to_numeric(out.get("hr_efficiency_drift_pct"), errors="coerce") if "hr_efficiency_drift_pct" in out else pd.Series(np.nan, index=out.index)
+    p_eff = pd.to_numeric(out.get("power_hr_efficiency"), errors="coerce") if "power_hr_efficiency" in out else pd.Series(np.nan, index=out.index)
+
+    def scale_series(s: pd.Series, lo: float, hi: float) -> pd.Series:
+        return ((s - lo) / max(hi - lo, 1e-9) * 100.0).clip(0, 100)
+
+    comp = pd.DataFrame({
+        "vo2": scale_series(vo2.combine_first(apple), 25, 55),
+        "eff": scale_series(eff, 3.0, 8.0),
+        "power_hr": scale_series(p_eff, 0.8, 1.8),
+        "drift": (70.0 - drift.fillna(0.0) * 2.0).clip(0, 100),
+    })
+    score = comp.mean(axis=1, skipna=True)
+    out["combined_fitness_score"] = score.round(2)
+    out["fitness_score_ma7"] = score.rolling(7, min_periods=2).mean().round(2)
+    out["fitness_score_ma14"] = score.rolling(14, min_periods=3).mean().round(2)
+    out["fitness_score_ma35"] = score.rolling(35, min_periods=5).mean().round(2)
+
+    # 35-day VO2 trend in VO2 units over 35 days.
+    trend_vals = []
+    vo2_for_trend = vo2.combine_first(apple)
+    days = (out["_sort_dt_for_fitness"] - out["_sort_dt_for_fitness"].min()).dt.total_seconds() / 86400.0
+    for i in range(len(out)):
+        start = max(0, i - 34)
+        xs = days.iloc[start:i+1].to_numpy(dtype=float)
+        ys = vo2_for_trend.iloc[start:i+1].to_numpy(dtype=float)
+        mask = np.isfinite(xs) & np.isfinite(ys)
+        if mask.sum() >= 3 and (np.nanmax(xs[mask]) - np.nanmin(xs[mask])) >= 7:
+            slope = float(np.polyfit(xs[mask], ys[mask], 1)[0])
+            trend_vals.append(round(slope * 35.0, 2))
+        else:
+            trend_vals.append(None)
+    out["vo2max_35d_trend"] = trend_vals
+
+    out = out.sort_values("index").drop(columns=["index", "_sort_dt_for_fitness"], errors="ignore")
+    return out
 
 def _dt_variants(value: Optional[str]) -> List[datetime]:
     if not value:

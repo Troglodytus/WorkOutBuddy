@@ -30,6 +30,7 @@ from .strava_oauth import StravaAuthenticator
 from .sync import StravaSyncService
 from .tcx_importer import TCXImportService
 from .weather import update_activity_weather_from_archive, update_missing_weather_for_recent_activities
+from .analysis_engine import analyze_recent_trainings
 
 
 # ----------------------------- formatting helpers -----------------------------
@@ -322,6 +323,11 @@ class WorkOutBuddyWeb:
         self.stats_plot = None
         self.stats_table = None
         self.stats_count_label = None
+        self.analysis_dialog = None
+        self.analysis_markdown = None
+        self.analysis_use_ollama = None
+        self.analysis_backend_select = None
+        self.analysis_model_input = None
 
     # ----------------------------- UI construction -----------------------------
 
@@ -357,6 +363,7 @@ class WorkOutBuddyWeb:
                 self._build_settings_panel()
 
         self._build_edit_dialog()
+        self._build_analysis_dialog()
         self.refresh_all()
 
     def _build_activities_panel(self) -> None:
@@ -367,6 +374,7 @@ class WorkOutBuddyWeb:
             ui.button("Recalculate metrics", on_click=self.recalculate_all_metrics).props("color=secondary")
             ui.button("Fetch weather archive", on_click=self.fetch_weather_archive).props("color=secondary")
             ui.button("Duplicate Cleanup", on_click=self.cleanup_duplicates).props("color=warning")
+            ui.button("Analyze", on_click=self.analyze_recent_trainings).props("color=accent")
 
         # Plain FastAPI multipart upload form. This is intentionally not NiceGUI's
         # ui.upload event handler because UploadEventArguments changed across
@@ -808,6 +816,33 @@ class WorkOutBuddyWeb:
                 """
             )
 
+
+    def _build_analysis_dialog(self) -> None:
+        self.analysis_dialog = ui.dialog()
+        with self.analysis_dialog, ui.card().classes("w-full max-w-6xl"):
+            ui.label("Analyze recent training").classes("text-lg font-semibold")
+            ui.label(
+                "The deterministic analysis always runs locally. "
+                "You can optionally add a local Ollama model."
+            ).classes("text-sm text-gray-600")
+            with ui.row().classes("w-full items-end"):
+                self.analysis_backend_select = ui.select(
+                    ["Deterministic only", "Local Ollama"],
+                    value="Deterministic only",
+                    label="Analysis mode",
+                ).classes("w-64")
+                self.analysis_model_input = ui.input(
+                    "Model",
+                    value="qwen3:8b",
+                    placeholder="qwen3:8b",
+                ).classes("w-56")
+                ui.button("Run analysis", on_click=self.analyze_recent_trainings).props("color=primary")
+                ui.button("Close", on_click=self.analysis_dialog.close)
+            ui.label(
+                "Local Ollama uses your installed Ollama service. Default model: qwen3:8b."
+            ).classes("text-xs text-gray-500")
+            self.analysis_markdown = ui.markdown("Click **Run analysis** to analyze the last 35 trainings.").classes("w-full")
+
     def _build_edit_dialog(self) -> None:
         self.edit_dialog = ui.dialog()
         with self.edit_dialog, ui.card().classes("w-full max-w-3xl"):
@@ -817,10 +852,10 @@ class WorkOutBuddyWeb:
             self.edit_no_workout.on("update:model-value", lambda e: self._adapt_edit_fields())
             self.edit_title = ui.input("title").classes("w-full")
             with ui.row().classes("w-full"):
-                self.edit_sport_type = ui.select(["Run", "Ride", "VirtualRide"], label="sport type").classes("w-1/3")
-                self.edit_sport_type.on("update:model-value", lambda e: self._adapt_edit_fields())
+                self.edit_sport_type = ui.select(["Run", "Ride", "VirtualRide", "Hike", "Walk", "Strength", "None"], label="sport type").classes("w-1/3")
+                self.edit_sport_type.on("update:model-value", lambda e: self.recalculate_edit_recommendation_for_type())
                 self.edit_family = ui.select(
-                    ["recovery_aerobic", "easy_aerobic", "steady_progression", "quality", "tempo", "long_run", "cross_training_ride", "endurance_ride", "bike_intervals", "rest_or_mobility"],
+                    ["recovery_aerobic", "easy_aerobic", "steady_progression", "quality", "tempo", "long_run", "cross_training_ride", "endurance_ride", "bike_intervals", "rest_or_mobility", "easy_hike", "long_hike", "hilly_hike", "recovery_hike"],
                     label="family",
                 ).classes("w-1/3")
                 self.edit_time = ui.input("start time", placeholder="18:00").classes("w-1/3")
@@ -2081,14 +2116,29 @@ class WorkOutBuddyWeb:
         sport = self.edit_sport_type.value
         ride = _is_ride(sport)
         run = _is_run(sport)
+        hike = _is_hike(sport)
+        strength = _is_strength(sport)
         # NiceGUI dynamic disabling/labels. Values are still validated at save.
         self.edit_distance.set_visibility(not no)
         self.edit_zone.set_visibility(not no)
-        self.edit_pace.set_visibility((not no) and run)
+        self.edit_pace.set_visibility((not no) and (run or hike))
         self.edit_wattage.set_visibility((not no) and ride)
         if no:
             self.edit_family.value = "rest_or_mobility"
             self.edit_title.value = self.edit_title.value or "Rest / mobility"
+        elif strength:
+            self.edit_pace.value = ""
+            self.edit_wattage.value = "bodyweight/light resistance"
+            if self.edit_family.value not in {"strength_prehab", "strength_general"}:
+                self.edit_family.value = "strength_prehab"
+        elif hike:
+            self.edit_wattage.value = ""
+            if not self.edit_pace.value:
+                self.edit_pace.value = "comfortable hiking pace"
+            if self.edit_family.value in {"quality", "tempo", "long_run", "endurance_ride"}:
+                self.edit_family.value = "long_hike"
+            elif self.edit_family.value in {"strength_prehab", "strength_general", "rest_or_mobility"}:
+                self.edit_family.value = "easy_hike"
         elif ride:
             if not self.edit_wattage.value:
                 self.edit_wattage.value = "Z2 / comfortable endurance power"
@@ -2101,6 +2151,51 @@ class WorkOutBuddyWeb:
                 self.edit_pace.value = "easy / goal-specific"
         for w in [self.edit_family, self.edit_title, self.edit_pace, self.edit_wattage]:
             w.update()
+
+
+    def recalculate_edit_recommendation_for_type(self) -> None:
+        """When only the planned workout type changes, rebuild the recommendation.
+
+        This is the missing semi-automatic step: e.g. Strength -> Hike should
+        immediately produce a hike title, duration, distance, HR zone and notes.
+        """
+        try:
+            if not self.selected_plan_date:
+                self._adapt_edit_fields()
+                return
+            old = self.planned_by_date.get(self.selected_plan_date) or {}
+            sport = str(self.edit_sport_type.value or old.get("sport_type") or "Run")
+            no = bool(self.edit_no_workout.value) or sport.lower() in {"none", "rest", "off"}
+            if no:
+                self.edit_no_workout.value = True
+                self._adapt_edit_fields()
+                return
+            day_dt = datetime.fromisoformat(f"{self.selected_plan_date}T{str(self.edit_time.value or old.get('start_time') or '18:00')}:00")
+            vo2 = self.db.get_float_setting("profile_vo2max", 41.0)
+            aggressiveness = self.db.get_int_setting("training_aggressiveness", 3)
+            planner = WorkoutPlanner(profile_vo2max=vo2, aggressiveness=aggressiveness)
+            recent = self.db.read_recent_activities(limit=240, before_iso=(day_dt.replace(hour=23, minute=59, second=59)).isoformat(timespec="seconds"))
+            sport_types = self.db.read_sport_types()
+            adapted = planner.adapt_workout_to_sport_type(old, sport, day_dt, recent, self.read_goals_from_ui(), sport_types)
+
+            self.edit_title.value = str(adapted.get("title") or self.edit_title.value or "Planned workout")
+            self.edit_family.value = str(adapted.get("family") or self.edit_family.value or "easy_aerobic")
+            self.edit_duration.value = float(adapted.get("duration_min") or 0.0)
+            self.edit_distance.value = float(adapted.get("distance_km") or 0.0)
+            self.edit_zone.value = str(adapted.get("zone") or "")
+            self.edit_pace.value = str(adapted.get("pace") or "")
+            self.edit_wattage.value = str(adapted.get("wattage") or "")
+            self.edit_notes.value = str(adapted.get("notes") or "")
+            self.edit_no_workout.value = bool(adapted.get("no_workout"))
+            for w in [self.edit_title, self.edit_family, self.edit_duration, self.edit_distance, self.edit_zone, self.edit_pace, self.edit_wattage, self.edit_notes, self.edit_no_workout]:
+                try:
+                    w.update()
+                except Exception:
+                    pass
+            self._adapt_edit_fields()
+        except Exception as e:
+            self._adapt_edit_fields()
+            ui.notify(f"Could not auto-recalculate workout type: {e}", type="warning", multi_line=True)
 
     def save_selected_plan_workout(self) -> None:
         if not self.selected_plan_date:
@@ -2120,10 +2215,10 @@ class WorkOutBuddyWeb:
                 "sport_type": sport,
                 "family": family,
                 "duration_min": int(float(self.edit_duration.value or 0.0)) if not no else 0,
-                "distance_km": float(self.edit_distance.value or 0.0) if (not no and _is_run(sport)) else 0.0,
+                "distance_km": float(self.edit_distance.value or 0.0) if (not no and (_is_run(sport) or _is_hike(sport) or _is_ride(sport))) else 0.0,
                 "zone": str(self.edit_zone.value or "") if not no else "Rest",
-                "pace": str(self.edit_pace.value or "") if (not no and _is_run(sport)) else "",
-                "wattage": str(self.edit_wattage.value or "") if (not no and _is_ride(sport)) else "",
+                "pace": str(self.edit_pace.value or "") if (not no and (_is_run(sport) or _is_hike(sport))) else "",
+                "wattage": str(self.edit_wattage.value or "") if (not no and (_is_ride(sport) or _is_strength(sport))) else "",
                 "notes": str(self.edit_notes.value or ""),
                 "no_workout": no,
                 "locked": True,
@@ -2143,6 +2238,46 @@ class WorkOutBuddyWeb:
         self.edit_dialog.close()
         self._generate_current_plan()
         ui.notify("Manual override cleared")
+
+
+    async def analyze_recent_trainings(self) -> None:
+        try:
+            if self.analysis_dialog is not None:
+                self.analysis_dialog.open()
+            if self.analysis_markdown is not None:
+                self.analysis_markdown.set_content("Analyzing last 35 trainings…")
+            self.set_status("Analyzing recent trainings…")
+
+            backend_label = (
+                str(self.analysis_backend_select.value)
+                if self.analysis_backend_select is not None and self.analysis_backend_select.value
+                else "Deterministic only"
+            )
+            if backend_label == "Local Ollama":
+                llm_backend = "ollama"
+                default_model = "qwen3:8b"
+            else:
+                llm_backend = "deterministic"
+                default_model = "qwen3:8b"
+
+            model = str(self.analysis_model_input.value or default_model) if self.analysis_model_input is not None else default_model
+
+            result = await asyncio.to_thread(
+                analyze_recent_trainings,
+                self.db,
+                35,
+                False,
+                model,
+                180,
+                llm_backend,
+            )
+            if self.analysis_markdown is not None:
+                self.analysis_markdown.set_content(result.get("summary_markdown") or "No analysis generated.")
+            self.set_status("Analysis complete")
+        except Exception as e:
+            if self.analysis_markdown is not None:
+                self.analysis_markdown.set_content(f"Analysis failed: {e}")
+            ui.notify(f"Analysis failed: {e}", type="negative", multi_line=True)
 
     # ----------------------------- Strava auth/settings -----------------------------
 
@@ -2302,3 +2437,10 @@ def main() -> None:
         reload=False,
         show=False,
     )
+
+
+def _is_hike(sport_type: Any) -> bool:
+    return _norm_sport(sport_type) in {"hike", "hiking", "walk", "walking", "trek", "trekking"}
+
+def _is_strength(sport_type: Any) -> bool:
+    return _norm_sport(sport_type) in {"strength", "strengthtraining", "strength_training", "bodyweightstrength", "bodyweight_strength", "gym", "weights", "workout"}

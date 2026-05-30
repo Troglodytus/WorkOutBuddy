@@ -26,6 +26,7 @@ GOAL_LABELS = {
 RUN_TYPES = {"run", "running", "trailrun", "trail_run", "virtualrun", "virtual_run"}
 RIDE_TYPES = {"ride", "cycling", "bike", "biking", "virtualride", "virtual_ride", "gravelride", "mountainbikeride", "ebikeride"}
 STRENGTH_TYPES = {"strength", "strengthtraining", "strength_training", "workout", "bodyweightstrength", "bodyweight_strength", "gym", "weights"}
+HIKE_TYPES = {"hike", "hiking", "walk", "walking", "trek", "trekking"}
 
 RIDE_PREFERRED_FAMILIES = {"recovery_aerobic", "cross_training_ride", "endurance_ride", "bike_intervals"}
 QUALITY_FAMILIES = {"quality", "tempo", "bike_intervals"}
@@ -308,6 +309,21 @@ class WorkoutPlanner:
             if family in {"recovery_aerobic", "easy_aerobic", "cross_training_ride", "rest_or_mobility"}:
                 return "strength_prehab"
             return "strength_general"
+        if _is_hike(sport_type):
+            return {
+                "quality": "hilly_hike",
+                "tempo": "hilly_hike",
+                "steady_progression": "hilly_hike",
+                "long_run": "long_hike",
+                "endurance_ride": "long_hike",
+                "cross_training_ride": "easy_hike",
+                "bike_intervals": "hilly_hike",
+                "strength_prehab": "easy_hike",
+                "strength_general": "easy_hike",
+                "rest_or_mobility": "recovery_hike",
+                "recovery_aerobic": "recovery_hike",
+                "easy_aerobic": "easy_hike",
+            }.get(family, "easy_hike")
         if _is_ride(sport_type):
             return {
                 "quality": "bike_intervals",
@@ -598,6 +614,7 @@ class WorkoutPlanner:
         race_pace_hm = hm_goal / 21.0975 if hm_goal else None
         is_run = _is_run(sport_type)
         is_ride = _is_ride(sport_type)
+        is_hike = _is_hike(sport_type)
         longest = float(baseline.get("longest_run_30d_km") or 5.0)
         median_run = float(baseline.get("median_run_30d_km") or 5.0)
         weekly_run = float(baseline.get("run_km_30d_weekly") or baseline.get("run_km_7d") or 8.0)
@@ -608,6 +625,9 @@ class WorkoutPlanner:
 
         if _is_strength(sport_type) or family in STRENGTH_FAMILIES:
             return self._build_strength_workout(day_dt, family, sport_type, baseline, goals)
+
+        if is_hike or family in {"easy_hike", "long_hike", "hilly_hike", "recovery_hike"}:
+            return self._build_hike_workout(day_dt, family, sport_type, baseline, goals)
 
         # Ride / virtual-ride variants. These deliberately still influence training
         # load through planned HR-zone time, but they do not count as run distance.
@@ -674,6 +694,39 @@ class WorkoutPlanner:
             "avoid knee pain and avoid heavy soreness before quality/long runs."
         )
         return self._base(day_dt, sport_type, "strength_general", "Running-specific strength", dur, 0.0, "Moderate; not HR-driven", "", "controlled strength work", notes)
+
+
+    def _build_hike_workout(self, day_dt: datetime, family: str, sport_type: str, baseline: Dict[str, Any], goals: TrainingGoals) -> Dict[str, Any]:
+        """Build hiking/walking recommendations when a planner day is changed to Hike.
+
+        Hikes are treated as low-impact aerobic volume. The targets are deliberately
+        HR-zone and duration driven, because distance depends strongly on terrain.
+        """
+        weekly_run = float(baseline.get("run_km_30d_weekly") or baseline.get("run_km_7d") or 8.0)
+        dur_mult = {1: 0.85, 2: 0.93, 3: 1.0, 4: 1.10, 5: 1.18}[self.aggressiveness]
+        norm = _norm_type(sport_type)
+        label = "Hike" if "hike" in norm or "trek" in norm else "Walk / hike"
+
+        if family in {"recovery_hike", "recovery_aerobic"}:
+            dur = int(round(50 * dur_mult))
+            dist = round(max(3.0, min(5.5, dur / 12.0)), 1)
+            return self._base(day_dt, sport_type, "recovery_hike", f"Recovery {label.lower()}", dur, dist, "Z1-low Z2", "comfortable walking pace", "", "Low-impact recovery. Keep it genuinely easy; use this instead of a recovery run if the legs or knee feel beaten up.")
+
+        if family in {"long_hike", "long_run", "endurance_ride"}:
+            base_dur = 95 if weekly_run < 14 else (115 if weekly_run < 25 else 135)
+            dur = int(round(base_dur * dur_mult))
+            dist = round(max(6.0, min(14.0, dur / 11.0)), 1)
+            return self._base(day_dt, sport_type, "long_hike", "Long aerobic hike", dur, dist, "Mostly Z1-Z2; short Z3 on climbs allowed", "terrain-dependent", "", "Long low-impact endurance session. Uphill is fine, but avoid turning every climb into a threshold effort.")
+
+        if family in {"hilly_hike", "quality", "tempo", "steady_progression", "bike_intervals"}:
+            dur = int(round((70 if weekly_run < 18 else 85) * dur_mult))
+            dist = round(max(4.5, min(9.5, dur / 11.5)), 1)
+            notes = "Hilly aerobic hike: 15 min easy, then 3-5 sustained uphill segments at strong but controlled Z2/Z3, easy walking between. No running required."
+            return self._base(day_dt, sport_type, "hilly_hike", "Hilly aerobic hike", dur, dist, "Z2 with controlled Z3 uphill", "brisk uphill / easy downhill", "", notes)
+
+        dur = int(round((65 if weekly_run < 18 else 75) * dur_mult))
+        dist = round(max(4.0, min(8.0, dur / 12.0)), 1)
+        return self._base(day_dt, sport_type, "easy_hike", "Easy aerobic hike", dur, dist, "Mostly Z2", "comfortable/brisk walk", "", "Aerobic hiking volume. This supports general fitness without the same impact load as running.")
 
     def _build_ride_workout(self, day_dt: datetime, family: str, sport_type: str, baseline: Dict[str, Any], goals: TrainingGoals) -> Dict[str, Any]:
         weekly_run = float(baseline.get("run_km_30d_weekly") or baseline.get("run_km_7d") or 8.0)
@@ -789,12 +842,12 @@ class WorkoutPlanner:
             z1 = dur_s * 0.65; z2 = dur_s * 0.35
         elif family in {"strength_general"}:
             z1 = dur_s * 0.35; z2 = dur_s * 0.55; z3 = dur_s * 0.10
-        elif family in {"easy_aerobic", "cross_training_ride"}:
-            z1 = dur_s * 0.20; z2 = dur_s * 0.75; z3 = dur_s * 0.05
-        elif family in {"long_run", "endurance_ride"}:
-            z1 = dur_s * 0.18; z2 = dur_s * 0.78; z3 = dur_s * 0.04
-        elif family in {"steady_progression", "tempo"}:
-            z1 = dur_s * 0.15; z2 = dur_s * 0.55; z3 = dur_s * 0.25; z4 = dur_s * 0.05
+        elif family in {"easy_aerobic", "cross_training_ride", "easy_hike", "recovery_hike"}:
+            z1 = dur_s * 0.25; z2 = dur_s * 0.70; z3 = dur_s * 0.05
+        elif family in {"long_run", "endurance_ride", "long_hike"}:
+            z1 = dur_s * 0.20; z2 = dur_s * 0.72; z3 = dur_s * 0.08
+        elif family in {"steady_progression", "tempo", "hilly_hike"}:
+            z1 = dur_s * 0.15; z2 = dur_s * 0.58; z3 = dur_s * 0.23; z4 = dur_s * 0.04
         elif family in {"quality", "bike_intervals"}:
             z1 = dur_s * 0.20; z2 = dur_s * 0.40; z3 = dur_s * 0.20; z4 = dur_s * 0.18; z5 = dur_s * 0.02
         else:
@@ -936,6 +989,10 @@ def _is_run(sport_type: Any) -> bool:
 
 def _is_ride(sport_type: Any) -> bool:
     return _norm_type(sport_type) in {x.replace("_", "") for x in RIDE_TYPES}
+
+
+def _is_hike(sport_type: Any) -> bool:
+    return _norm_type(sport_type) in {x.replace("_", "") for x in HIKE_TYPES}
 
 
 def _is_strength(sport_type: Any) -> bool:
