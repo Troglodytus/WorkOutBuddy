@@ -114,6 +114,11 @@ def _norm_sport_type(sport_type: Any) -> str:
     return re.sub(r"[^a-z0-9]", "", str(sport_type or "").lower())
 
 
+def _norm_sport(sport_type: Any) -> str:
+    """Backward-compatible alias used by hike/strength helpers."""
+    return _norm_sport_type(sport_type)
+
+
 def _is_run(sport_type: Any) -> bool:
     return _norm_sport_type(sport_type) in {"run", "running", "trailrun", "virtualrun"}
 
@@ -265,6 +270,7 @@ class WorkOutBuddyWeb:
         self.status_label = None
         self.token_label = None
         self.activity_grid = None
+        self.landing_summary_markdown = None
         self.detail_markdown = None
         self.map_frame = None
         self.map_link = None
@@ -419,6 +425,10 @@ class WorkOutBuddyWeb:
                 ).classes("w-full h-[560px]")
                 self.activity_grid.on("cellClicked", self.on_activity_grid_click)
                 self.activity_grid.on("cellValueChanged", self.on_activity_grid_cell_changed)
+
+                with ui.card().classes("w-full mt-2"):
+                    ui.label("Quick training summary").classes("font-semibold")
+                    self.landing_summary_markdown = ui.markdown("Loading summary…").classes("w-full mono text-sm")
 
             with ui.column().classes("min-w-[420px]").style("flex: 1 1 38%;"):
                 ui.label("Route map").classes("text-lg font-semibold")
@@ -853,7 +863,7 @@ class WorkOutBuddyWeb:
             self.edit_title = ui.input("title").classes("w-full")
             with ui.row().classes("w-full"):
                 self.edit_sport_type = ui.select(["Run", "Ride", "VirtualRide", "Hike", "Walk", "Strength", "None"], label="sport type").classes("w-1/3")
-                self.edit_sport_type.on("update:model-value", lambda e: self.recalculate_edit_recommendation_for_type())
+                self.edit_sport_type.on("update:model-value", lambda e: ui.timer(0.05, self.recalculate_edit_recommendation_for_type, once=True))
                 self.edit_family = ui.select(
                     ["recovery_aerobic", "easy_aerobic", "steady_progression", "quality", "tempo", "long_run", "cross_training_ride", "endurance_ride", "bike_intervals", "rest_or_mobility", "easy_hike", "long_hike", "hilly_hike", "recovery_hike"],
                     label="family",
@@ -920,9 +930,92 @@ class WorkOutBuddyWeb:
                 self.activity_grid.options["rowData"] = rows
                 self.activity_grid.update()
             self.update_sport_type_options()
+            self.update_landing_summary(df)
             self.set_status(f"Loaded {len(rows)} activities")
         except Exception as e:
             self.set_status(f"Failed to load activities: {e}")
+
+
+    def update_landing_summary(self, df: Optional[pd.DataFrame] = None) -> None:
+        """Update the small summary below the activities table.
+
+        Uses the full activities dataframe, not the currently selected/filtered
+        statistics dataframe.
+        """
+        if self.landing_summary_markdown is None:
+            return
+        try:
+            if df is None:
+                df = self.db.read_activities_dataframe()
+            self.landing_summary_markdown.set_content(self._landing_summary_markdown(df))
+        except Exception as e:
+            self.landing_summary_markdown.set_content(f"Could not build summary: {e}")
+
+    def _landing_summary_markdown(self, df: pd.DataFrame) -> str:
+        if df is None or df.empty:
+            return (
+                "- Workouts last 14 days: **0**\n"
+                "- Workouts last 7 days: **0**\n"
+                "- Total km this year: **0.0 km**\n"
+                "- Total km last year: **0.0 km**\n"
+                "- Run km this year: **0.0 km**\n"
+                "- Run km last year: **0.0 km**\n"
+                "- Elevation gain this year: **0 m**"
+            )
+
+        data = df.copy()
+        if "start_date_local" not in data.columns:
+            data["start_date_local"] = None
+
+        data["_dt"] = pd.to_datetime(data["start_date_local"], errors="coerce", utc=True)
+        data = data.dropna(subset=["_dt"]).copy()
+        if data.empty:
+            return "No activities with parseable dates."
+
+        now = pd.Timestamp.now(tz="UTC")
+        this_year = int(now.year)
+        last_year = this_year - 1
+
+        dist = pd.to_numeric(data.get("distance_km", 0.0), errors="coerce").fillna(0.0)
+
+        # Elevation gain is already a first-class metric in the app/table as
+        # elevation_gain_m. Some older imports may have alternative column names,
+        # so fall back conservatively.
+        elev_col = None
+        for candidate in ["elevation_gain_m", "total_elevation_gain", "elev_gain_m"]:
+            if candidate in data.columns:
+                elev_col = candidate
+                break
+        elev = pd.to_numeric(data.get(elev_col, 0.0), errors="coerce").fillna(0.0) if elev_col else pd.Series(0.0, index=data.index)
+
+        years = data["_dt"].dt.year
+        sport_norm = data.get("sport_type", pd.Series("", index=data.index)).astype(str).map(_norm_sport_type)
+        is_run = sport_norm.isin({"run", "running", "trailrun", "virtualrun"})
+
+        last_14 = int((data["_dt"] >= now - pd.Timedelta(days=14)).sum())
+        last_7 = int((data["_dt"] >= now - pd.Timedelta(days=7)).sum())
+
+        km_this_year = float(dist[years == this_year].sum())
+        km_last_year = float(dist[years == last_year].sum())
+        run_km_this_year = float(dist[(years == this_year) & is_run].sum())
+        run_km_last_year = float(dist[(years == last_year) & is_run].sum())
+        elev_this_year = float(elev[years == this_year].sum())
+
+        # Also show the source column used for elevation so it is clear that this
+        # is not ignored silently.
+        elev_note = elev_col or "none"
+
+        return (
+            f"- Workouts last 14 days: **{last_14}**\n"
+            f"- Workouts last 7 days: **{last_7}**\n"
+            f"- Total km this year: **{km_this_year:.1f} km**\n"
+            f"- Total km last year: **{km_last_year:.1f} km**\n"
+            f"- Run km this year: **{run_km_this_year:.1f} km**\n"
+            f"- Run km last year: **{run_km_last_year:.1f} km**\n"
+            f"- Elevation gain this year: **{elev_this_year:.0f} m**\n"
+            f"- Elevation metric: `{elev_note}`"
+        )
+
 
     def on_activity_grid_click(self, e: Any) -> None:
         try:
@@ -2153,33 +2246,179 @@ class WorkOutBuddyWeb:
             w.update()
 
 
-    def recalculate_edit_recommendation_for_type(self) -> None:
-        """When only the planned workout type changes, rebuild the recommendation.
 
-        This is the missing semi-automatic step: e.g. Strength -> Hike should
-        immediately produce a hike title, duration, distance, HR zone and notes.
+    def _fallback_planned_workout_for_type(self, old: Dict[str, Any], sport: str, day_dt: datetime) -> Dict[str, Any]:
+        """Local fallback for type-change auto-fill.
+
+        This guarantees that changing Strength -> Hike, Run -> Ride, etc. always
+        produces usable recommendations even if the planner adaptation path fails.
+        """
+        family_old = str(old.get("family") or "easy_aerobic")
+        sport_norm = _norm_sport_type(sport)
+        old_dur = _safe_float(old.get("duration_min"), None)
+        old_dist = _safe_float(old.get("distance_km"), None)
+
+        def base(sport_type: str, family: str, title: str, dur: int, dist: float, zone: str, pace: str, wattage: str, notes: str) -> Dict[str, Any]:
+            return {
+                "date": day_dt.date().isoformat(),
+                "weekday": day_dt.strftime("%a"),
+                "start_time": day_dt.strftime("%H:%M"),
+                "sport_type": sport_type,
+                "family": family,
+                "title": title,
+                "duration_min": int(max(0, round(float(dur or 0)))),
+                "distance_km": round(float(dist or 0.0), 1),
+                "zone": zone,
+                "pace": pace,
+                "wattage": wattage,
+                "notes": notes,
+                "no_workout": False,
+                "locked": True,
+                "source": "manual_type_change_fallback_auto_fill",
+            }
+
+        # Preserve training intent roughly by using the old family.
+        quality_like = family_old in {"quality", "tempo", "bike_intervals", "hilly_hike", "steady_progression"}
+        long_like = family_old in {"long_run", "endurance_ride", "long_hike"}
+        recovery_like = family_old in {"recovery_aerobic", "recovery_hike", "rest_or_mobility"}
+
+        if sport_norm in {"none", "rest", "off"}:
+            return {
+                "date": day_dt.date().isoformat(),
+                "weekday": day_dt.strftime("%a"),
+                "start_time": day_dt.strftime("%H:%M"),
+                "sport_type": "None",
+                "family": "rest_or_mobility",
+                "title": "Rest / mobility",
+                "duration_min": 0,
+                "distance_km": 0.0,
+                "zone": "Rest",
+                "pace": "",
+                "wattage": "",
+                "notes": "No endurance workout. Optional 15-20 min walk or gentle mobility.",
+                "no_workout": True,
+                "locked": True,
+                "source": "manual_type_change_fallback_auto_fill",
+            }
+
+        if _is_hike(sport):
+            if long_like:
+                dur = int(max(90, min(180, old_dur * 1.25 if old_dur else 110)))
+                dist = max(6.0, min(16.0, dur / 11.0))
+                return base(sport, "long_hike", "Long aerobic hike", dur, dist, "Mostly Z1-Z2; short Z3 uphill allowed", "terrain-dependent", "", "Low-impact endurance replacement. Keep climbs controlled; avoid turning every hill into threshold.")
+            if quality_like:
+                dur = int(max(60, min(120, old_dur * 1.10 if old_dur else 80)))
+                dist = max(4.5, min(11.0, dur / 11.5))
+                return base(sport, "hilly_hike", "Hilly aerobic hike", dur, dist, "Z2 with controlled Z3 uphill", "brisk uphill / easy downhill", "", "15 min easy, then 3-5 sustained uphill segments at strong but controlled effort. No running required.")
+            if recovery_like:
+                dur = int(max(35, min(75, old_dur * 1.20 if old_dur else 50)))
+                dist = max(2.5, min(6.0, dur / 12.0))
+                return base(sport, "recovery_hike", "Recovery hike", dur, dist, "Z1-low Z2", "comfortable walking pace", "", "Easy low-impact recovery. Keep it genuinely easy.")
+            dur = int(max(55, min(100, old_dur * 1.15 if old_dur else 70)))
+            dist = max(4.0, min(9.0, dur / 12.0))
+            return base(sport, "easy_hike", "Easy aerobic hike", dur, dist, "Mostly Z2", "comfortable/brisk walk", "", "Aerobic hiking volume to support general fitness without the same running impact.")
+
+        if _is_strength(sport):
+            if quality_like or long_like:
+                dur = int(max(35, min(60, old_dur * 0.65 if old_dur else 45)))
+                return base(sport, "strength_general", "Running-specific strength", dur, 0.0, "Moderate; not HR-driven", "", "controlled strength work", "Squat/lunge pattern, hinge, calf raises, step-ups/split squats, and core. Keep 2-3 reps in reserve.")
+            dur = int(max(25, min(45, old_dur * 0.65 if old_dur else 30)))
+            return base(sport, "strength_prehab", "Core / prehab strength", dur, 0.0, "Easy-moderate; not HR-driven", "", "bodyweight/light resistance", "Calves, glute medius, hamstrings, side plank, dead bug, and painless split-squat pattern. Should not create heavy soreness.")
+
+        if _is_ride(sport):
+            if long_like:
+                dur = int(max(75, min(150, old_dur * 1.25 if old_dur else 90)))
+                dist = max(18.0, min(55.0, dur * 0.38))
+                return base(sport, "endurance_ride", "Long aerobic virtual ride", dur, dist, "Mostly Z2", "", "comfortable endurance power", "Low-impact endurance replacement. Smooth cadence; do not grind.")
+            if quality_like:
+                dur = int(max(45, min(90, old_dur * 1.05 if old_dur else 60)))
+                dist = max(12.0, min(38.0, dur * 0.38))
+                return base(sport, "bike_intervals", "Quality virtual ride", dur, dist, "Z3 blocks, short Z4 only if planned", "", "controlled tempo / sweet spot", "Warm-up, then controlled tempo intervals. Lower impact than running but still a hard session.")
+            if recovery_like:
+                dur = int(max(30, min(65, old_dur * 1.10 if old_dur else 40)))
+                dist = max(8.0, min(25.0, dur * 0.35))
+                return base(sport, "recovery_aerobic", "Recovery spin", dur, dist, "Z1-Z2", "", "very easy spin", "Low-force recovery spin. High comfort, no grinding.")
+            dur = int(max(40, min(85, old_dur * 1.15 if old_dur else 55)))
+            dist = max(10.0, min(32.0, dur * 0.37))
+            return base(sport, "cross_training_ride", "Easy virtual ride", dur, dist, "Mostly Z2", "", "endurance power, steady cadence", "Aerobic support without running impact.")
+
+        if _is_run(sport):
+            if long_like:
+                dist = max(7.0, min(16.0, old_dist if old_dist and old_dist > 0 else 9.0))
+                dur = int(round(dist * 7.5))
+                return base(sport, "long_run", "Long easy run", dur, dist, "Z2; avoid Z4/Z5", "easy conversational", "", "Main stamina session. Distance matters more than speed.")
+            if quality_like:
+                dist = max(5.0, min(10.0, old_dist if old_dist and old_dist > 0 else 6.5))
+                dur = int(round(dist * 7.0))
+                return base(sport, "quality", "Quality run", dur, dist, "Z3-Z4 during work blocks", "controlled hard, not all-out", "", "Warm-up, controlled intervals/tempo, cool-down. Stop if HR is unusually high.")
+            if recovery_like:
+                dist = max(3.0, min(6.0, old_dist if old_dist and old_dist > 0 else 4.0))
+                dur = int(round(dist * 8.0))
+                return base(sport, "recovery_aerobic", "Recovery run", dur, dist, "Z1-low Z2", "very easy", "", "Easy enough that HR remains controlled. Walk breaks allowed.")
+            dist = max(4.0, min(9.0, old_dist if old_dist and old_dist > 0 else 5.5))
+            dur = int(round(dist * 7.7))
+            return base(sport, "easy_aerobic", "Easy aerobic run", dur, dist, "Mostly Z2", "easy conversational", "", "Build aerobic consistency. HR/effort overrides pace.")
+
+        dur = int(old_dur or 45)
+        return base(sport, "easy_aerobic", "Easy aerobic workout", dur, 0.0, "Z1-Z2", "", "", "Generic aerobic work. Keep it conversational.")
+
+
+    def recalculate_edit_recommendation_for_type(self) -> None:
+        """Auto-fill recommendation fields when the planned sport type changes.
+
+        This is intentionally *not* a dumb manual override. It rebuilds title,
+        duration, distance, zone, pace/power and notes for the selected type.
         """
         try:
             if not self.selected_plan_date:
                 self._adapt_edit_fields()
                 return
-            old = self.planned_by_date.get(self.selected_plan_date) or {}
-            sport = str(self.edit_sport_type.value or old.get("sport_type") or "Run")
-            no = bool(self.edit_no_workout.value) or sport.lower() in {"none", "rest", "off"}
-            if no:
-                self.edit_no_workout.value = True
-                self._adapt_edit_fields()
-                return
-            day_dt = datetime.fromisoformat(f"{self.selected_plan_date}T{str(self.edit_time.value or old.get('start_time') or '18:00')}:00")
-            vo2 = self.db.get_float_setting("profile_vo2max", 41.0)
-            aggressiveness = self.db.get_int_setting("training_aggressiveness", 3)
-            planner = WorkoutPlanner(profile_vo2max=vo2, aggressiveness=aggressiveness)
-            recent = self.db.read_recent_activities(limit=240, before_iso=(day_dt.replace(hour=23, minute=59, second=59)).isoformat(timespec="seconds"))
-            sport_types = self.db.read_sport_types()
-            adapted = planner.adapt_workout_to_sport_type(old, sport, day_dt, recent, self.read_goals_from_ui(), sport_types)
 
-            self.edit_title.value = str(adapted.get("title") or self.edit_title.value or "Planned workout")
-            self.edit_family.value = str(adapted.get("family") or self.edit_family.value or "easy_aerobic")
+            old = dict(self.planned_by_date.get(self.selected_plan_date) or {})
+            sport = str(self.edit_sport_type.value or old.get("sport_type") or "Run")
+            no = bool(self.edit_no_workout.value) or _norm_sport_type(sport) in {"none", "rest", "off"}
+
+            time_value = str(self.edit_time.value or old.get("start_time") or "18:00")
+            try:
+                day_dt = _parse_datetime(self.selected_plan_date, time_value)
+            except Exception:
+                day_dt = datetime.fromisoformat(f"{self.selected_plan_date}T18:00:00")
+
+            if no:
+                adapted = self._fallback_planned_workout_for_type(old, "None", day_dt)
+            else:
+                adapted = None
+                try:
+                    vo2 = self.db.get_float_setting("profile_vo2max", 41.0)
+                    aggressiveness = self.db.get_int_setting("training_aggressiveness", 3)
+                    planner = WorkoutPlanner(profile_vo2max=vo2, aggressiveness=aggressiveness)
+                    recent = self.db.read_recent_activities(
+                        limit=240,
+                        before_iso=(day_dt.replace(hour=23, minute=59, second=59)).isoformat(timespec="seconds"),
+                    )
+                    sport_types = self.db.read_sport_types()
+                    adapted = planner.adapt_workout_to_sport_type(
+                        old,
+                        sport,
+                        day_dt,
+                        recent,
+                        self.read_goals_from_ui(),
+                        sport_types,
+                    )
+                except Exception:
+                    adapted = None
+
+                # Fallback is deliberately used if planner returns incomplete values.
+                if (
+                    not adapted
+                    or not str(adapted.get("title") or "").strip()
+                    or (not adapted.get("no_workout") and int(float(adapted.get("duration_min") or 0)) <= 0)
+                    or (_is_hike(sport) and float(adapted.get("distance_km") or 0.0) <= 0.0)
+                ):
+                    adapted = self._fallback_planned_workout_for_type(old, sport, day_dt)
+
+            self.edit_title.value = str(adapted.get("title") or "Planned workout")
+            self.edit_family.value = str(adapted.get("family") or "easy_aerobic")
             self.edit_duration.value = float(adapted.get("duration_min") or 0.0)
             self.edit_distance.value = float(adapted.get("distance_km") or 0.0)
             self.edit_zone.value = str(adapted.get("zone") or "")
@@ -2187,15 +2426,23 @@ class WorkOutBuddyWeb:
             self.edit_wattage.value = str(adapted.get("wattage") or "")
             self.edit_notes.value = str(adapted.get("notes") or "")
             self.edit_no_workout.value = bool(adapted.get("no_workout"))
-            for w in [self.edit_title, self.edit_family, self.edit_duration, self.edit_distance, self.edit_zone, self.edit_pace, self.edit_wattage, self.edit_notes, self.edit_no_workout]:
+
+            for widget in [
+                self.edit_title, self.edit_family, self.edit_duration, self.edit_distance,
+                self.edit_zone, self.edit_pace, self.edit_wattage, self.edit_notes,
+                self.edit_no_workout,
+            ]:
                 try:
-                    w.update()
+                    widget.update()
                 except Exception:
                     pass
+
             self._adapt_edit_fields()
+            ui.notify(f"Auto-filled {sport} recommendation", type="positive")
         except Exception as e:
             self._adapt_edit_fields()
             ui.notify(f"Could not auto-recalculate workout type: {e}", type="warning", multi_line=True)
+
 
     def save_selected_plan_workout(self) -> None:
         if not self.selected_plan_date:
@@ -2440,7 +2687,7 @@ def main() -> None:
 
 
 def _is_hike(sport_type: Any) -> bool:
-    return _norm_sport(sport_type) in {"hike", "hiking", "walk", "walking", "trek", "trekking"}
+    return _norm_sport_type(sport_type) in {"hike", "hiking", "walk", "walking", "trek", "trekking"}
 
 def _is_strength(sport_type: Any) -> bool:
-    return _norm_sport(sport_type) in {"strength", "strengthtraining", "strength_training", "bodyweightstrength", "bodyweight_strength", "gym", "weights", "workout"}
+    return _norm_sport_type(sport_type) in {"strength", "strengthtraining", "strength_training", "bodyweightstrength", "bodyweight_strength", "gym", "weights", "workout"}
