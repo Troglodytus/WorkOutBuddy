@@ -70,6 +70,8 @@ The app callback URL is:
 
 ## 3. Run
 
+Browser/Tailscale version:
+
 ```powershell
 .\.venv\Scripts\python.exe main.py
 ```
@@ -85,6 +87,15 @@ Open from iPhone over Tailscale:
 ```text
 http://your-pc.your-tailnet.ts.net:8080
 ```
+
+Desktop GUI version:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe desktop.py
+```
+
+See [README_DESKTOP.md](README_DESKTOP.md) for native GUI settings and the later `.exe` build command.
 
 ## 4. Use
 

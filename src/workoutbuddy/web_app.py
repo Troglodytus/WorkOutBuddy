@@ -349,8 +349,11 @@ class WorkOutBuddyWeb:
         )
 
         with ui.header().classes("items-center justify-between"):
-            ui.label("WorkOutBuddy Web").classes("text-xl font-semibold")
-            self.status_label = ui.label("Ready").classes("text-sm")
+            title = "WorkOutBuddy" if self.config.app_mode == "desktop" else "WorkOutBuddy Web"
+            ui.label(title).classes("text-xl font-semibold")
+            with ui.row().classes("items-center gap-3"):
+                self.status_label = ui.label("Ready").classes("text-sm")
+                ui.button("Exit", on_click=self.exit_app).props("color=negative outline dense").classes("px-3")
 
         with ui.tabs().classes("w-full") as tabs:
             activity_tab = ui.tab("Activities")
@@ -809,22 +812,26 @@ class WorkOutBuddyWeb:
             ui.label("Strava authorization").classes("text-lg font-semibold")
             self.token_label = ui.label("")
             ui.label(f"Configured redirect URI: {self.config.redirect_uri}").classes("mono text-sm")
-            ui.label("In your Strava API app, the callback domain must match the domain part of that URL. For local use: localhost. For Tailscale use: your MagicDNS .ts.net hostname.").classes("text-sm")
+            if self.config.app_mode == "desktop":
+                ui.label("Desktop mode uses a local callback. In your Strava API app, the callback domain should be localhost.").classes("text-sm")
+            else:
+                ui.label("In your Strava API app, the callback domain must match the domain part of that URL. For local use: localhost. For Tailscale use: your MagicDNS .ts.net hostname.").classes("text-sm")
             with ui.row().classes("items-center"):
                 ui.button("Connect Strava", on_click=self.open_strava_authorization).props("color=primary")
                 ui.button("Refresh token now", on_click=self.refresh_strava_token)
                 ui.button("Refresh status", on_click=self.update_token_status)
 
-        with ui.card().classes("w-full"):
-            ui.label("Access from iPhone via Tailscale").classes("text-lg font-semibold")
-            ui.markdown(
-                f"""
-                1. Run this web app on the PC/server.
-                2. Install Tailscale on the PC/server and iPhone.
-                3. Open the PC's Tailscale/MagicDNS URL on the iPhone, for example `http://your-pc.your-tailnet.ts.net:{self.config.web_port}`.
-                4. Set `WORKOUTBUDDY_PUBLIC_BASE_URL` in `.env` to that same URL before Strava OAuth.
-                """
-            )
+        if self.config.app_mode != "desktop":
+            with ui.card().classes("w-full"):
+                ui.label("Access from iPhone via Tailscale").classes("text-lg font-semibold")
+                ui.markdown(
+                    f"""
+                    1. Run this web app on the PC/server.
+                    2. Install Tailscale on the PC/server and iPhone.
+                    3. Open the PC's Tailscale/MagicDNS URL on the iPhone, for example `http://your-pc.your-tailnet.ts.net:{self.config.web_port}`.
+                    4. Set `WORKOUTBUDDY_PUBLIC_BASE_URL` in `.env` to that same URL before Strava OAuth.
+                    """
+                )
 
 
     def _build_analysis_dialog(self) -> None:
@@ -2563,9 +2570,13 @@ class WorkOutBuddyWeb:
             self.status_label.set_text(str(message))
         print(message)
 
+    def exit_app(self) -> None:
+        self.set_status("Closing WorkOutBuddy...")
+        ui.timer(0.2, app.shutdown, once=True)
 
-def create_app_instance() -> WorkOutBuddyWeb:
-    config = AppConfig.load()
+
+def create_app_instance(config: Optional[AppConfig] = None) -> WorkOutBuddyWeb:
+    config = config or AppConfig.load()
     app.add_static_files("/maps", str(config.maps_dir))
     app.add_static_files("/exports", str(config.exports_dir))
     web = WorkOutBuddyWeb(config)
@@ -2674,16 +2685,28 @@ def create_app_instance() -> WorkOutBuddyWeb:
     return web
 
 
-def main() -> None:
-    config = AppConfig.load()
-    create_app_instance()
+def run_app(config: AppConfig, *, native: bool, title: str, window_size: Optional[Tuple[int, int]] = None) -> None:
+    create_app_instance(config)
     ui.run(
         host=config.web_host,
         port=config.web_port,
-        title="WorkOutBuddy Web",
+        title=title,
         reload=False,
         show=False,
+        native=native,
+        window_size=window_size,
+        uvicorn_logging_level="warning",
     )
+
+
+def main() -> None:
+    config = AppConfig.load("web")
+    run_app(config, native=False, title="WorkOutBuddy Web")
+
+
+def desktop_main() -> None:
+    config = AppConfig.load("desktop")
+    run_app(config, native=True, title="WorkOutBuddy", window_size=(1500, 950))
 
 
 def _is_hike(sport_type: Any) -> bool:
