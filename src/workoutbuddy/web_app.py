@@ -4,6 +4,7 @@ import asyncio
 import json
 import math
 import html as html_lib
+import os
 import re
 import time
 import urllib.parse
@@ -183,6 +184,16 @@ def _parse_stats_datetime_series(series: pd.Series) -> pd.Series:
 def _safe_filename(name: str) -> str:
     name = Path(name).name
     return re.sub(r"[^A-Za-z0-9_. -]", "_", name)
+
+
+def _startup_log(config: AppConfig, message: str) -> None:
+    try:
+        log_dir = config.root_dir / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with (log_dir / "startup.log").open("a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat(timespec='seconds')} {message}\n")
+    except Exception:
+        pass
 
 
 # ----------------------------- web application -----------------------------
@@ -2686,7 +2697,26 @@ def create_app_instance(config: Optional[AppConfig] = None) -> WorkOutBuddyWeb:
 
 
 def run_app(config: AppConfig, *, native: bool, title: str, window_size: Optional[Tuple[int, int]] = None) -> None:
+    _startup_log(
+        config,
+        f"run_app mode={config.app_mode} native={native} pid={os.getpid()} "
+        f"root={config.root_dir} db={config.db_path} host={config.web_host} port={config.web_port}",
+    )
     create_app_instance(config)
+    app.on_shutdown(lambda: _startup_log(config, f"shutdown pid={os.getpid()}"))
+    if native:
+        app.native.start_args.update({"gui": "edgechromium"})
+        app.native.window_args.update({
+            "x": 80,
+            "y": 60,
+            "focus": True,
+            "hidden": False,
+            "minimized": False,
+            "min_size": (1024, 720),
+        })
+        app.native.on("shown", lambda: _startup_log(config, f"native window shown pid={os.getpid()}"))
+        app.native.on("loaded", lambda: _startup_log(config, f"native window loaded pid={os.getpid()}"))
+        app.native.on("closed", lambda: _startup_log(config, f"native window closed pid={os.getpid()}"))
     ui.run(
         host=config.web_host,
         port=config.web_port,
