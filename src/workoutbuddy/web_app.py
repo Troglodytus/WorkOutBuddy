@@ -282,6 +282,15 @@ class WorkOutBuddyWeb:
         self.token_label = None
         self.activity_grid = None
         self.landing_summary_markdown = None
+        self.dashboard_load_ratio_label = None
+        self.dashboard_stress_detail_label = None
+        self.dashboard_stress_status_label = None
+        self.dashboard_load_progress = None
+        self.dashboard_7d_main_label = None
+        self.dashboard_7d_detail_label = None
+        self.dashboard_30d_main_label = None
+        self.dashboard_30d_detail_label = None
+        self.dashboard_hr_zones_html = None
         self.detail_markdown = None
         self.map_frame = None
         self.map_link = None
@@ -355,6 +364,13 @@ class WorkOutBuddyWeb:
               .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
               .calendar-card { min-height: 170px; cursor: pointer; white-space: pre-wrap; }
               .calendar-card:hover { outline: 2px solid #777; }
+              .dashboard-row { display:flex; flex-wrap:wrap; gap:12px; width:100%; margin:10px 0 14px; }
+              .dashboard-card { flex:1 1 230px; min-width:220px; min-height:170px; gap:8px; border-radius:8px; }
+              .dashboard-value { font-size:1.75rem; line-height:1.1; font-weight:700; }
+              .dashboard-detail { color:#667085; font-size:.82rem; }
+              .hr-zone-row { display:grid; grid-template-columns:28px 1fr 86px; align-items:center; gap:7px; margin:5px 0; font-size:12px; }
+              .hr-zone-track { height:7px; background:#e5e7eb; border-radius:3px; overflow:hidden; }
+              .hr-zone-fill { height:100%; border-radius:3px; }
             </style>
             """
         )
@@ -419,6 +435,7 @@ class WorkOutBuddyWeb:
                 self.server_folder_input = ui.input("Server-side folder path", placeholder=r"C:\Users\Daniel\Downloads\StravaExport").classes("w-2/3")
                 ui.button("Import folder", on_click=self.import_server_folder)
 
+        self._build_activity_dashboard()
         ui.separator()
         with ui.row().classes("w-full gap-4 items-start").style("display:flex; flex-wrap:wrap;"):
             with ui.column().classes("min-w-[760px]").style("flex: 1 1 58%;"):
@@ -490,6 +507,40 @@ class WorkOutBuddyWeb:
                 ui.label("Selected activity").classes("text-lg font-semibold")
                 self.detail_markdown = ui.markdown("Select an activity row.").classes("w-full mono text-sm")
 
+    def _build_activity_dashboard(self) -> None:
+        with ui.row().classes("dashboard-row"):
+            with ui.card().classes("dashboard-card p-4"):
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("Training load").classes("font-semibold")
+                    with ui.icon("info_outline").classes("text-gray-500 cursor-help"):
+                        ui.tooltip("CTL = 42-day fitness load; ATL = 7-day fatigue load; TSB = CTL - ATL")
+                self.dashboard_load_ratio_label = ui.label("--").classes("dashboard-value")
+                self.dashboard_stress_status_label = ui.label("No load history").classes("text-sm font-medium")
+                self.dashboard_load_progress = ui.linear_progress(value=0.0, show_value=False).props(
+                    "rounded color=positive"
+                ).classes("w-full mt-2")
+                self.dashboard_stress_detail_label = ui.label("ATL -- / CTL -- / TSB --").classes("dashboard-detail")
+
+            with ui.card().classes("dashboard-card p-4"):
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("Last 7 days").classes("font-semibold")
+                    ui.icon("date_range").classes("text-gray-500")
+                self.dashboard_7d_main_label = ui.label("0.0 h").classes("dashboard-value")
+                self.dashboard_7d_detail_label = ui.label("0 sessions | load 0 | avg HR --").classes("dashboard-detail")
+
+            with ui.card().classes("dashboard-card p-4"):
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("Last 30 days").classes("font-semibold")
+                    ui.icon("calendar_month").classes("text-gray-500")
+                self.dashboard_30d_main_label = ui.label("0.0 h").classes("dashboard-value")
+                self.dashboard_30d_detail_label = ui.label("0 sessions | load 0 | avg HR --").classes("dashboard-detail")
+
+            with ui.card().classes("dashboard-card p-4"):
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("HR zones 7d / 30d").classes("font-semibold")
+                    ui.icon("favorite").classes("text-red-500")
+                self.dashboard_hr_zones_html = ui.html(self._hr_zone_dashboard_html([0] * 5, [0] * 5)).classes("w-full")
+
     def _activity_column_defs(self) -> List[Dict[str, Any]]:
         """Wide table: raw data, physiology, run mechanics, best efforts, and data quality."""
         num = "agNumberColumnFilter"
@@ -512,6 +563,12 @@ class WorkOutBuddyWeb:
             {"headerName": "BMI", "field": "bmi", "filter": num, "width": 80},
             {"headerName": "Age", "field": "age_years_at_activity", "filter": num, "width": 80},
             {"headerName": "Weather °C", "field": "weather_temp_c", "filter": num, "width": 115},
+            {"headerName": "Start °C", "field": "weather_start_temp_c", "filter": num, "width": 95},
+            {"headerName": "End °C", "field": "weather_end_temp_c", "filter": num, "width": 90},
+            {"headerName": "Humidity %", "field": "weather_humidity_pct", "filter": num, "width": 110},
+            {"headerName": "Cloud %", "field": "weather_cloud_cover_pct", "filter": num, "width": 100},
+            {"headerName": "Solar W/m²", "field": "weather_shortwave_radiation_w_m2", "filter": num, "width": 115},
+            {"headerName": "Direct W/m²", "field": "weather_direct_radiation_w_m2", "filter": num, "width": 120},
             {"headerName": "Weather |°C-15|", "field": "weather_temp_deviation_from_15_c", "filter": num, "width": 135},
             {"headerName": "VO2 demand", "field": "vo2_demand_est_ml_kg_min", "filter": num, "width": 120},
             {"headerName": "Load", "field": "training_load_score", "filter": num, "width": 85},
@@ -677,7 +734,10 @@ class WorkOutBuddyWeb:
             "start_date_local", "distance_km", "moving_time_min", "avg_pace_min_km", "avg_gap_pace_min_km",
             "avg_hr", "max_hr", "hr_efficiency_drift_pct", "gap_hr_efficiency_drift_pct", "km_gap_hr_efficiency_drift_pct",
             "apple_vo2max", "body_weight_kg", "bmi", "age_years_at_activity", "vo2_demand_est_ml_kg_min", "training_load_score", "trimp_score",
-            "weather_temp_c", "weather_temp_deviation_from_15_c", "cycling_power_w", "run_equivalent_power_w", "bike_inferred_power_w", "power_hr_efficiency",
+            "weather_temp_c", "weather_start_temp_c", "weather_end_temp_c",
+            "weather_humidity_pct", "weather_cloud_cover_pct",
+            "weather_shortwave_radiation_w_m2", "weather_direct_radiation_w_m2",
+            "weather_temp_deviation_from_15_c", "cycling_power_w", "run_equivalent_power_w", "bike_inferred_power_w", "power_hr_efficiency",
             "easy_zone_fraction", "hard_zone_fraction", "run_step_frequency_spm", "estimated_total_steps",
             "avg_impact_bw", "max_impact_bw", "impact_load_index", "normalized_power", "variability_index",
             "best_5min_pace_min_km", "best_20min_pace_min_km", "best_5min_power", "elevation_gain_m",
@@ -948,10 +1008,116 @@ class WorkOutBuddyWeb:
                 self.activity_grid.options["rowData"] = rows
                 self.activity_grid.update()
             self.update_sport_type_options()
+            self.refresh_activity_dashboard(df)
             self.update_landing_summary(df)
             self.set_status(f"Loaded {len(rows)} activities")
         except Exception as e:
             self.set_status(f"Failed to load activities: {e}")
+
+    def refresh_activity_dashboard(self, df: Optional[pd.DataFrame] = None) -> None:
+        try:
+            if df is None:
+                df = self.db.read_activities_dataframe()
+            history = self.db.rebuild_training_stress_history()
+            latest = history[-1] if history else {}
+            ctl = _safe_float(latest.get("ctl"), 0.0) or 0.0
+            atl = _safe_float(latest.get("atl"), 0.0) or 0.0
+            tsb = _safe_float(latest.get("tsb"), 0.0) or 0.0
+            ratio = _safe_float(latest.get("load_ratio"), 0.0) or 0.0
+
+            if ctl <= 0:
+                status = "No load history"
+            elif ratio < 0.80:
+                status = "Fresh / low recent load"
+            elif ratio <= 1.30:
+                status = "Balanced load"
+            elif ratio <= 1.50:
+                status = "High fatigue"
+            else:
+                status = "Overload risk"
+
+            if self.dashboard_load_ratio_label is not None:
+                self.dashboard_load_ratio_label.set_text(f"{ratio:.2f}")
+            if self.dashboard_stress_status_label is not None:
+                self.dashboard_stress_status_label.set_text(status)
+            if self.dashboard_stress_detail_label is not None:
+                self.dashboard_stress_detail_label.set_text(f"ATL {atl:.1f} / CTL {ctl:.1f} / TSB {tsb:+.1f}")
+            if self.dashboard_load_progress is not None:
+                self.dashboard_load_progress.value = max(0.0, min(1.0, ratio / 1.5))
+                self.dashboard_load_progress.update()
+
+            stats_7 = self._dashboard_window_stats(df, 7)
+            stats_30 = self._dashboard_window_stats(df, 30)
+            self._set_dashboard_window(self.dashboard_7d_main_label, self.dashboard_7d_detail_label, stats_7)
+            self._set_dashboard_window(self.dashboard_30d_main_label, self.dashboard_30d_detail_label, stats_30)
+
+            if self.dashboard_hr_zones_html is not None:
+                self.dashboard_hr_zones_html.set_content(
+                    self._hr_zone_dashboard_html(stats_7["zones_min"], stats_30["zones_min"])
+                )
+        except Exception as e:
+            self.set_status(f"Dashboard refresh failed: {e}")
+
+    def _dashboard_window_stats(self, df: pd.DataFrame, days: int) -> Dict[str, Any]:
+        empty = {"hours": 0.0, "sessions": 0, "load": 0.0, "avg_hr": None, "zones_min": [0.0] * 5}
+        if df is None or df.empty or "start_date_local" not in df.columns:
+            return empty
+
+        data = df.copy()
+        data["_dt"] = pd.to_datetime(data["start_date_local"], errors="coerce", utc=True)
+        cutoff = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=int(days))
+        data = data[data["_dt"] >= cutoff].copy()
+        if data.empty:
+            return empty
+
+        def numeric_column(name: str) -> pd.Series:
+            values = data[name] if name in data.columns else pd.Series(0.0, index=data.index)
+            return pd.to_numeric(values, errors="coerce").fillna(0.0)
+
+        duration_s = numeric_column("moving_time_s")
+        load = numeric_column("training_load_score")
+        avg_hr = pd.to_numeric(data.get("avg_hr", pd.Series(index=data.index, dtype=float)), errors="coerce")
+        hr_mask = avg_hr.notna() & (duration_s > 0)
+        weighted_hr = None
+        if hr_mask.any() and float(duration_s[hr_mask].sum()) > 0:
+            weighted_hr = float((avg_hr[hr_mask] * duration_s[hr_mask]).sum() / duration_s[hr_mask].sum())
+
+        zones = []
+        for zone in ["z1_s", "z2_s", "z3_s", "z4_s", "z5_s"]:
+            zone_s = numeric_column(zone)
+            zones.append(float(zone_s.sum()) / 60.0)
+        return {
+            "hours": float(duration_s.sum()) / 3600.0,
+            "sessions": int(len(data)),
+            "load": float(load.sum()),
+            "avg_hr": weighted_hr,
+            "zones_min": zones,
+        }
+
+    @staticmethod
+    def _set_dashboard_window(main_label: Any, detail_label: Any, stats: Dict[str, Any]) -> None:
+        if main_label is not None:
+            main_label.set_text(f"{stats['hours']:.1f} h")
+        if detail_label is not None:
+            hr_text = f"{stats['avg_hr']:.0f} bpm" if stats.get("avg_hr") is not None else "--"
+            detail_label.set_text(
+                f"{stats['sessions']} sessions | load {stats['load']:.0f} | avg HR {hr_text}"
+            )
+
+    @staticmethod
+    def _hr_zone_dashboard_html(zones_7: List[float], zones_30: List[float]) -> str:
+        colors = ["#7c3aed", "#2563eb", "#16a34a", "#f59e0b", "#dc2626"]
+        max_value = max([float(v or 0.0) for v in zones_30] or [1.0])
+        max_value = max(max_value, 1.0)
+        rows = []
+        for idx, (v7, v30, color) in enumerate(zip(zones_7, zones_30, colors), start=1):
+            width = max(1.0, min(100.0, float(v30 or 0.0) / max_value * 100.0))
+            rows.append(
+                f"<div class='hr-zone-row'><b>Z{idx}</b>"
+                f"<div class='hr-zone-track'><div class='hr-zone-fill' style='width:{width:.1f}%;background:{color}'></div></div>"
+                f"<span>{float(v7 or 0.0):.0f} / {float(v30 or 0.0):.0f} min</span></div>"
+            )
+        return "".join(rows)
 
 
     def update_landing_summary(self, df: Optional[pd.DataFrame] = None) -> None:
@@ -1260,6 +1426,9 @@ class WorkOutBuddyWeb:
             f"- **Manual body weight / BMI:** {_fmt(row.get('body_weight_kg'), 1, ' kg')} / {_fmt(row.get('bmi'), 1)} ({row.get('bmi_category') or '—'}), age {_fmt(row.get('age_years_at_activity'), 0)}",
             f"- **Power normalization:** cycling {_fmt(row.get('cycling_power_w'), 0, ' W')}, run-equivalent {_fmt(row.get('run_equivalent_power_w'), 0, ' W')}, W/HR {_fmt(row.get('power_hr_efficiency'), 2)}",
             f"- **Weather archive temperature:** {_fmt(row.get('weather_temp_c') if row.get('weather_temp_c') is not None else row.get('avg_temp_c'), 1, ' °C')} (source: {row.get('weather_source') or 'stream/manual/unknown'})",
+            f"- **Weather start / end temperature:** {_fmt(row.get('weather_start_temp_c'), 1, ' °C')} / {_fmt(row.get('weather_end_temp_c'), 1, ' °C')}",
+            f"- **Humidity / cloud cover:** {_fmt(row.get('weather_humidity_pct'), 0, ' %')} / {_fmt(row.get('weather_cloud_cover_pct'), 0, ' %')}",
+            f"- **Solar / direct radiation:** {_fmt(row.get('weather_shortwave_radiation_w_m2'), 0, ' W/m²')} / {_fmt(row.get('weather_direct_radiation_w_m2'), 0, ' W/m²')}",
             f"- **Weather deviation from 15 °C:** {_fmt(row.get('weather_temp_deviation_from_15_c'), 1, ' °C')}",
             f"- **Training load score / TRIMP:** {_fmt(row.get('training_load_score'), 1)} / {_fmt(row.get('trimp_score'), 1)}",
             f"- **Easy / hard fraction:** {_fmt((_safe_float(row.get('easy_zone_fraction'), 0) or 0) * 100, 0, ' %')} / {_fmt((_safe_float(row.get('hard_zone_fraction'), 0) or 0) * 100, 0, ' %')}",

@@ -109,7 +109,9 @@ def update_missing_weather_for_recent_activities(db: Any, limit: int = 300, prog
     with db.connect() as conn:
         rows = conn.execute(
             """
-            SELECT m.activity_id, m.weather_temp_c, a.streams_json_path
+            SELECT m.activity_id, m.weather_temp_c, m.weather_humidity_pct,
+                   m.weather_cloud_cover_pct, m.weather_shortwave_radiation_w_m2,
+                   a.streams_json_path
             FROM metrics m
             JOIN activities a ON a.activity_id = m.activity_id
             ORDER BY m.start_date_local DESC
@@ -124,7 +126,10 @@ def update_missing_weather_for_recent_activities(db: Any, limit: int = 300, prog
 
     for r in rows:
         activity_id = str(r["activity_id"])
-        if r["weather_temp_c"] is not None:
+        if all(r[key] is not None for key in [
+            "weather_temp_c", "weather_humidity_pct",
+            "weather_cloud_cover_pct", "weather_shortwave_radiation_w_m2",
+        ]):
             skipped += 1
             continue
 
@@ -136,8 +141,8 @@ def update_missing_weather_for_recent_activities(db: Any, limit: int = 300, prog
                 updated += 1
                 if progress:
                     progress(
-                        f"Weather archive: {activity_id} -> {res.get('temp_c')} °C "
-                        f"at local hour {res.get('local_hour')} ({res.get('time_source')})"
+                        f"Weather archive: {activity_id} -> {res.get('temp_c')} °C average "
+                        f"from {res.get('local_hour')} ({res.get('time_source')})"
                     )
         except Exception as e:
             failed += 1
@@ -154,12 +159,7 @@ def fetch_archive_temperature(
     time_ref: WeatherTimeRef | datetime,
     timeout_s: int = 20,
 ) -> Optional[Dict[str, Any]]:
-    """Fetch hourly archive temperature for one activity.
-
-    Backwards-compatible: if a plain datetime is passed:
-    - aware datetime = true instant
-    - naive datetime = local clock
-    """
+    """Fetch and interpolate historical conditions at one coordinate/time."""
     if isinstance(time_ref, datetime):
         if time_ref.tzinfo is None:
             ref = WeatherTimeRef("local_clock", time_ref.replace(tzinfo=None), "legacy-naive-local-clock")
@@ -168,15 +168,17 @@ def fetch_archive_temperature(
     else:
         ref = time_ref
 
-    # For true instants, final matching needs Open-Meteo's coordinate-specific
-    # utc_offset_seconds. The cache key therefore includes the instant/source kind.
-    cache_basis = ref.dt.replace(minute=0, second=0, microsecond=0)
-    cache_key = f"openmeteo:v5:{round(lat, 3)}:{round(lon, 3)}:{ref.kind}:{cache_basis.isoformat()}"
+    cache_basis = ref.dt.replace(second=0, microsecond=0)
+    cache_key = f"openmeteo:v7:{round(lat, 3)}:{round(lon, 3)}:{ref.kind}:{cache_basis.isoformat()}"
     cached = db.get_weather_cache(cache_key)
     if cached and cached.get("temp_c") is not None:
         return {
             "temp_c": _safe_float(cached.get("temp_c")),
             "apparent_temp_c": _safe_float(cached.get("apparent_temp_c")),
+            "humidity_pct": _safe_float(cached.get("humidity_pct")),
+            "cloud_cover_pct": _safe_float(cached.get("cloud_cover_pct")),
+            "shortwave_radiation_w_m2": _safe_float(cached.get("shortwave_radiation_w_m2")),
+            "direct_radiation_w_m2": _safe_float(cached.get("direct_radiation_w_m2")),
             "source": cached.get("source") or "open-meteo archive cache",
             "local_hour": cached.get("local_hour"),
             "time_source": ref.source_label,
@@ -194,8 +196,12 @@ def fetch_archive_temperature(
         "longitude": f"{lon:.6f}",
         "start_date": (center_date - timedelta(days=1)).isoformat(),
         "end_date": (center_date + timedelta(days=1)).isoformat(),
-        "hourly": "temperature_2m,apparent_temperature",
+        "hourly": (
+            "temperature_2m,apparent_temperature,relative_humidity_2m,"
+            "cloud_cover,shortwave_radiation,direct_radiation"
+        ),
         "timezone": "auto",
+        "cell_selection": "nearest",
     }
 
     resp = requests.get(OPEN_METEO_ARCHIVE_URL, params=params, timeout=timeout_s)
@@ -205,39 +211,110 @@ def fetch_archive_temperature(
     data = resp.json()
     hourly = data.get("hourly") or {}
     times = hourly.get("time") or []
-    temps = hourly.get("temperature_2m") or []
-    apparent = hourly.get("apparent_temperature") or []
-
-    if not times or not temps:
+    if not times or not (hourly.get("temperature_2m") or []):
         return None
 
     offset_s = int(data.get("utc_offset_seconds") or 0)
     target_local = _time_ref_to_openmeteo_local(ref, offset_s)
 
-    idx = _nearest_hour_index(times, target_local)
-    if idx is None:
+    values = {
+        "temp_c": _interpolate_hourly(times, hourly.get("temperature_2m") or [], target_local),
+        "apparent_temp_c": _interpolate_hourly(times, hourly.get("apparent_temperature") or [], target_local),
+        "humidity_pct": _interpolate_hourly(times, hourly.get("relative_humidity_2m") or [], target_local),
+        "cloud_cover_pct": _interpolate_hourly(times, hourly.get("cloud_cover") or [], target_local),
+        "shortwave_radiation_w_m2": _interpolate_hourly(times, hourly.get("shortwave_radiation") or [], target_local),
+        "direct_radiation_w_m2": _interpolate_hourly(times, hourly.get("direct_radiation") or [], target_local),
+    }
+    if values["temp_c"] is None:
         return None
-
-    temp_c = _safe_float(temps[idx] if idx < len(temps) else None)
-    app_c = _safe_float(apparent[idx] if idx < len(apparent) else None)
-    local_hour = str(times[idx])
+    local_hour = target_local.isoformat(timespec="minutes")
 
     source = (
-        "open-meteo archive temperature_2m"
-        f"; matched_local_hour={local_hour}"
-        f"; target_local={target_local.isoformat(timespec='minutes')}"
+        "open-meteo historical nearest grid; exact-minute linear interpolation"
+        f"; target_local={local_hour}"
         f"; time_source={ref.source_label}"
     )
 
-    db.set_weather_cache(cache_key, lat, lon, local_hour, temp_c, app_c, source, json.dumps(data)[:5000])
+    db.set_weather_cache(
+        cache_key, lat, lon, local_hour,
+        values["temp_c"], values["apparent_temp_c"], source, json.dumps(data)[:5000],
+        humidity_pct=values["humidity_pct"],
+        cloud_cover_pct=values["cloud_cover_pct"],
+        shortwave_radiation_w_m2=values["shortwave_radiation_w_m2"],
+        direct_radiation_w_m2=values["direct_radiation_w_m2"],
+    )
 
     return {
-        "temp_c": temp_c,
-        "apparent_temp_c": app_c,
+        **values,
         "source": source,
         "local_hour": local_hour,
         "time_source": ref.source_label,
+        "archive_lat": _safe_float(data.get("latitude")),
+        "archive_lon": _safe_float(data.get("longitude")),
     }
+
+
+def _shift_time_ref(ref: WeatherTimeRef, seconds: float) -> WeatherTimeRef:
+    return WeatherTimeRef(ref.kind, ref.dt + timedelta(seconds=float(seconds)), ref.source_label + "+duration")
+
+
+def _average_weather_conditions(
+    start: Optional[Dict[str, Any]],
+    end: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    for key in [
+        "temp_c", "apparent_temp_c", "humidity_pct", "cloud_cover_pct",
+        "shortwave_radiation_w_m2", "direct_radiation_w_m2",
+    ]:
+        values = [
+            value for value in [
+                _safe_float((start or {}).get(key)),
+                _safe_float((end or {}).get(key)),
+            ]
+            if value is not None
+        ]
+        out[key] = sum(values) / len(values) if values else None
+    out["local_hour"] = (
+        f"{(start or {}).get('local_hour', '?')} -> {(end or {}).get('local_hour', '?')}"
+    )
+    out["time_source"] = (start or end or {}).get("time_source")
+    return out
+
+
+def _interpolate_hourly(times: List[str], values: List[Any], target_local: datetime) -> Optional[float]:
+    points: List[Tuple[datetime, float]] = []
+    for raw_time, raw_value in zip(times, values):
+        value = _safe_float(raw_value)
+        if value is None:
+            continue
+        try:
+            point_time = datetime.fromisoformat(str(raw_time)).replace(tzinfo=None)
+        except Exception:
+            continue
+        points.append((point_time, value))
+    if not points:
+        return None
+
+    target = target_local.replace(tzinfo=None)
+    if target <= points[0][0]:
+        return points[0][1]
+    if target >= points[-1][0]:
+        return points[-1][1]
+
+    for (left_time, left_value), (right_time, right_value) in zip(points, points[1:]):
+        if left_time <= target <= right_time:
+            width_s = (right_time - left_time).total_seconds()
+            if width_s <= 0:
+                return left_value
+            fraction = (target - left_time).total_seconds() / width_s
+            return left_value + (right_value - left_value) * fraction
+    return None
+
+
+def _is_virtual_activity(sport_type: Any) -> bool:
+    normalized = re.sub(r"[^a-z0-9]", "", str(sport_type or "").lower())
+    return normalized in VIRTUAL_ACTIVITY_TYPES
 
 
 def _build_weather_time_ref(row: Dict[str, Any]) -> Optional[WeatherTimeRef]:
@@ -313,7 +390,9 @@ def _nested_get(obj: Dict[str, Any], *keys: str) -> Any:
     return cur
 
 
-def _first_latlon_from_streams(path: Any) -> Optional[Tuple[float, float]]:
+def _route_endpoints_from_streams(
+    path: Any,
+) -> Optional[Tuple[Tuple[float, float], Tuple[float, float]]]:
     if not path:
         return None
     try:
@@ -334,15 +413,23 @@ def _first_latlon_from_streams(path: Any) -> Optional[Tuple[float, float]]:
     if not isinstance(pts, list):
         return None
 
+    valid: List[Tuple[float, float]] = []
     for pnt in pts:
         try:
             lat, lon = float(pnt[0]), float(pnt[1])
             if -90 <= lat <= 90 and -180 <= lon <= 180:
-                return (lat, lon)
+                valid.append((lat, lon))
         except Exception:
             continue
+    if not valid:
+        return None
+    return valid[0], valid[-1]
 
-    return None
+
+def _first_latlon_from_streams(path: Any) -> Optional[Tuple[float, float]]:
+    """Compatibility wrapper for callers which only need the route start."""
+    endpoints = _route_endpoints_from_streams(path)
+    return endpoints[0] if endpoints else None
 
 
 def _parse_activity_time(value: Any) -> Optional[datetime]:
