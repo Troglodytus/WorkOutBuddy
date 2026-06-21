@@ -600,9 +600,14 @@
       {
         "type": "calories",
         "visibility": "everyone"
+      },
+      {
+        "type": "weight_lifted",
+        "visibility": "everyone"
       }
     ],
     "hide_from_home": false,
+    "sport_image_visibility": "everyone",
     "embed_token": "0069df3dfe11748426a63bbbe4577b4a08905c0b",
     "private_note": "",
     "available_zones": []

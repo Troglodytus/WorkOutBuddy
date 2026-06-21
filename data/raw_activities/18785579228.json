@@ -1,0 +1,267 @@
+{
+  "summary": {
+    "resource_state": 2,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Thursday Evening Walk",
+    "distance": 1429.5,
+    "moving_time": 1442,
+    "elapsed_time": 2255,
+    "total_elevation_gain": 0.0,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 18785579228,
+    "start_date": "2026-06-04T15:14:47Z",
+    "start_date_local": "2026-06-04T17:14:47Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 7200.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a18785579228",
+      "summary_polyline": "spmbHoe|dBNm@B{@Ls@ACEBCHC\\ECBJ@d@Kt@EHE@C??CMAG@EDMIOSOJMEc@Ea@[g@AQ@]AIBQAGL[DYCIIIB]BKEWTi@POAEGIc@Ck@CKCBLSCA@@@A?RIt@GRAPEVA\\CFAGB^MnA@f@A?ADAR@JCf@Hf@Iz@@l@CHE?\\\\JO@IDADBF?JUBKDAJc@?IHSDABGT{@",
+      "resource_state": 2
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      47.752326,
+      16.696517
+    ],
+    "end_latlng": [
+      47.753212,
+      16.699954
+    ],
+    "average_speed": 0.991,
+    "max_speed": 2.0,
+    "average_cadence": 38.1,
+    "has_heartrate": true,
+    "average_heartrate": 80.9,
+    "max_heartrate": 93.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 117.1,
+    "elev_low": 116.1,
+    "upload_id": 19895791431,
+    "upload_id_str": "19895791431",
+    "external_id": "Thursday Evening Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false
+  },
+  "detail": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 155277753,
+      "resource_state": 1
+    },
+    "name": "Thursday Evening Walk",
+    "distance": 1429.5,
+    "moving_time": 1442,
+    "elapsed_time": 2255,
+    "total_elevation_gain": 0.0,
+    "type": "Walk",
+    "sport_type": "Walk",
+    "device_name": "Apple Watch Series 10",
+    "id": 18785579228,
+    "start_date": "2026-06-04T15:14:47Z",
+    "start_date_local": "2026-06-04T17:14:47Z",
+    "timezone": "(GMT+01:00) Europe/Vienna",
+    "utc_offset": 7200.0,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a18785579228",
+      "polyline": "_smbHe`|dBE?j@NFARoB?e@D[Na@BQB{@Ls@ACEBCHC\\ECBJ@d@Kt@EHE@C??CMAG@EDMIOSOJMEc@Ea@[g@AQ@]AIBQAGL[DYCIIIB]BKEWTi@POAEGIc@Ck@CKCBLSCA@@@A?RIt@GRAPEVA\\CFAGB^MnA@f@A?ADAR@JCf@Hf@Iz@@l@CHE?\\\\JOBKLBFEFO?GJIH_@?IHSDABGXiABUFQFa@Pk@BAN@LGZ@H?BEP?RKDAJMBMCBCAB?BEACFSDm@FW@]ASIa@IQOKGI?IDsAG]Fm@BG@BFi@ASIi@@KNkBb@qAHEBK\\U?V@IKIEFCA[b@CHCBI\\Sd@E\\",
+      "resource_state": 3,
+      "summary_polyline": "spmbHoe|dBNm@B{@Ls@ACEBCHC\\ECBJ@d@Kt@EHE@C??CMAG@EDMIOSOJMEc@Ea@[g@AQ@]AIBQAGL[DYCIIIB]BKEWTi@POAEGIc@Ck@CKCBLSCA@@@A?RIt@GRAPEVA\\CFAGB^MnA@f@A?ADAR@JCf@Hf@Iz@@l@CHE?\\\\JO@IDADBF?JUBKDAJc@?IHSDABGT{@"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": true,
+    "visibility": "only_me",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [
+      47.752326,
+      16.696517
+    ],
+    "end_latlng": [
+      47.753212,
+      16.699954
+    ],
+    "average_speed": 0.991,
+    "max_speed": 2.0,
+    "average_cadence": 38.1,
+    "has_heartrate": true,
+    "average_heartrate": 80.9,
+    "max_heartrate": 93.0,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": true,
+    "elev_high": 117.1,
+    "elev_low": 116.1,
+    "upload_id": 19895791431,
+    "upload_id_str": "19895791431",
+    "external_id": "Thursday Evening Walk.fit",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 0,
+    "has_kudoed": false,
+    "description": null,
+    "calories": 128.0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 1000.9,
+        "elapsed_time": 1184,
+        "elevation_difference": 0.0,
+        "moving_time": 1029,
+        "split": 1,
+        "average_speed": 0.97,
+        "average_grade_adjusted_speed": 0.97,
+        "average_heartrate": 80.93823216187434,
+        "pace_zone": 0
+      },
+      {
+        "distance": 426.8,
+        "elapsed_time": 1071,
+        "elevation_difference": 0.2,
+        "moving_time": 437,
+        "split": 2,
+        "average_speed": 0.98,
+        "average_grade_adjusted_speed": 0.98,
+        "average_heartrate": 80.87179487179488,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1427.7,
+        "elapsed_time": 2255,
+        "elevation_difference": 0.2,
+        "moving_time": 1466,
+        "split": 1,
+        "average_speed": 0.97,
+        "average_grade_adjusted_speed": 0.97,
+        "average_heartrate": 80.91739766081871,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 67187077997,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 18785579228,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1186,
+        "moving_time": 1078,
+        "start_date": "2026-06-04T15:14:47Z",
+        "start_date_local": "2026-06-04T17:14:47Z",
+        "distance": 1000.0,
+        "average_speed": 0.93,
+        "max_speed": 2.0,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 785,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 38.9,
+        "device_watts": false,
+        "average_heartrate": 81.0,
+        "max_heartrate": 93.0
+      },
+      {
+        "id": 67187078004,
+        "resource_state": 2,
+        "name": "Lap 2",
+        "activity": {
+          "id": 18785579228,
+          "visibility": "only_me",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 155277753,
+          "resource_state": 1
+        },
+        "elapsed_time": 1069,
+        "moving_time": 529,
+        "start_date": "2026-06-04T15:34:35Z",
+        "start_date_local": "2026-06-04T17:34:35Z",
+        "distance": 429.47,
+        "average_speed": 0.81,
+        "max_speed": 1.72,
+        "lap_index": 2,
+        "split": 2,
+        "start_index": 785,
+        "end_index": 785,
+        "total_elevation_gain": 0.0,
+        "average_cadence": 36.3,
+        "device_watts": false,
+        "average_heartrate": 80.8,
+        "max_heartrate": 91.0
+      }
+    ],
+    "photos": {
+      "primary": null,
+      "count": 0
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "8ba44bd07b54a0d7a84209ece7cd4d281389d712",
+    "available_zones": []
+  },
+  "zones_source": "local_inferred"
+}

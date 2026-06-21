@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 
 from .metrics import ActivityMetrics
+from .training_stress import aggregate_loads, calculate_training_stress_history
 
 
 TEXT_COLUMNS = {"activity_id", "sport_type", "name", "start_date_local", "zones_json", "km_splits_json", "best_efforts_json", "flags_json", "weather_source", "weather_fetched_at", "gender", "bmi_category"}
@@ -77,9 +78,23 @@ class WorkoutDatabase:
                     local_hour TEXT NOT NULL,
                     temp_c REAL,
                     apparent_temp_c REAL,
+                    humidity_pct REAL,
+                    cloud_cover_pct REAL,
+                    shortwave_radiation_w_m2 REAL,
+                    direct_radiation_w_m2 REAL,
                     source TEXT,
                     response_json TEXT,
                     fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS training_stress_daily (
+                    stress_date TEXT PRIMARY KEY,
+                    daily_load REAL NOT NULL DEFAULT 0,
+                    ctl REAL NOT NULL DEFAULT 0,
+                    atl REAL NOT NULL DEFAULT 0,
+                    tsb REAL NOT NULL DEFAULT 0,
+                    load_ratio REAL NOT NULL DEFAULT 0,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
                 """
             )
@@ -134,8 +149,22 @@ class WorkoutDatabase:
             "weather_temp_c": "REAL",
             "weather_apparent_temp_c": "REAL",
             "weather_temp_deviation_from_15_c": "REAL",
+            "weather_humidity_pct": "REAL",
+            "weather_cloud_cover_pct": "REAL",
+            "weather_shortwave_radiation_w_m2": "REAL",
+            "weather_direct_radiation_w_m2": "REAL",
+            "weather_start_temp_c": "REAL",
+            "weather_end_temp_c": "REAL",
+            "weather_start_humidity_pct": "REAL",
+            "weather_end_humidity_pct": "REAL",
+            "weather_start_cloud_cover_pct": "REAL",
+            "weather_end_cloud_cover_pct": "REAL",
+            "weather_start_shortwave_radiation_w_m2": "REAL",
+            "weather_end_shortwave_radiation_w_m2": "REAL",
             "weather_lat": "REAL",
             "weather_lon": "REAL",
+            "weather_end_lat": "REAL",
+            "weather_end_lon": "REAL",
             "weather_source": "TEXT",
             "weather_fetched_at": "TEXT",
         }
@@ -143,6 +172,17 @@ class WorkoutDatabase:
         for col, typ in weather_columns.items():
             if col not in existing:
                 conn.execute(f"ALTER TABLE metrics ADD COLUMN {col} {typ}")
+
+        weather_cache_columns = {
+            "humidity_pct": "REAL",
+            "cloud_cover_pct": "REAL",
+            "shortwave_radiation_w_m2": "REAL",
+            "direct_radiation_w_m2": "REAL",
+        }
+        cache_existing = {row[1] for row in conn.execute("PRAGMA table_info(weather_cache)").fetchall()}
+        for col, typ in weather_cache_columns.items():
+            if col not in cache_existing:
+                conn.execute(f"ALTER TABLE weather_cache ADD COLUMN {col} {typ}")
 
     def get_known_activity_ids(self) -> set[str]:
         with self.connect() as conn:
@@ -725,6 +765,21 @@ class WorkoutDatabase:
         longitude: Optional[float],
         source: str,
         fetched_at: Optional[str] = None,
+        *,
+        humidity_pct: Optional[float] = None,
+        cloud_cover_pct: Optional[float] = None,
+        shortwave_radiation_w_m2: Optional[float] = None,
+        direct_radiation_w_m2: Optional[float] = None,
+        start_temp_c: Optional[float] = None,
+        end_temp_c: Optional[float] = None,
+        start_humidity_pct: Optional[float] = None,
+        end_humidity_pct: Optional[float] = None,
+        start_cloud_cover_pct: Optional[float] = None,
+        end_cloud_cover_pct: Optional[float] = None,
+        start_shortwave_radiation_w_m2: Optional[float] = None,
+        end_shortwave_radiation_w_m2: Optional[float] = None,
+        end_latitude: Optional[float] = None,
+        end_longitude: Optional[float] = None,
     ) -> None:
         """Store historical/archived weather temperature for one activity.
 
@@ -747,13 +802,35 @@ class WorkoutDatabase:
                     weather_temp_c = ?,
                     weather_apparent_temp_c = ?,
                     weather_temp_deviation_from_15_c = ?,
+                    weather_humidity_pct = ?,
+                    weather_cloud_cover_pct = ?,
+                    weather_shortwave_radiation_w_m2 = ?,
+                    weather_direct_radiation_w_m2 = ?,
+                    weather_start_temp_c = ?,
+                    weather_end_temp_c = ?,
+                    weather_start_humidity_pct = ?,
+                    weather_end_humidity_pct = ?,
+                    weather_start_cloud_cover_pct = ?,
+                    weather_end_cloud_cover_pct = ?,
+                    weather_start_shortwave_radiation_w_m2 = ?,
+                    weather_end_shortwave_radiation_w_m2 = ?,
                     weather_lat = ?,
                     weather_lon = ?,
+                    weather_end_lat = ?,
+                    weather_end_lon = ?,
                     weather_source = ?,
                     weather_fetched_at = ?
                 WHERE activity_id = ?
                 """,
-                (temp_c, temp_c, apparent_temp_c, deviation, latitude, longitude, source, fetched_at, activity_id),
+                (
+                    temp_c, temp_c, apparent_temp_c, deviation,
+                    humidity_pct, cloud_cover_pct, shortwave_radiation_w_m2, direct_radiation_w_m2,
+                    start_temp_c, end_temp_c, start_humidity_pct, end_humidity_pct,
+                    start_cloud_cover_pct, end_cloud_cover_pct,
+                    start_shortwave_radiation_w_m2, end_shortwave_radiation_w_m2,
+                    latitude, longitude, end_latitude, end_longitude,
+                    source, fetched_at, activity_id,
+                ),
             )
 
     def get_weather_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
@@ -771,21 +848,35 @@ class WorkoutDatabase:
         apparent_temp_c: Optional[float],
         source: str,
         response_json: Optional[str] = None,
+        humidity_pct: Optional[float] = None,
+        cloud_cover_pct: Optional[float] = None,
+        shortwave_radiation_w_m2: Optional[float] = None,
+        direct_radiation_w_m2: Optional[float] = None,
     ) -> None:
         with self.connect() as conn:
             conn.execute(
                 """
                 INSERT INTO weather_cache
-                (cache_key, latitude, longitude, local_hour, temp_c, apparent_temp_c, source, response_json, fetched_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                (cache_key, latitude, longitude, local_hour, temp_c, apparent_temp_c,
+                 humidity_pct, cloud_cover_pct, shortwave_radiation_w_m2, direct_radiation_w_m2,
+                 source, response_json, fetched_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(cache_key) DO UPDATE SET
                     temp_c=excluded.temp_c,
                     apparent_temp_c=excluded.apparent_temp_c,
+                    humidity_pct=excluded.humidity_pct,
+                    cloud_cover_pct=excluded.cloud_cover_pct,
+                    shortwave_radiation_w_m2=excluded.shortwave_radiation_w_m2,
+                    direct_radiation_w_m2=excluded.direct_radiation_w_m2,
                     source=excluded.source,
                     response_json=excluded.response_json,
                     fetched_at=CURRENT_TIMESTAMP
                 """,
-                (cache_key, latitude, longitude, local_hour, temp_c, apparent_temp_c, source, response_json),
+                (
+                    cache_key, latitude, longitude, local_hour, temp_c, apparent_temp_c,
+                    humidity_pct, cloud_cover_pct, shortwave_radiation_w_m2, direct_radiation_w_m2,
+                    source, response_json,
+                ),
             )
 
     def delete_activity(self, activity_id: str) -> None:
@@ -809,6 +900,53 @@ class WorkoutDatabase:
         df = self.read_activities_dataframe()
         df.to_excel(out_path, index=False)
         return out_path
+
+    def rebuild_training_stress_history(self) -> List[Dict[str, Any]]:
+        """Recalculate and persist daily CTL/ATL/TSB through today."""
+        with self.connect() as conn:
+            activity_rows = conn.execute(
+                """
+                SELECT start_date_local, training_load_score
+                FROM metrics
+                WHERE start_date_local IS NOT NULL
+                ORDER BY start_date_local
+                """
+            ).fetchall()
+
+        daily_loads = aggregate_loads(dict(row) for row in activity_rows)
+        history = calculate_training_stress_history(daily_loads)
+        with self.connect() as conn:
+            conn.execute("DELETE FROM training_stress_daily")
+            conn.executemany(
+                """
+                INSERT INTO training_stress_daily
+                (stress_date, daily_load, ctl, atl, tsb, load_ratio, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                [
+                    (
+                        row["stress_date"], row["daily_load"], row["ctl"],
+                        row["atl"], row["tsb"], row["load_ratio"],
+                    )
+                    for row in history
+                ],
+            )
+        return history
+
+    def read_training_stress_history(self, days: Optional[int] = None) -> List[Dict[str, Any]]:
+        query = "SELECT * FROM training_stress_daily ORDER BY stress_date"
+        params: tuple[Any, ...] = ()
+        if days is not None and int(days) > 0:
+            query = """
+                SELECT * FROM (
+                    SELECT * FROM training_stress_daily
+                    ORDER BY stress_date DESC LIMIT ?
+                ) ORDER BY stress_date
+            """
+            params = (int(days),)
+        with self.connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
 
 
 
