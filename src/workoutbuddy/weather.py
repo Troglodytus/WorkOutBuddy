@@ -13,6 +13,9 @@ import requests
 
 OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 LOCAL_FALLBACK_TZ = ZoneInfo("Europe/Vienna")
+LANDSKRON_LAT = 46.6368
+LANDSKRON_LON = 13.8960
+VIRTUAL_ACTIVITY_TYPES = {"virtualride", "virtualrun"}
 
 
 @dataclass(frozen=True)
@@ -35,15 +38,7 @@ class WeatherTimeRef:
 
 
 def update_activity_weather_from_archive(db: Any, activity_id: str, timeout_s: int = 20) -> Optional[Dict[str, Any]]:
-    """Fetch archived weather for an activity and store temperature in DB.
-
-    Uses the first available GPS coordinate from the stream JSON and the activity
-    starting time.
-
-    Important time handling:
-    - Z means UTC/Zulu and is converted to the coordinate-local weather hour.
-    - Offset-less timestamps are treated as local clock time.
-    """
+    """Store start/end averaged historical conditions for one activity."""
     row = db.read_activity_row(activity_id)
     if not row:
         return None
@@ -52,22 +47,59 @@ def update_activity_weather_from_archive(db: Any, activity_id: str, timeout_s: i
     if time_ref is None:
         return None
 
-    latlon = _first_latlon_from_streams(row.get("streams_json_path"))
-    if latlon is None:
+    endpoints = _route_endpoints_from_streams(row.get("streams_json_path"))
+    use_landskron = _is_virtual_activity(row.get("sport_type")) or endpoints is None
+    if use_landskron:
+        start_latlon = end_latlon = (LANDSKRON_LAT, LANDSKRON_LON)
+        location_source = "Landskron fallback (virtual/no GPS)"
+    else:
+        start_latlon, end_latlon = endpoints
+        location_source = "route start/end nearest archive grid"
+
+    elapsed_s = _safe_float(row.get("elapsed_time_s"))
+    moving_s = _safe_float(row.get("moving_time_s"))
+    duration_s = elapsed_s if elapsed_s is not None and elapsed_s > 0 else (moving_s or 0.0)
+    end_time_ref = _shift_time_ref(time_ref, max(0.0, duration_s))
+
+    start_result = fetch_archive_temperature(
+        db, start_latlon[0], start_latlon[1], time_ref, timeout_s=timeout_s,
+    )
+    end_result = fetch_archive_temperature(
+        db, end_latlon[0], end_latlon[1], end_time_ref, timeout_s=timeout_s,
+    )
+    if start_result is None and end_result is None:
         return None
 
-    lat, lon = latlon
-    result = fetch_archive_temperature(db, lat, lon, time_ref, timeout_s=timeout_s)
-    if result is None:
-        return None
+    result = _average_weather_conditions(start_result, end_result)
+    result["start"] = start_result
+    result["end"] = end_result
+    result["location_source"] = location_source
+    result["source"] = (
+        f"open-meteo historical start/end average; {location_source}; "
+        f"duration_source={'elapsed_time_s' if elapsed_s else 'moving_time_s'}"
+    )
 
     db.set_activity_weather(
         activity_id=activity_id,
         temp_c=result.get("temp_c"),
         apparent_temp_c=result.get("apparent_temp_c"),
-        latitude=lat,
-        longitude=lon,
-        source=result.get("source") or "open-meteo archive",
+        latitude=start_latlon[0],
+        longitude=start_latlon[1],
+        end_latitude=end_latlon[0],
+        end_longitude=end_latlon[1],
+        humidity_pct=result.get("humidity_pct"),
+        cloud_cover_pct=result.get("cloud_cover_pct"),
+        shortwave_radiation_w_m2=result.get("shortwave_radiation_w_m2"),
+        direct_radiation_w_m2=result.get("direct_radiation_w_m2"),
+        start_temp_c=(start_result or {}).get("temp_c"),
+        end_temp_c=(end_result or {}).get("temp_c"),
+        start_humidity_pct=(start_result or {}).get("humidity_pct"),
+        end_humidity_pct=(end_result or {}).get("humidity_pct"),
+        start_cloud_cover_pct=(start_result or {}).get("cloud_cover_pct"),
+        end_cloud_cover_pct=(end_result or {}).get("cloud_cover_pct"),
+        start_shortwave_radiation_w_m2=(start_result or {}).get("shortwave_radiation_w_m2"),
+        end_shortwave_radiation_w_m2=(end_result or {}).get("shortwave_radiation_w_m2"),
+        source=result.get("source") or "open-meteo historical start/end average",
         fetched_at=datetime.now().isoformat(timespec="seconds"),
     )
     return result
