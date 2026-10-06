@@ -838,9 +838,7 @@ function renderStreamViewer(rows,target){
   if(gps.length>=2){
     el(mapId).classList.remove("hidden");
     const map=L.map(mapId);routeMaps[target]=map;state.map=map;
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png".replace("{y}","{y}"),{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
-    // Leaflet uses the standard {z}/{x}/{y} tile ordering; keep literal URL after construction.
-    map.eachLayer(layer=>{if(layer instanceof L.TileLayer)layer.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");});
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
     for(let i=1;i<gps.length;i++){
       const c=colorForStreamMetric(key,gps[i][key],stats);
       L.polyline([[gps[i-1].lat,gps[i-1].lon],[gps[i].lat,gps[i].lon]],{weight:5,opacity:.92,color:c,interactive:false}).addTo(map);
@@ -849,6 +847,11 @@ function renderStreamViewer(rows,target){
     L.circleMarker([gps[gps.length-1].lat,gps[gps.length-1].lon],{radius:5,weight:2,color:"#991b1b",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Finish").addTo(map);
     map.fitBounds(gps.map(r=>[r.lat,r.lon]),{padding:[18,18]});
     map.on("click",e=>{const r=nearestGpsRow(rows,e.latlng);if(r)updateViewerCursor(target,r);});
+    let lastMapFollow=0;
+    map.on("mousemove",e=>{
+      const now=performance.now();if(now-lastMapFollow<35)return;lastMapFollow=now;
+      const r=nearestGpsRow(rows,e.latlng);if(r)updateViewerCursor(target,r);
+    });
     setTimeout(()=>map.invalidateSize(),0);
   }else{
     el(mapId).classList.add("hidden");
