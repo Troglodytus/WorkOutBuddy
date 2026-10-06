@@ -23,6 +23,7 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 function n(value, fallback = null) {
+  if (value === null || value === undefined || value === "" || typeof value === "boolean") return fallback;
   const x = Number(value);
   return Number.isFinite(x) ? x : fallback;
 }
