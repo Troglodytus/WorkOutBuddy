@@ -25,10 +25,12 @@ The legacy tracked Strava token has been removed from this web branch, but remov
 ## 1. Create the Supabase project
 
 1. Sign in to Supabase and create a new project.
-2. Project name: `WorkOutBuddy`.
-3. Choose a strong database password and store it in your password manager.
-4. Pick a European region close to Austria.
-5. Wait until the project is ready.
+2. Choose **Troglodytus's Org** (the organization currently containing Vienna-HideNSeek).
+3. Project name: `WorkOutBuddy`.
+4. Choose a strong database password and store it in your password manager.
+5. Pick a European region close to Austria.
+6. Start with the Free plan.
+7. Wait until the project is ready.
 
 You do not need to create tables manually one by one.
 
@@ -36,7 +38,7 @@ You do not need to create tables manually one by one.
 
 1. In the Supabase Dashboard open **SQL Editor**.
 2. Open this repository file:
-   `supabase/migrations/001_workoutbuddy_web.sql`
+   `supabase/migrations/20261006183900_workoutbuddy_web.sql`
 3. Copy the complete file into a new SQL query.
 4. Click **Run**.
 5. Verify that these tables now exist:
@@ -86,7 +88,7 @@ The deterministic Analysis tab works without OpenAI. The AI button requires the 
 In Supabase open **Edge Function Secrets** and add:
 
 - `OPENAI_API_KEY` = your OpenAI API key
-- optionally `OPENAI_MODEL` = `gpt-6-luna`
+- optionally `OPENAI_MODEL` = `gpt-5.6-luna`
 
 ### 5B. Deploy the function from the Dashboard
 
@@ -147,7 +149,8 @@ The migration:
 - copies every legacy activity;
 - maps the most important metrics to canonical column names;
 - preserves the complete legacy row in `metrics_json`;
-- migrates saved stream JSON when the referenced file still exists;
+- migrates saved stream JSON when the referenced file still exists and normalizes legacy Strava/TCX stream dictionaries into route/HR points;
+- downsamples very dense legacy streams to at most 4,000 stored points per workout;
 - uses a deterministic duplicate key so rerunning the migration skips existing workouts.
 
 The `sb_secret_` key bypasses RLS. It is appropriate for this local one-time migration but must never be committed or pasted into browser code.
