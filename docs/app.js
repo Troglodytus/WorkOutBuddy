@@ -574,7 +574,7 @@ async function parseTcx(file) {
     const dist=n(textByLocal(tp,"DistanceMeters"));
     const hrNode=firstByLocal(tp,"HeartRateBpm");
     const hr=hrNode?n(textByLocal(hrNode,"Value")):null;
-    const cad=n(textByLocal(tp,"Cadence"));
+    const cad=n(textByLocal(tp,"Cadence")) ?? n(textByLocal(tp,"RunCadence"));
     const watts=n(textByLocal(tp,"Watts"));
     points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts});
   }
