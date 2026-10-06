@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=0.1.0">
+  <link rel="stylesheet" href="./styles.css?v=0.2.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -42,7 +42,7 @@
 
     <nav class="tabs" aria-label="Main navigation">
       <button class="tab active" data-view="home">Home</button>
-      <button class="tab" data-view="history">History</button>
+      <button class="tab" data-view="history">Workouts</button>
       <button class="tab" data-view="analysis">Analysis</button>
     </nav>
 
@@ -80,12 +80,33 @@
         </div>
         <div id="recentWorkouts" class="workout-list"></div>
       </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><div class="eyebrow">LATEST WORKOUT</div><h2>Workout viewer</h2></div>
+        </div>
+        <div id="homeWorkoutDetail" class="muted">Your newest workout will appear here.</div>
+        <div class="viewer-toolbar">
+          <label>Route / profile color
+            <select id="homeRouteMetric" class="route-metric-select"></select>
+          </label>
+          <label>Profile x-axis
+            <select id="homeRouteXAxis" class="route-x-select">
+              <option value="distance_km">Distance</option>
+              <option value="time_min">Time</option>
+            </select>
+          </label>
+        </div>
+        <div id="homeRouteLegend" class="metric-legend hidden"></div>
+        <div id="homeRouteMap" class="route-map hidden"></div>
+        <div id="homeStreamPlot" class="plot compact hidden"></div>
+      </article>
     </section>
 
     <section id="historyView" class="view">
       <article class="panel">
-        <div class="panel-head"><div><div class="eyebrow">HISTORY</div><h2>Workout explorer</h2></div></div>
-        <div class="toolbar">
+        <div class="panel-head"><div><div class="eyebrow">WORKOUTS</div><h2>Statistics explorer</h2></div></div>
+        <div class="toolbar stats-toolbar">
           <label>Sport
             <select id="historySportFilter">
               <option value="all">All sports</option>
@@ -104,15 +125,23 @@
               <option value="all">All dates</option>
             </select>
           </label>
-          <label>Plot metric
-            <select id="historyMetric">
-              <option value="derived_load">Training load</option>
-              <option value="distance_km">Distance (km)</option>
-              <option value="avg_hr">Average HR</option>
-              <option value="avg_pace_min_km">Pace (min/km)</option>
-              <option value="elevation_gain_m">Elevation gain (m)</option>
-              <option value="apple_vo2max">Apple VO₂max</option>
-              <option value="hr_efficiency_drift_pct">HR drift (%)</option>
+          <label>X axis
+            <select id="historyXMetric"></select>
+          </label>
+          <label>Y axis
+            <select id="historyYMetric"></select>
+          </label>
+          <label>Plot
+            <select id="historyPlotType">
+              <option value="line">Line + markers</option>
+              <option value="scatter">Scatter</option>
+              <option value="bar">Bar</option>
+            </select>
+          </label>
+          <label>Group / color
+            <select id="historyColorBy">
+              <option value="none">None</option>
+              <option value="sport">Sport</option>
             </select>
           </label>
         </div>
@@ -120,18 +149,32 @@
         <div id="historyPlot" class="plot"></div>
       </article>
 
-      <div class="history-grid">
-        <article class="panel">
-          <div class="panel-head"><div><div class="eyebrow">ACTIVITIES</div><h2>All workouts</h2></div></div>
-          <div id="historyList" class="workout-list dense"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head"><div><div class="eyebrow">DETAILS</div><h2>Selected workout</h2></div></div>
-          <div id="workoutDetail" class="muted">Select a workout.</div>
-          <div id="routeMap" class="route-map hidden"></div>
-          <div id="streamPlot" class="plot compact hidden"></div>
-        </article>
-      </div>
+      <article class="panel">
+        <div class="panel-head">
+          <div><div class="eyebrow">ACTIVITIES</div><h2>Workout table</h2></div>
+          <span class="muted small-note">Apple VO₂max and weight are editable directly in the table.</span>
+        </div>
+        <div id="historyTableWrap" class="table-wrap"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">DETAILS</div><h2>Selected workout</h2></div></div>
+        <div id="workoutDetail" class="muted">Select a workout from the table.</div>
+        <div class="viewer-toolbar">
+          <label>Route / profile color
+            <select id="historyRouteMetric" class="route-metric-select"></select>
+          </label>
+          <label>Profile x-axis
+            <select id="historyRouteXAxis" class="route-x-select">
+              <option value="distance_km">Distance</option>
+              <option value="time_min">Time</option>
+            </select>
+          </label>
+        </div>
+        <div id="historyRouteLegend" class="metric-legend hidden"></div>
+        <div id="routeMap" class="route-map hidden"></div>
+        <div id="streamPlot" class="plot compact hidden"></div>
+      </article>
     </section>
 
     <section id="analysisView" class="view">
@@ -222,7 +265,7 @@
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="./config.js?v=0.1.0"></script>
-  <script src="./app.js?v=0.1.0"></script>
+  <script src="./config.js?v=0.2.0"></script>
+  <script src="./app.js?v=0.2.0"></script>
 </body>
 </html>
