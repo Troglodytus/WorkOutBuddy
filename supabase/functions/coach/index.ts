@@ -73,7 +73,8 @@ Deno.serve(async (req: Request) => {
         model,
         instructions,
         input,
-        max_output_tokens: 1800,
+        reasoning: { effort: "low" },
+        max_output_tokens: 1200,
         store: false,
       }),
     });
