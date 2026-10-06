@@ -1271,7 +1271,7 @@ async function parseTcx(file) {
 
 async function importTcx(file) {
   const parsed=await parseTcx(file);
-  const fields="id,name,start_time,raw_file_path,file_sha256,dedupe_key,apple_vo2max,body_weight_kg";
+  const fields="id,name,start_time,raw_file_path,file_sha256,dedupe_key,apple_vo2max,body_weight_kg,metrics_json";
   const byHash=await client.from("activities").select(fields).eq("user_id",userId()).eq("file_sha256",parsed.activity.file_sha256).limit(1);
   if(byHash.error)throw byHash.error;
   let existing=byHash.data&&byHash.data[0],matchType="identical file hash";
@@ -1296,6 +1296,7 @@ async function importTcx(file) {
     // Preserve manual per-workout values unless this import explicitly provides them.
     if(parsed.activity.apple_vo2max==null&&existing.apple_vo2max!=null)parsed.activity.apple_vo2max=existing.apple_vo2max;
     if(parsed.activity.body_weight_kg==null&&existing.body_weight_kg!=null)parsed.activity.body_weight_kg=existing.body_weight_kg;
+    parsed.activity.metrics_json={...safeJson(existing.metrics_json,{}),...safeJson(parsed.activity.metrics_json,{})};
 
     const upd=await client.from("activities").update(parsed.activity).eq("id",existing.id).eq("user_id",userId()).select("id").single();
     if(upd.error)throw upd.error;
