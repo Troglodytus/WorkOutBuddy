@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>WorkOutBuddy</title>
+  <link rel="stylesheet" href="./styles.css?v=0.1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body>
+  <div id="toast" class="toast hidden"></div>
+
+  <main id="loginView" class="login-shell">
+    <section class="login-card">
+      <div class="brand-mark">WB</div>
+      <p class="eyebrow">PRIVATE TRAINING DASHBOARD</p>
+      <h1>WorkOutBuddy</h1>
+      <p class="muted">Your workouts, training plan and analysis in one place.</p>
+      <form id="loginForm">
+        <label>Password
+          <input id="passwordInput" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary full" type="submit">Sign in</button>
+      </form>
+      <div id="loginStatus" class="status"></div>
+      <p id="setupHint" class="setup-hint hidden">Supabase is not configured yet. Follow WEB_SUPABASE_SETUP.md.</p>
+    </section>
+  </main>
+
+  <main id="appView" class="app-shell hidden">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">WORKOUTBUDDY</div>
+        <h1>Training dashboard</h1>
+      </div>
+      <div class="topbar-actions">
+        <button id="uploadTopButton" class="secondary">Upload TCX</button>
+        <button id="settingsButton" class="icon-button" aria-label="Settings">⚙</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Main navigation">
+      <button class="tab active" data-view="home">Home</button>
+      <button class="tab" data-view="history">History</button>
+      <button class="tab" data-view="analysis">Analysis</button>
+    </nav>
+
+    <section id="homeView" class="view active">
+      <div class="hero-grid">
+        <article class="panel recommendation-panel">
+          <div class="panel-head">
+            <div><div class="eyebrow">TODAY</div><h2>Recommended training</h2></div>
+            <span id="readinessBadge" class="score-badge">—</span>
+          </div>
+          <div id="recommendationContent" class="recommendation-content skeleton">Loading training context…</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><div class="eyebrow">QUICK STATUS</div><h2>Training load</h2></div></div>
+          <div id="quickStats" class="metric-grid"></div>
+        </article>
+      </div>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><div class="eyebrow">PLAN</div><h2>Next 7 days</h2></div>
+          <button id="regeneratePlanButton" class="secondary small">Regenerate</button>
+        </div>
+        <div id="weekPlan" class="week-plan"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><div class="eyebrow">RECENT</div><h2>Latest workouts</h2></div>
+          <div class="inline-actions">
+            <button id="uploadHomeButton" class="primary small">+ Upload TCX</button>
+            <button class="text-button" data-view-link="history">View all →</button>
+          </div>
+        </div>
+        <div id="recentWorkouts" class="workout-list"></div>
+      </article>
+    </section>
+
+    <section id="historyView" class="view">
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">HISTORY</div><h2>Workout explorer</h2></div></div>
+        <div class="toolbar">
+          <label>Sport
+            <select id="historySportFilter">
+              <option value="all">All sports</option>
+              <option value="run">Run</option>
+              <option value="bike">Bike</option>
+              <option value="strength">Strength</option>
+              <option value="hike">Hike / walk</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>Period
+            <select id="historyPeriodFilter">
+              <option value="90">Last 90 days</option>
+              <option value="180">Last 180 days</option>
+              <option value="365">Last year</option>
+              <option value="all">All dates</option>
+            </select>
+          </label>
+          <label>Plot metric
+            <select id="historyMetric">
+              <option value="derived_load">Training load</option>
+              <option value="distance_km">Distance (km)</option>
+              <option value="avg_hr">Average HR</option>
+              <option value="avg_pace_min_km">Pace (min/km)</option>
+              <option value="elevation_gain_m">Elevation gain (m)</option>
+              <option value="apple_vo2max">Apple VO₂max</option>
+              <option value="hr_efficiency_drift_pct">HR drift (%)</option>
+            </select>
+          </label>
+        </div>
+        <div id="plotCoverage" class="status"></div>
+        <div id="historyPlot" class="plot"></div>
+      </article>
+
+      <div class="history-grid">
+        <article class="panel">
+          <div class="panel-head"><div><div class="eyebrow">ACTIVITIES</div><h2>All workouts</h2></div></div>
+          <div id="historyList" class="workout-list dense"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><div class="eyebrow">DETAILS</div><h2>Selected workout</h2></div></div>
+          <div id="workoutDetail" class="muted">Select a workout.</div>
+          <div id="routeMap" class="route-map hidden"></div>
+          <div id="streamPlot" class="plot compact hidden"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="analysisView" class="view">
+      <article class="panel">
+        <div class="panel-head">
+          <div><div class="eyebrow">ANALYSIS</div><h2>Current training state</h2></div>
+          <button id="aiCoachButton" class="primary">Ask AI coach</button>
+        </div>
+        <div id="analysisCards" class="analysis-cards"></div>
+        <div id="analysisEvidence" class="evidence-grid"></div>
+      </article>
+      <div class="analysis-grid">
+        <article class="panel"><h3>Weekly run volume</h3><div id="weeklyVolumePlot" class="plot compact"></div></article>
+        <article class="panel"><h3>Intensity distribution</h3><div id="zonePlot" class="plot compact"></div></article>
+      </div>
+      <article class="panel">
+        <div class="panel-head"><div><div class="eyebrow">AI COACH</div><h2>Interpretation</h2></div></div>
+        <div id="aiCoachOutput" class="markdown-output muted">Run the deterministic analysis first, then use “Ask AI coach” for an optional interpretation.</div>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <span id="syncStatus">Ready</span>
+      <button id="logoutButton" class="text-button">Sign out</button>
+    </footer>
+  </main>
+
+  <dialog id="uploadDialog">
+    <form method="dialog" class="dialog-card">
+      <div class="panel-head"><div><div class="eyebrow">IMPORT</div><h2>Upload workout</h2></div><button value="cancel" class="icon-button">×</button></div>
+      <p class="muted">Export TCX from WorkOutDoors and select it here. Multiple files are supported.</p>
+      <input id="tcxInput" type="file" accept=".tcx,application/vnd.garmin.tcx+xml,application/xml,text/xml" multiple>
+      <div id="uploadStatus" class="status"></div>
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary">Cancel</button>
+        <button id="importFilesButton" type="button" class="primary">Import selected files</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <form id="settingsForm" class="dialog-card wide">
+      <div class="panel-head"><div><div class="eyebrow">SETTINGS</div><h2>Profile & goals</h2></div><button type="button" id="settingsCloseButton" class="icon-button">×</button></div>
+      <div class="form-grid">
+        <label>Display name<input id="profileName" type="text"></label>
+        <label>Birth date<input id="profileBirthdate" type="date"></label>
+        <label>Height (cm)<input id="profileHeight" type="number" min="120" max="230" step="0.1"></label>
+        <label>Current weight (kg)<input id="profileWeight" type="number" min="30" max="250" step="0.1"></label>
+        <label>Profile VO₂max<input id="profileVo2" type="number" min="15" max="90" step="0.1"></label>
+        <label>Primary goal
+          <select id="goalType">
+            <option value="general">General fitness</option>
+            <option value="10k">10 km</option>
+            <option value="hm">Half marathon</option>
+            <option value="m">Marathon</option>
+          </select>
+        </label>
+        <label>Goal date<input id="goalDate" type="date"></label>
+        <label>Running days / week<input id="weeklyRunDays" type="number" min="1" max="7" step="1"></label>
+        <label>Strength sessions / week<input id="weeklyStrengthDays" type="number" min="0" max="5" step="1"></label>
+        <label>Preferred long-run day
+          <select id="longRunDay">
+            <option value="6">Saturday</option>
+            <option value="0">Sunday</option>
+            <option value="5">Friday</option>
+          </select>
+        </label>
+      </div>
+      <details>
+        <summary>Heart-rate zone upper limits</summary>
+        <div class="form-grid">
+          <label>Z1 max<input id="z1Max" type="number"></label>
+          <label>Z2 max<input id="z2Max" type="number"></label>
+          <label>Z3 max<input id="z3Max" type="number"></label>
+          <label>Z4 max<input id="z4Max" type="number"></label>
+          <label>Z5 max<input id="z5Max" type="number"></label>
+        </div>
+      </details>
+      <div id="settingsStatus" class="status"></div>
+      <div class="dialog-actions">
+        <button type="button" id="settingsCancelButton" class="secondary">Cancel</button>
+        <button type="submit" class="primary">Save settings</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="./config.js?v=0.1.0"></script>
+  <script src="./app.js?v=0.1.0"></script>
+</body>
+</html>
