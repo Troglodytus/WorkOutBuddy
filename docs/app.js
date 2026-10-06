@@ -734,16 +734,61 @@ function lowerBoundDistance(rows,target){
   while(lo<hi){const mid=(lo+hi)>>1,d=n(rows[mid].distance_m,Infinity);if(d<target)lo=mid+1;else hi=mid;}
   return clamp(lo,0,rows.length-1);
 }
+function lowerBoundTime(rows,target){
+  let lo=0,hi=rows.length;
+  while(lo<hi){const mid=(lo+hi)>>1,t=n(rows[mid].elapsed_s,Infinity);if(t<target)lo=mid+1;else hi=mid;}
+  return clamp(lo,0,rows.length-1);
+}
+function deriveSpeedFromDistance(rows,halfWindowSec=4){
+  const valid=rows.filter(r=>n(r.elapsed_s)!=null&&n(r.distance_m)!=null);
+  if(valid.length<3)return false;
+  const firstD=n(valid[0].distance_m),lastD=n(valid[valid.length-1].distance_m);
+  const span=(firstD!=null&&lastD!=null)?lastD-firstD:0;
+  if(!(span>100))return false;
+
+  for(let i=0;i<rows.length;i++){
+    const t=n(rows[i].elapsed_s),d=n(rows[i].distance_m);
+    if(t==null||d==null){rows[i].distance_speed_mps=null;continue;}
+    let j0=lowerBoundTime(rows,t-halfWindowSec);
+    let j1=lowerBoundTime(rows,t+halfWindowSec);
+    if(j0>=i&&i>0)j0=i-1;
+    if(j1<=i&&i<rows.length-1)j1=i+1;
+    const t0=n(rows[j0].elapsed_s),t1=n(rows[j1].elapsed_s);
+    const d0=n(rows[j0].distance_m),d1=n(rows[j1].distance_m);
+    if(t0==null||t1==null||d0==null||d1==null||t1<=t0||d1<d0){
+      rows[i].distance_speed_mps=null;continue;
+    }
+    rows[i].distance_speed_mps=clamp((d1-d0)/(t1-t0),0,12);
+  }
+  return rows.some(r=>n(r.distance_speed_mps)!=null);
+}
 function buildStreamRows(stream){
   const pts=Array.isArray(stream&&stream.points)?stream.points:[];
   if(!pts.length)return [];
   const rows=pts.map((p,i)=>({
-    i,elapsed_s:n(p.elapsed_s,i),distance_m:n(p.distance_calc_m)??n(p.distance_m),lat:n(p.lat),lon:n(p.lon),altitude_m:n(p.alt),
-    heart_rate:n(p.hr),power_w:n(p.watts),cadence:n(p.cadence),speed_mps:n(p.speed_mps)
+    i,
+    elapsed_s:n(p.elapsed_s,i),
+    distance_m:n(p.distance_calc_m)??n(p.distance_m),
+    lat:n(p.lat),lon:n(p.lon),altitude_m:n(p.alt),
+    heart_rate:n(p.hr),power_w:n(p.watts),cadence:n(p.cadence),
+    raw_speed_mps:n(p.raw_speed_mps)??n(p.speed_mps),
+    speed_mps:n(p.speed_mps)
   }));
 
   for(let i=0;i<rows.length;i++){
     if(rows[i].distance_m==null) rows[i].distance_m=i?rows[i-1].distance_m:null;
+  }
+
+  const haveDistanceSpeed=deriveSpeedFromDistance(rows,4);
+  for(let i=0;i<rows.length;i++){
+    // DistanceMeters/time is authoritative whenever it exists. The TCX Speed
+    // extension in WorkOutDoors exports can be temporally misaligned despite
+    // having a plausible workout-average value.
+    rows[i].speed_mps=haveDistanceSpeed&&n(rows[i].distance_speed_mps)!=null
+      ? rows[i].distance_speed_mps
+      : rows[i].raw_speed_mps;
+
+    // Last-resort one-step derivative for sparse distance streams.
     if(rows[i].speed_mps==null&&i>0&&rows[i].distance_m!=null&&rows[i-1].distance_m!=null){
       const dt=rows[i].elapsed_s-rows[i-1].elapsed_s,dd=rows[i].distance_m-rows[i-1].distance_m;
       if(dt>0&&dt<60&&dd>=0)rows[i].speed_mps=dd/dt;
@@ -755,9 +800,6 @@ function buildStreamRows(stream){
     rows[i].zone=viewerZoneIndex(rows[i].heart_rate,(profile&&profile.hr_zones)||defaultProfile().hr_zones);
   }
 
-  // Smooth barometric/GPS altitude first, then estimate grade over an ~80 m
-  // centered distance window. This avoids the alternating ±grade spikes caused
-  // by taking a derivative over only a few metres.
   const alt=rows.map(r=>r.altitude_m);
   const altSmooth=rows.map((_,i)=>rollingMedian(alt,i,5));
   const hasDistance=rows.some(r=>n(r.distance_m)!=null);
@@ -1202,7 +1244,7 @@ async function parseTcx(file) {
     const cad=n(textByLocal(tp,"Cadence")) ?? n(textByLocal(tp,"RunCadence"));
     const watts=n(textByLocal(tp,"Watts"));
     const speed=n(textByLocal(tp,"Speed"));
-    points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts,speed_mps:speed});
+    points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts,raw_speed_mps:speed,speed_mps:speed});
   }
   if(!points.length)throw new Error("TCX contains no trackpoints.");
   const firstTime=new Date(points.find(p=>p.time)?.time||idText);
@@ -1216,6 +1258,14 @@ async function parseTcx(file) {
     points[i].distance_calc_m=cumulative;
     points[i].elapsed_s=points[i].time?(new Date(points[i].time)-firstTime)/1000:0;
   }
+  // Build the same authoritative distance/time speed used by the viewer before
+  // storing the stream. Keep raw_speed_mps separately for diagnostics.
+  const speedRows=points.map((p,i)=>({i,elapsed_s:n(p.elapsed_s,i),distance_m:n(p.distance_calc_m)??n(p.distance_m),raw_speed_mps:n(p.raw_speed_mps),speed_mps:n(p.speed_mps)}));
+  const derivedOk=deriveSpeedFromDistance(speedRows,4);
+  for(let i=0;i<points.length;i++){
+    if(derivedOk&&n(speedRows[i].distance_speed_mps)!=null)points[i].speed_mps=speedRows[i].distance_speed_mps;
+  }
+
   const last=points[points.length-1];
   let distance=n(last.distance_m);
   if(distance==null||distance<=0)distance=n(last.distance_calc_m,0);
@@ -1263,7 +1313,8 @@ async function parseTcx(file) {
       metrics_json:{parser:"workoutbuddy-web-tcx-v2",trackpoints:points.length,stored_trackpoints:streamPoints.length,
         max_speed_kmh:streamDerived.max_speed_kmh,max_power_w:streamDerived.max_power_w,max_cadence:streamDerived.max_cadence,
         avg_grade_pct:streamDerived.avg_grade_pct,min_grade_pct:streamDerived.min_grade_pct,max_grade_pct:streamDerived.max_grade_pct,
-        vo2_estimate_method:"ACSM running oxygen cost + grade + HR-reserve heuristic"}
+        vo2_estimate_method:"ACSM running oxygen cost + grade + HR-reserve heuristic",
+        speed_source:derivedOk?"distance_over_time_8s_centered":"tcx_speed_fallback"}
     },
     stream:{points:streamPoints}
   };
