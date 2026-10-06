@@ -1,4 +1,4 @@
-import { withSupabase } from "npm:@supabase/server@1";
+import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,9 +17,27 @@ function extractText(data: any): string {
   return parts.join("\n").trim();
 }
 
-const authenticatedHandler = withSupabase({ auth: "user" }, async (req) => {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return Response.json({ error: "Authentication required" }, { status: 401, headers: corsHeaders });
+  }
+
+  const publishableKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
+  const publishableKey = publishableKeys.default || Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") || "",
+    publishableKey,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return Response.json({ error: "Invalid or expired session" }, { status: 401, headers: corsHeaders });
   }
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
@@ -29,7 +47,7 @@ const authenticatedHandler = withSupabase({ auth: "user" }, async (req) => {
 
   try {
     const payload = await req.json();
-    const model = Deno.env.get("OPENAI_MODEL") || "gpt-6-luna";
+    const model = Deno.env.get("OPENAI_MODEL") || "gpt-5.6-luna";
 
     const instructions =
       "You are WorkOutBuddy, an evidence-focused endurance training analyst. " +
@@ -41,7 +59,8 @@ const authenticatedHandler = withSupabase({ auth: "user" }, async (req) => {
       "When the evidence is weak or missing, say so explicitly. Keep recommendations progressive and avoid abrupt volume jumps.";
 
     const input =
-      "Analyze this structured WorkOutBuddy payload. The deterministic analysis is primary evidence; the activity rows are supporting context.\n\n" +
+      "Analyze this structured WorkOutBuddy payload. The deterministic analysis is primary evidence; the activity rows are supporting context. " +
+      "No raw GPS route is included.\n\n" +
       JSON.stringify(payload);
 
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -55,6 +74,7 @@ const authenticatedHandler = withSupabase({ auth: "user" }, async (req) => {
         instructions,
         input,
         max_output_tokens: 1800,
+        store: false,
       }),
     });
 
@@ -72,10 +92,3 @@ const authenticatedHandler = withSupabase({ auth: "user" }, async (req) => {
     );
   }
 });
-
-export default {
-  fetch: async (req: Request) => {
-    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-    return authenticatedHandler(req);
-  },
-};
