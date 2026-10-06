@@ -1,3 +1,5 @@
+import { withSupabase } from "npm:@supabase/server@1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -15,23 +17,14 @@ function extractText(data: any): string {
   return parts.join("\n").trim();
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
-
-  // Keep the function user-authenticated. Supabase also verifies JWTs by default
-  // for deployed functions; this explicit check prevents accidental anonymous use.
-  if (!req.headers.get("Authorization")) {
-    return new Response(JSON.stringify({ error: "Authentication required" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+const authenticatedHandler = withSupabase({ auth: "user" }, async (req) => {
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: "OPENAI_API_KEY is not configured" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    return Response.json({ error: "OPENAI_API_KEY is not configured" }, { status: 500, headers: corsHeaders });
   }
 
   try {
@@ -68,17 +61,21 @@ Deno.serve(async (req: Request) => {
     const data = await response.json();
     if (!response.ok) {
       const message = data?.error?.message || "OpenAI request failed";
-      return new Response(JSON.stringify({ error: message }), {
-        status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return Response.json({ error: message }, { status: response.status, headers: corsHeaders });
     }
 
-    return new Response(JSON.stringify({ text: extractText(data), model }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    return Response.json({ text: extractText(data), model }, { headers: corsHeaders });
   } catch (error) {
-    return new Response(JSON.stringify({ error: String(error?.message || error) }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    return Response.json(
+      { error: String((error as any)?.message || error) },
+      { status: 500, headers: corsHeaders },
+    );
   }
 });
+
+export default {
+  fetch: async (req: Request) => {
+    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+    return authenticatedHandler(req);
+  },
+};
