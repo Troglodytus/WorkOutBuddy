@@ -12,6 +12,7 @@ let activities = [];
 let profile = null;
 let selectedActivityId = null;
 let routeMaps = {history:null, home:null};
+let viewerStates = {history:null, home:null};
 const streamCache = new Map();
 
 const el = id => document.getElementById(id);
@@ -371,12 +372,12 @@ function renderRecent() {
 const STREAM_METRICS = {
   pace_min_km:{label:"Pace",unit:"min/km",gradient:"linear-gradient(90deg,#22c55e,#facc15,#dc2626)"},
   speed_kmh:{label:"Speed",unit:"km/h",gradient:"linear-gradient(90deg,#dc2626,#facc15,#22c55e)"},
-  heart_rate:{label:"Heart rate",unit:"bpm",gradient:"linear-gradient(90deg,#ffffff,#ffd3d3,#ff7070,#d60000,#670000)"},
-  zone:{label:"HR zone",unit:"zone",gradient:"linear-gradient(90deg,#ffffff,#ffd3d3,#ff8080,#ea3030,#8b0000)"},
-  power_w:{label:"Power",unit:"W",gradient:"linear-gradient(90deg,#ffffff,#e8d7ff,#b978e8,#6a0dad)"},
-  altitude_m:{label:"Altitude",unit:"m",gradient:"linear-gradient(90deg,#f6f7f8,#c9cdd3,#7d838c,#343a40)"},
-  grade_pct:{label:"Grade",unit:"%",gradient:"linear-gradient(90deg,#315eaa,#dce8f8,#ffffff,#e5c6a5,#87552f)"},
-  cadence:{label:"Cadence",unit:"spm / rpm",gradient:"linear-gradient(90deg,#ffffff,#eadfce,#c3a77e,#826744)"}
+  heart_rate:{label:"Heart rate",unit:"bpm",gradient:"linear-gradient(90deg,#f7f7f7,#ffd3d3,#ff7070,#d60000,#670000)"},
+  zone:{label:"HR zone",unit:"zone",gradient:"linear-gradient(90deg,#b9dcff 0%,#b9dcff 16.6%,#43b66f 16.6%,#43b66f 33.2%,#f3d43b 33.2%,#f3d43b 49.8%,#f59e0b 49.8%,#f59e0b 66.4%,#e03b35 66.4%,#e03b35 83%,#7c3aed 83%,#7c3aed 100%)"},
+  power_w:{label:"Power",unit:"W",gradient:"linear-gradient(90deg,#f7f5fa,#e1d2f3,#b978e8,#6a0dad)"},
+  altitude_m:{label:"Altitude",unit:"m",gradient:"linear-gradient(90deg,#343a40,#555d66,#7d858e,#a7adb5)"},
+  grade_pct:{label:"Grade",unit:"%",gradient:"linear-gradient(90deg,#3f6f91,#879aa8,#b8b2aa,#8a5a35)"},
+  cadence:{label:"Cadence",unit:"spm / rpm",gradient:"linear-gradient(90deg,#f5f2ed,#dfd2bf,#b99b70,#735b3b)"}
 };
 
 function initWorkoutViewerControls() {
@@ -547,28 +548,52 @@ function streamMetricStats(rows,key){
   if(lo==null||hi==null){lo=0;hi=1;} if(hi<=lo)hi=lo+1;
   return {lo,hi};
 }
+function viewerZoneIndex(hr,z){
+  const h=n(hr);if(h==null)return null;
+  const z1=n(z&&z.z1_max,130),z2=n(z&&z.z2_max,150),z3=n(z&&z.z3_max,165),z4=n(z&&z.z4_max,178);
+  let z5=n(z&&z.z5_max);
+  // Older profiles used 220 as a catch-all maximum. For the 6-zone viewer,
+  // infer a practical Z5/Z6 boundary from Z4 unless the user set one explicitly.
+  if(z5==null||z5<=z4||z5>210)z5=z4+12;
+  if(h<=z1)return 1;if(h<=z2)return 2;if(h<=z3)return 3;if(h<=z4)return 4;if(h<=z5)return 5;return 6;
+}
 function colorForStreamMetric(key,value,stats){
   const v=n(value);if(v==null)return "#94a3b8";
   if(key==="heart_rate"){
-    if(v<=95)return "#ffffff";if(v<=130)return mixColor("#ffffff","#ffd3d3",(v-95)/35);
+    if(v<=95)return "#f7f7f7";if(v<=130)return mixColor("#f7f7f7","#ffd3d3",(v-95)/35);
     if(v<=160)return mixColor("#ffd3d3","#ff7070",(v-130)/30);
     if(v<=180)return mixColor("#ff7070","#d60000",(v-160)/20);
     return mixColor("#d60000","#670000",clamp((v-180)/25,0,1));
   }
-  if(key==="zone"){return ["#ffffff","#ffe6e6","#ffb6b6","#ff7474","#d92c2c","#850000"][clamp(Math.round(v),1,5)];}
+  if(key==="zone"){
+    const colors=["#94a3b8","#b9dcff","#43b66f","#f3d43b","#f59e0b","#e03b35","#7c3aed"];
+    return colors[clamp(Math.round(v),1,6)];
+  }
   let t=clamp((v-stats.lo)/(stats.hi-stats.lo),0,1);
   if(key==="pace_min_km") return threeColor("#22c55e","#facc15","#dc2626",t);
   if(key==="speed_kmh") return threeColor("#dc2626","#facc15","#22c55e",t);
-  if(key==="power_w") return mixColor("#ffffff","#6a0dad",t);
-  if(key==="cadence") return mixColor("#ffffff","#826744",t);
-  if(key==="altitude_m") return mixColor("#f6f7f8","#343a40",t);
+  if(key==="power_w") return mixColor("#f7f5fa","#6a0dad",t);
+  if(key==="cadence") return mixColor("#f5f2ed","#735b3b",t);
+  if(key==="altitude_m") return mixColor("#343a40","#a7adb5",t);
   if(key==="grade_pct"){
-    const span=Math.max(Math.abs(stats.lo),Math.abs(stats.hi),1),z=clamp(v/span,-1,1);
-    return z<0?mixColor("#ffffff","#315eaa",-z):mixColor("#ffffff","#87552f",z);
+    const span=Math.max(Math.abs(stats.lo),Math.abs(stats.hi),1),zv=clamp(v/span,-1,1);
+    return zv<0?mixColor("#879aa8","#3f6f91",-zv):mixColor("#b8b2aa","#8a5a35",zv);
   }
   return threeColor("#dc2626","#facc15","#22c55e",t);
 }
 
+function rollingMedian(values,i,radius){
+  const a=[];
+  for(let j=Math.max(0,i-radius);j<=Math.min(values.length-1,i+radius);j++){
+    const v=n(values[j]);if(v!=null)a.push(v);
+  }
+  return a.length?median(a):null;
+}
+function lowerBoundDistance(rows,target){
+  let lo=0,hi=rows.length;
+  while(lo<hi){const mid=(lo+hi)>>1,d=n(rows[mid].distance_m,Infinity);if(d<target)lo=mid+1;else hi=mid;}
+  return clamp(lo,0,rows.length-1);
+}
 function buildStreamRows(stream){
   const pts=Array.isArray(stream&&stream.points)?stream.points:[];
   if(!pts.length)return [];
@@ -576,6 +601,7 @@ function buildStreamRows(stream){
     i,elapsed_s:n(p.elapsed_s,i),distance_m:n(p.distance_calc_m)??n(p.distance_m),lat:n(p.lat),lon:n(p.lon),altitude_m:n(p.alt),
     heart_rate:n(p.hr),power_w:n(p.watts),cadence:n(p.cadence),speed_mps:n(p.speed_mps)
   }));
+
   for(let i=0;i<rows.length;i++){
     if(rows[i].distance_m==null) rows[i].distance_m=i?rows[i-1].distance_m:null;
     if(rows[i].speed_mps==null&&i>0&&rows[i].distance_m!=null&&rows[i-1].distance_m!=null){
@@ -586,13 +612,26 @@ function buildStreamRows(stream){
     rows[i].distance_km=rows[i].distance_m==null?null:rows[i].distance_m/1000;
     rows[i].speed_kmh=rows[i].speed_mps==null?null:rows[i].speed_mps*3.6;
     rows[i].pace_min_km=rows[i].speed_mps!=null&&rows[i].speed_mps>.55?1000/rows[i].speed_mps/60:null;
-    rows[i].zone=zoneIndex(rows[i].heart_rate,(profile&&profile.hr_zones)||defaultProfile().hr_zones);
+    rows[i].zone=viewerZoneIndex(rows[i].heart_rate,(profile&&profile.hr_zones)||defaultProfile().hr_zones);
   }
-  for(let i=0;i<rows.length;i++){
-    const j0=Math.max(0,i-3),j1=Math.min(rows.length-1,i+3),a=rows[j0],b=rows[j1];
-    const dd=(b.distance_m!=null&&a.distance_m!=null)?b.distance_m-a.distance_m:null;
-    const da=(b.altitude_m!=null&&a.altitude_m!=null)?b.altitude_m-a.altitude_m:null;
-    rows[i].grade_pct=dd!=null&&dd>=12&&da!=null?clamp(100*da/dd,-25,25):null;
+
+  // Smooth barometric/GPS altitude first, then estimate grade over an ~80 m
+  // centered distance window. This avoids the alternating ±grade spikes caused
+  // by taking a derivative over only a few metres.
+  const alt=rows.map(r=>r.altitude_m);
+  const altSmooth=rows.map((_,i)=>rollingMedian(alt,i,5));
+  const hasDistance=rows.some(r=>n(r.distance_m)!=null);
+  if(hasDistance){
+    for(let i=0;i<rows.length;i++){
+      const d=n(rows[i].distance_m);if(d==null){rows[i].grade_pct=null;continue;}
+      const j0=lowerBoundDistance(rows,Math.max(0,d-40));
+      const j1=lowerBoundDistance(rows,d+40);
+      const dd=n(rows[j1].distance_m)!=null&&n(rows[j0].distance_m)!=null?rows[j1].distance_m-rows[j0].distance_m:null;
+      const da=altSmooth[j1]!=null&&altSmooth[j0]!=null?altSmooth[j1]-altSmooth[j0]:null;
+      rows[i].grade_pct=dd!=null&&dd>=45&&da!=null?clamp(100*da/dd,-18,18):null;
+    }
+  }else{
+    rows.forEach(r=>r.grade_pct=null);
   }
   return rows;
 }
@@ -688,53 +727,166 @@ async function showWorkout(id,target="history") {
   if(target==="history")renderWorkoutTable(filteredActivities());
 }
 
+function nearestRowByX(rows,xKey,xValue){
+  const x=n(xValue);if(x==null||!rows.length)return null;
+  let best=null,bestD=Infinity;
+  for(const r of rows){const v=n(r[xKey]);if(v==null)continue;const d=Math.abs(v-x);if(d<bestD){bestD=d;best=r;}}
+  return best;
+}
+function nearestGpsRow(rows,latlng){
+  if(!latlng)return null;
+  let best=null,bestD=Infinity;
+  const cos=Math.cos(latlng.lat*Math.PI/180);
+  for(const r of rows){
+    if(r.lat==null||r.lon==null)continue;
+    const dy=r.lat-latlng.lat,dx=(r.lon-latlng.lng)*cos,d=dx*dx+dy*dy;
+    if(d<bestD){bestD=d;best=r;}
+  }
+  return best;
+}
+function cursorReadoutHtml(row,key,def){
+  const value=n(row&&row[key]);
+  const selected=value==null?"—":(key==="pace_min_km"?fmtPace(value):fmt(value,1,def.unit?" "+def.unit:""));
+  return '<strong>'+escapeHtml(def.label)+': '+escapeHtml(selected)+'</strong>'+
+    '<span>Time '+escapeHtml(fmt(row&&row.time_min,1," min"))+'</span>'+
+    '<span>Distance '+escapeHtml(fmt(row&&row.distance_km,2," km"))+'</span>'+
+    '<span>HR '+escapeHtml(fmt(row&&row.heart_rate,0," bpm"))+'</span>'+
+    '<span>Speed '+escapeHtml(fmt(row&&row.speed_kmh,1," km/h"))+'</span>'+
+    '<span>Power '+escapeHtml(fmt(row&&row.power_w,0," W"))+'</span>'+
+    '<span>Cadence '+escapeHtml(fmt(row&&row.cadence,0))+'</span>'+
+    '<span>Grade '+escapeHtml(fmt(row&&row.grade_pct,1,"%"))+'</span>'+
+    '<span>Altitude '+escapeHtml(fmt(row&&row.altitude_m,0," m"))+'</span>';
+}
+function updateViewerCursor(target,row){
+  const state=viewerStates[target];if(!state||!row)return;
+  state.cursorRow=row;
+  const readout=el(state.readoutId);readout.classList.remove("hidden");readout.innerHTML=cursorReadoutHtml(row,state.key,state.def);
+
+  if(state.map&&row.lat!=null&&row.lon!=null){
+    if(!state.cursorMarker){
+      const icon=L.divIcon({className:"workout-cursor-icon",html:'<div class="workout-cursor-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+      state.cursorMarker=L.marker([row.lat,row.lon],{icon,draggable:true,zIndexOffset:1000}).addTo(state.map);
+      state.cursorMarker.on("drag",e=>{
+        const r=nearestGpsRow(state.rows,e.target.getLatLng());if(r)updateViewerCursor(target,r);
+      });
+      state.cursorMarker.on("dragend",e=>{
+        const r=nearestGpsRow(state.rows,e.target.getLatLng());if(r)updateViewerCursor(target,r);
+      });
+    }else state.cursorMarker.setLatLng([row.lat,row.lon]);
+  }
+
+  const xv=n(row[state.xKey]),yv=n(row[state.key]);
+  if(state.plotReady&&xv!=null){
+    const plot=el(state.plotId);
+    if(yv!=null) Plotly.restyle(plot,{x:[[xv]],y:[[yv]]},[2]);
+    else Plotly.restyle(plot,{x:[[]],y:[[]]},[2]);
+    Plotly.relayout(plot,{"shapes[0].x0":xv,"shapes[0].x1":xv});
+  }
+}
+function bindPlotCursor(target){
+  const state=viewerStates[target],plot=el(state.plotId);if(!state||!plot)return;
+  if(typeof plot.removeAllListeners==="function"){plot.removeAllListeners("plotly_hover");plot.removeAllListeners("plotly_click");}
+  plot.on("plotly_hover",ev=>{
+    const cd=ev&&ev.points&&ev.points[0]&&ev.points[0].customdata;
+    const idx=Array.isArray(cd)?n(cd[8]):null;
+    if(idx!=null&&state.rows[idx])updateViewerCursor(target,state.rows[idx]);
+  });
+  plot.on("plotly_click",ev=>{
+    const cd=ev&&ev.points&&ev.points[0]&&ev.points[0].customdata;
+    const idx=Array.isArray(cd)?n(cd[8]):null;
+    if(idx!=null&&state.rows[idx])updateViewerCursor(target,state.rows[idx]);
+  });
+
+  if(plot._wbPointerDown)plot.removeEventListener("pointerdown",plot._wbPointerDown,true);
+  if(plot._wbPointerMove)plot.removeEventListener("pointermove",plot._wbPointerMove,true);
+  if(plot._wbPointerUp)window.removeEventListener("pointerup",plot._wbPointerUp,true);
+  let dragging=false;
+  const move=e=>{
+    const xa=plot._fullLayout&&plot._fullLayout.xaxis;if(!xa||typeof xa.p2d!=="function")return;
+    const rect=plot.getBoundingClientRect(),px=e.clientX-rect.left-xa._offset,xv=xa.p2d(px);
+    const row=nearestRowByX(state.rows,state.xKey,xv);if(row)updateViewerCursor(target,row);
+  };
+  plot._wbPointerDown=e=>{if(e.button!==0)return;dragging=true;move(e);};
+  plot._wbPointerMove=e=>{if(dragging&&(e.buttons&1))move(e);};
+  plot._wbPointerUp=()=>{dragging=false;};
+  plot.addEventListener("pointerdown",plot._wbPointerDown,true);
+  plot.addEventListener("pointermove",plot._wbPointerMove,true);
+  window.addEventListener("pointerup",plot._wbPointerUp,true);
+}
 function renderStreamViewer(rows,target){
   const mapId=target==="home"?"homeRouteMap":"routeMap",plotId=target==="home"?"homeStreamPlot":"streamPlot",
     metricId=target==="home"?"homeRouteMetric":"historyRouteMetric",xId=target==="home"?"homeRouteXAxis":"historyRouteXAxis",
-    legendId=target==="home"?"homeRouteLegend":"historyRouteLegend";
-  const key=el(metricId).value||"pace_min_km",def=STREAM_METRICS[key],stats=streamMetricStats(rows,key);
+    legendId=target==="home"?"homeRouteLegend":"historyRouteLegend",readoutId=target==="home"?"homeCursorReadout":"historyCursorReadout";
+  const key=el(metricId).value||"pace_min_km",def=STREAM_METRICS[key],stats=streamMetricStats(rows,key),xKey=el(xId).value||"distance_km";
   const vals=rows.map(r=>n(r[key])).filter(Number.isFinite);
+
   if(vals.length){
     el(legendId).classList.remove("hidden");
-    const range=key==="heart_rate"?"fixed HR scale; darkest red ≥180 bpm":(stats.lo.toFixed(1)+"–"+stats.hi.toFixed(1)+" "+def.unit+" (5th–95th percentile)");
+    let range;
+    if(key==="heart_rate")range="white/pale = low HR · dark red ≥180 bpm";
+    else if(key==="zone")range="Z1 blue · Z2 green · Z3 yellow · Z4 orange · Z5 red · Z6 purple";
+    else range=stats.lo.toFixed(1)+"–"+stats.hi.toFixed(1)+" "+def.unit+" (5th–95th percentile)";
     el(legendId).innerHTML='<span class="legend-label">'+escapeHtml(def.label)+'</span><span class="legend-gradient" style="background:'+def.gradient+'"></span><span>'+escapeHtml(range)+'</span>';
   }else el(legendId).classList.add("hidden");
 
-  const gps=streamRowsDownsample(rows.filter(r=>r.lat!=null&&r.lon!=null),850);
+  const old=viewerStates[target];
+  if(old&&old.map&&routeMaps[target]){routeMaps[target].remove();routeMaps[target]=null;}
+  const state={rows,key,def,stats,xKey,mapId,plotId,legendId,readoutId,map:null,cursorMarker:null,plotReady:false};
+  viewerStates[target]=state;
+
+  const gps=streamRowsDownsample(rows.filter(r=>r.lat!=null&&r.lon!=null),1200);
   if(gps.length>=2){
     el(mapId).classList.remove("hidden");
-    if(routeMaps[target]){routeMaps[target].remove();routeMaps[target]=null;}
-    const map=L.map(mapId);routeMaps[target]=map;
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
+    const map=L.map(mapId);routeMaps[target]=map;state.map=map;
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png".replace("{y}","{y}"),{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
+    // Leaflet uses the standard {z}/{x}/{y} tile ordering; keep literal URL after construction.
+    map.eachLayer(layer=>{if(layer instanceof L.TileLayer)layer.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");});
     for(let i=1;i<gps.length;i++){
       const c=colorForStreamMetric(key,gps[i][key],stats);
-      L.polyline([[gps[i-1].lat,gps[i-1].lon],[gps[i].lat,gps[i].lon]],{weight:5,opacity:.92,color:c}).addTo(map);
+      L.polyline([[gps[i-1].lat,gps[i-1].lon],[gps[i].lat,gps[i].lon]],{weight:5,opacity:.92,color:c,interactive:false}).addTo(map);
     }
     L.circleMarker([gps[0].lat,gps[0].lon],{radius:5,weight:2,color:"#166534",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Start").addTo(map);
     L.circleMarker([gps[gps.length-1].lat,gps[gps.length-1].lon],{radius:5,weight:2,color:"#991b1b",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Finish").addTo(map);
     map.fitBounds(gps.map(r=>[r.lat,r.lon]),{padding:[18,18]});
+    map.on("click",e=>{const r=nearestGpsRow(rows,e.latlng);if(r)updateViewerCursor(target,r);});
     setTimeout(()=>map.invalidateSize(),0);
   }else{
-    if(routeMaps[target]){routeMaps[target].remove();routeMaps[target]=null;}el(mapId).classList.add("hidden");
+    el(mapId).classList.add("hidden");
   }
 
-  const xKey=el(xId).value||"distance_km";
-  const usable=streamRowsDownsample(rows.filter(r=>n(r[xKey])!=null&&n(r[key])!=null),260);
-  if(usable.length>=2){
+  // IMPORTANT: downsample the full time series before checking metric validity.
+  // This preserves recovery/stop gaps. Filtering first used to connect the end
+  // of one interval directly to the beginning of another and visually stretched
+  // intervals across the workout.
+  const plotRows=streamRowsDownsample(rows,1200);
+  const validCount=plotRows.filter(r=>n(r[xKey])!=null&&n(r[key])!=null).length;
+  if(validCount>=2){
     el(plotId).classList.remove("hidden");
-    const traces=[];
-    for(let i=1;i<usable.length;i++){
-      traces.push({x:[usable[i-1][xKey],usable[i][xKey]],y:[usable[i-1][key],usable[i][key]],mode:"lines",type:"scatter",
-        line:{color:colorForStreamMetric(key,usable[i][key],stats),width:3.5},hoverinfo:"skip",showlegend:false});
-    }
-    traces.push({x:usable.map(r=>r[xKey]),y:usable.map(r=>r[key]),mode:"markers",type:"scatter",showlegend:false,
-      marker:{size:3,color:usable.map(r=>colorForStreamMetric(key,r[key],stats))},
-      customdata:usable.map(r=>[r.time_min,r.distance_km,r.altitude_m,r.heart_rate,r.speed_kmh,r.power_w,r.cadence,r.grade_pct]),
-      hovertemplate:"Time %{customdata[0]:.1f} min · Distance %{customdata[1]:.2f} km<br>"+escapeHtml(def.label)+": %{y:.2f} "+escapeHtml(def.unit)+"<br>Altitude %{customdata[2]:.0f} m · HR %{customdata[3]:.0f}<br>Speed %{customdata[4]:.1f} km/h · Power %{customdata[5]:.0f} W · Cadence %{customdata[6]:.0f}<extra></extra>"});
-    Plotly.react(plotId,traces,{margin:{l:60,r:20,t:20,b:45},xaxis:{title:xKey==="distance_km"?"Distance (km)":"Time (min)"},
-      yaxis:{title:def.label+" ("+def.unit+")",autorange:key==="pace_min_km"?"reversed":true},paper_bgcolor:"transparent",plot_bgcolor:"transparent",showlegend:false},
-      {responsive:true,displaylogo:false});
-  }else el(plotId).classList.add("hidden");
+    const xs=plotRows.map(r=>n(r[xKey]));
+    const ys=plotRows.map(r=>n(r[key]));
+    const custom=plotRows.map(r=>[r.time_min,r.distance_km,r.altitude_m,r.heart_rate,r.speed_kmh,r.power_w,r.cadence,r.grade_pct,r.i]);
+    const colors=plotRows.map(r=>colorForStreamMetric(key,r[key],stats));
+    const traces=[
+      {x:xs,y:ys,mode:"lines",type:"scattergl",connectgaps:false,showlegend:false,hoverinfo:"skip",line:{color:"rgba(83,97,113,.28)",width:1.2}},
+      {x:xs,y:ys,mode:"markers",type:"scattergl",connectgaps:false,showlegend:false,marker:{size:5,color:colors},customdata:custom,
+       hovertemplate:"Time %{customdata[0]:.1f} min · Distance %{customdata[1]:.2f} km<br>"+escapeHtml(def.label)+": %{y:.2f} "+escapeHtml(def.unit)+"<br>Altitude %{customdata[2]:.0f} m · HR %{customdata[3]:.0f}<br>Speed %{customdata[4]:.1f} km/h · Power %{customdata[5]:.0f} W · Cadence %{customdata[6]:.0f} · Grade %{customdata[7]:.1f}%<extra></extra>"},
+      {x:[],y:[],mode:"markers",type:"scatter",showlegend:false,hoverinfo:"skip",marker:{size:12,color:"#111827",line:{width:3,color:"#ffffff"}}}
+    ];
+    const firstValid=plotRows.find(r=>n(r[xKey])!=null&&n(r[key])!=null);
+    const firstX=firstValid?n(firstValid[xKey]):0;
+    Plotly.react(plotId,traces,{margin:{l:60,r:20,t:20,b:45},hovermode:"closest",dragmode:false,
+      xaxis:{title:xKey==="distance_km"?"Distance (km)":"Time (min)"},
+      yaxis:{title:def.label+" ("+def.unit+")",autorange:key==="pace_min_km"?"reversed":true},
+      shapes:[{type:"line",x0:firstX,x1:firstX,yref:"paper",y0:0,y1:1,line:{color:"rgba(17,24,39,.35)",width:1,dash:"dot"}}],
+      paper_bgcolor:"transparent",plot_bgcolor:"transparent",showlegend:false},
+      {responsive:true,displaylogo:false,scrollZoom:false});
+    state.plotReady=true;
+    bindPlotCursor(target);
+    updateViewerCursor(target,firstValid);
+  }else{
+    el(plotId).classList.add("hidden");
+    el(readoutId).classList.add("hidden");
+  }
 }
 
 function analysisData() {
