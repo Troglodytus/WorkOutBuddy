@@ -937,6 +937,8 @@ async function parseTcx(file) {
   const e1=eff(0),e2=eff(1),drift=e1&&e2?100*(e2/e1-1):null;
   const fileHash=await sha256(file);
   const pace=distance>0&&duration>0?(duration/60)/(distance/1000):null;
+  const derivedRows=buildStreamRows({points});
+  const streamDerived=derivedStreamSummary(derivedRows,{sport_type:sport,sport_category:normalizeSport(sport),max_hr:maxHr});
   const streamPoints=downsamplePoints(points,4000);
   const startIso=firstTime.toISOString();
   const dedupe=[startIso.slice(0,19),normalizeSport(sport),Math.round(duration/10),Math.round(distance/10)].join("|");
@@ -944,10 +946,14 @@ async function parseTcx(file) {
     activity:{
       source:"tcx_upload",name:file.name.replace(/\.tcx$/i,""),sport_type:sport,sport_category:normalizeSport(sport),
       start_time:startIso,original_start_time:idText||startIso,duration_s:duration,moving_time_s:duration,distance_m:distance,
-      elevation_gain_m:elevation,avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,training_load_score:load,
-      easy_zone_fraction:easy,hard_zone_fraction:hard,z1_s:zones[0],z2_s:zones[1],z3_s:zones[2],z4_s:zones[3],z5_s:zones[4],
-      average_power:avgPower,cadence_spm:cadence,hr_efficiency_drift_pct:drift,file_sha256:fileHash,dedupe_key:dedupe,
-      metrics_json:{parser:"workoutbuddy-web-tcx-v1",trackpoints:points.length,stored_trackpoints:streamPoints.length}
+      elevation_gain_m:elevation,avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,avg_gap_pace_min_km:streamDerived.gap,
+      training_load_score:load,easy_zone_fraction:easy,hard_zone_fraction:hard,z1_s:zones[0],z2_s:zones[1],z3_s:zones[2],z4_s:zones[3],z5_s:zones[4],
+      own_vo2max_estimate:streamDerived.vo2,estimated_vo2max:streamDerived.vo2,average_power:avgPower,cadence_spm:cadence,
+      hr_efficiency_drift_pct:drift,file_sha256:fileHash,dedupe_key:dedupe,
+      metrics_json:{parser:"workoutbuddy-web-tcx-v2",trackpoints:points.length,stored_trackpoints:streamPoints.length,
+        max_speed_kmh:streamDerived.max_speed_kmh,max_power_w:streamDerived.max_power_w,max_cadence:streamDerived.max_cadence,
+        avg_grade_pct:streamDerived.avg_grade_pct,min_grade_pct:streamDerived.min_grade_pct,max_grade_pct:streamDerived.max_grade_pct,
+        vo2_estimate_method:"ACSM running oxygen cost + grade + HR-reserve heuristic"}
     },
     stream:{points:streamPoints}
   };
