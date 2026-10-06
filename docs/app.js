@@ -1321,7 +1321,7 @@ function openSettings(){
   el("profileName").value=p.display_name||"";el("profileBirthdate").value=p.birthdate||"";el("profileHeight").value=n(p.height_cm,178);
   el("profileWeight").value=n(p.current_weight_kg,75);el("profileVo2").value=n(p.profile_vo2max,45);
   el("goalType").value=g.primary_goal||"general";el("goalDate").value=g.goal_date||"";
-  el("weeklyRunDays").value=n(t.weekly_run_days,3);el("weeklyStrengthDays").value=n(t.strength_sessions,2);el("longRunDay").value=String(t.long_run_day==null?6:t.long_run_day);
+  el("weeklyRunDays").value=n(t.weekly_run_days,3);el("weeklyStrengthDays").value=n(t.strength_sessions,2);el("trainingAggressiveness").value=String(n(t.training_aggressiveness,3));el("longRunDay").value=String(t.long_run_day==null?6:t.long_run_day);
   el("z1Max").value=n(z.z1_max,130);el("z2Max").value=n(z.z2_max,150);el("z3Max").value=n(z.z3_max,165);el("z4Max").value=n(z.z4_max,178);el("z5Max").value=n(z.z5_max,220);
   el("settingsStatus").textContent="";el("settingsDialog").showModal();
 }
@@ -1330,7 +1330,7 @@ async function saveSettings(event){
   const row={user_id:userId(),display_name:el("profileName").value.trim(),birthdate:el("profileBirthdate").value||null,
     height_cm:n(el("profileHeight").value),current_weight_kg:n(el("profileWeight").value),profile_vo2max:n(el("profileVo2").value),
     goals:{primary_goal:el("goalType").value,goal_date:el("goalDate").value||null},
-    training_preferences:{...((profile&&profile.training_preferences)||{}),weekly_run_days:n(el("weeklyRunDays").value,3),strength_sessions:n(el("weeklyStrengthDays").value,2),long_run_day:n(el("longRunDay").value,6)},
+    training_preferences:{...((profile&&profile.training_preferences)||{}),weekly_run_days:n(el("weeklyRunDays").value,3),strength_sessions:n(el("weeklyStrengthDays").value,2),training_aggressiveness:n(el("trainingAggressiveness").value,3),long_run_day:n(el("longRunDay").value,6)},
     hr_zones:{z1_max:n(el("z1Max").value,130),z2_max:n(el("z2Max").value,150),z3_max:n(el("z3Max").value,165),z4_max:n(el("z4Max").value,178),z5_max:n(el("z5Max").value,220)}
   };
   el("settingsStatus").textContent="Saving…";
