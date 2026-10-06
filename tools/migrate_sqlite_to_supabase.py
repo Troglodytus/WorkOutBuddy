@@ -144,6 +144,56 @@ def read_json_file(value: Any) -> Any:
         return None
 
 
+def _stream_values(data: Any, key: str) -> list[Any]:
+    if not isinstance(data, dict):
+        return []
+    value = data.get(key)
+    if isinstance(value, dict) and isinstance(value.get("data"), list):
+        return value["data"]
+    if isinstance(value, list):
+        return value
+    return []
+
+
+def normalize_stream_json(data: Any, max_points: int = 4000) -> dict[str, Any]:
+    """Convert legacy Strava/TCX stream dictionaries to the browser's point format."""
+    if not isinstance(data, dict):
+        return {"points": []}
+    if isinstance(data.get("points"), list):
+        points = data["points"]
+    else:
+        time = _stream_values(data, "time")
+        latlng = _stream_values(data, "latlng")
+        hr = _stream_values(data, "heartrate")
+        altitude = _stream_values(data, "altitude")
+        distance = _stream_values(data, "distance")
+        speed = _stream_values(data, "velocity_smooth")
+        cadence = _stream_values(data, "cadence")
+        watts = _stream_values(data, "watts")
+        n_points = max(map(len, [time, latlng, hr, altitude, distance, speed, cadence, watts]), default=0)
+        points = []
+        for i in range(n_points):
+            ll = latlng[i] if i < len(latlng) and isinstance(latlng[i], (list, tuple)) and len(latlng[i]) >= 2 else [None, None]
+            points.append({
+                "elapsed_s": time[i] if i < len(time) else None,
+                "lat": ll[0],
+                "lon": ll[1],
+                "hr": hr[i] if i < len(hr) else None,
+                "alt": altitude[i] if i < len(altitude) else None,
+                "distance_m": distance[i] if i < len(distance) else None,
+                "speed_mps": speed[i] if i < len(speed) else None,
+                "cadence": cadence[i] if i < len(cadence) else None,
+                "watts": watts[i] if i < len(watts) else None,
+            })
+    if len(points) > max_points:
+        if max_points <= 1:
+            points = points[:1]
+        else:
+            step = (len(points) - 1) / (max_points - 1)
+            points = [points[min(len(points)-1, round(i * step))] for i in range(max_points)]
+    return {"points": clean(points)}
+
+
 def main() -> None:
     if not SUPABASE_URL or ".supabase.co" not in SUPABASE_URL:
         fail("Set SUPABASE_URL.")
@@ -252,13 +302,14 @@ def main() -> None:
 
         stream_json = read_json_file(row.get("streams_json_path"))
         if stream_json is not None:
+            normalized_stream = normalize_stream_json(stream_json)
             request(
                 "POST",
                 "/rest/v1/activity_streams",
                 data=json.dumps({
                     "activity_id": new_id,
                     "user_id": USER_ID,
-                    "stream_data": clean(stream_json),
+                    "stream_data": normalized_stream,
                 }),
             )
             stream_count += 1
