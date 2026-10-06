@@ -13,6 +13,8 @@ let profile = null;
 let selectedActivityId = null;
 let routeMaps = {history:null, home:null};
 let viewerStates = {history:null, home:null};
+let currentPlan = [];
+let duplicateResolver = null;
 const streamCache = new Map();
 
 const el = id => document.getElementById(id);
@@ -103,7 +105,7 @@ function defaultProfile() {
     profile_vo2max: 45,
     hr_zones: {z1_max:130,z2_max:150,z3_max:165,z4_max:178,z5_max:220},
     goals: {primary_goal:"general",goal_date:null},
-    training_preferences: {weekly_run_days:3,strength_sessions:2,long_run_day:6}
+    training_preferences: {weekly_run_days:3,strength_sessions:2,long_run_day:6,training_aggressiveness:3,manual_plan_overrides:{}}
   };
 }
 
@@ -139,6 +141,16 @@ function bindUi() {
   ["historyXMetric","historyYMetric","historyPlotType","historyColorBy"].forEach(id => el(id).addEventListener("change", renderHistory));
   initWorkoutViewerControls();
   el("regeneratePlanButton").addEventListener("click", renderPlan);
+  el("plannerRegenerateButton").addEventListener("click", renderPlan);
+  el("planEditForm").addEventListener("submit", savePlanOverride);
+  el("planEditCloseButton").addEventListener("click",()=>el("planEditDialog").close());
+  el("planEditCancelButton").addEventListener("click",()=>el("planEditDialog").close());
+  el("planEditClearButton").addEventListener("click",clearPlanOverride);
+  el("planEditSport").addEventListener("change",adaptPlanEditorForSport);
+  el("planEditRest").addEventListener("change",adaptPlanEditorForSport);
+  el("duplicateSkipButton").addEventListener("click",()=>resolveDuplicateDecision("skip"));
+  el("duplicateOverwriteButton").addEventListener("click",()=>resolveDuplicateDecision("overwrite"));
+  el("duplicateDialog").addEventListener("cancel",e=>{e.preventDefault();resolveDuplicateDecision("skip");});
   el("aiCoachButton").addEventListener("click", askAiCoach);
   el("settingsButton").addEventListener("click", openSettings);
   el("settingsCloseButton").addEventListener("click", () => el("settingsDialog").close());
@@ -179,6 +191,7 @@ function openView(name) {
   const target = el(name + "View");
   if (target) target.classList.add("active");
   if (name === "history") renderHistory();
+  if (name === "planner") renderPlanner();
   if (name === "analysis") renderAnalysis();
 }
 
@@ -208,6 +221,7 @@ async function loadActivities() {
 function renderAll() {
   renderHome();
   renderHistory();
+  renderPlanner();
   renderAnalysis();
 }
 function renderHome() {
@@ -303,51 +317,177 @@ function renderQuickStats() {
   el("quickStats").innerHTML = values.map(v => '<div class="metric"><div class="metric-value">'+escapeHtml(v[0])+'</div><div class="metric-label">'+escapeHtml(v[1])+"</div></div>").join("");
 }
 
-function buildSevenDayPlan() {
-  const c = trainingContext();
-  const pref = (profile && profile.training_preferences) || {};
-  const runDays = clamp(parseInt(pref.weekly_run_days || 3,10),1,7);
-  const strengthCount = clamp(parseInt(pref.strength_sessions || 2,10),0,4);
-  const longDay = parseInt(pref.long_run_day == null ? 6 : pref.long_run_day,10);
-  const todayRec = recommendation();
-  const start = new Date();
-  start.setHours(12,0,0,0);
-  const days = [];
-  let runsPlaced = 0, strengthPlaced = 0, qualityPlaced = 0;
-  for (let i=0;i<7;i++) {
-    const d = new Date(start.getTime()+i*86400000);
-    let item = {date:d,title:"Rest / mobility",meta:"Recovery"};
-    if (i===0) {
-      item = {date:d,title:todayRec.title,meta:todayRec.meta};
-      if (todayRec.family !== "rest") runsPlaced += todayRec.title.toLowerCase().includes("run") ? 1 : 0;
-    } else if (d.getDay() === longDay && runsPlaced < runDays) {
-      const dist = clamp(Math.max(c.longestRun*.95,c.medianRun*1.15),7,c.longestRun+1.5);
-      item = {date:d,title:"Long easy run",meta:dist.toFixed(1)+" km · Z2"};
-      runsPlaced++;
-    } else if (strengthPlaced < strengthCount && (i===1 || i===4)) {
-      item = {date:d,title:"Strength / prehab",meta:"30–40 min · calves, hips, core, knee stability"};
-      strengthPlaced++;
-    } else if (!qualityPlaced && runsPlaced < runDays && i>=2 && c.lastHardHours + i*24 >= 60) {
-      item = {date:d,title:"Quality run",meta:"5 × 3 min controlled Z4 · full easy recovery"};
-      qualityPlaced++; runsPlaced++;
-    } else if (runsPlaced < runDays && (i%2===0 || (7-i) <= (runDays-runsPlaced))) {
-      const dist = clamp(c.medianRun*.9,4.5,8);
-      item = {date:d,title:"Easy aerobic run",meta:dist.toFixed(1)+" km · mostly Z2"};
-      runsPlaced++;
-    } else if (strengthPlaced < strengthCount) {
-      item = {date:d,title:"Strength / prehab",meta:"30–40 min · controlled"};
-      strengthPlaced++;
-    }
-    days.push(item);
-  }
-  return days;
+
+function isoPlanDate(d){ return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function planLoad(w){
+  if(!w||w.no_workout)return 0;
+  const dur=n(w.duration_min,0),family=String(w.family||"");
+  const factor=family.includes("quality")||family.includes("interval")?3.4:family==="tempo"||family==="steady_progression"?2.8:
+    family.includes("long")?2.2:family.includes("strength")?1.8:family.includes("recovery")?1.3:2.0;
+  return dur*factor;
 }
-function renderPlan() {
-  const plan = buildSevenDayPlan();
-  el("weekPlan").innerHTML = plan.map((p,i) =>
-    '<div class="day-card '+(i===0?"today":"")+'"><div class="day-date">'+escapeHtml(shortDay(p.date))+
-    '</div><div class="day-title">'+escapeHtml(p.title)+'</div><div class="day-meta">'+escapeHtml(p.meta)+"</div></div>"
+function planIsHard(w){
+  const family=String(w&&w.family||"");
+  return family==="quality"||family==="tempo"||family==="bike_intervals"||String(w&&w.zone||"").toLowerCase().includes("z4");
+}
+function planSportCategory(w){return normalizeSport(w&&w.sport_type);}
+function planMeta(w){
+  if(w.no_workout)return "Rest / mobility";
+  const parts=[];
+  if(n(w.distance_km)>0)parts.push(n(w.distance_km).toFixed(1)+" km");
+  if(n(w.duration_min)>0)parts.push(Math.round(n(w.duration_min))+" min");
+  if(w.zone)parts.push(w.zone);
+  if(w.pace)parts.push(w.pace);
+  if(w.wattage)parts.push(w.wattage);
+  return parts.join(" · ");
+}
+function makePlannedWorkout(dateObj,opts={}){
+  const key=isoPlanDate(dateObj);
+  return {
+    date:key,dateObj:new Date(dateObj),weekday:new Intl.DateTimeFormat(undefined,{weekday:"short"}).format(dateObj),
+    start_time:opts.start_time||"18:00",title:opts.title||"Rest / mobility",sport_type:opts.sport_type||"None",
+    family:opts.family||"rest_or_mobility",duration_min:n(opts.duration_min,0),distance_km:n(opts.distance_km,0),
+    zone:opts.zone||"",pace:opts.pace||"",wattage:opts.wattage||"",notes:opts.notes||"",
+    no_workout:opts.no_workout!==undefined?!!opts.no_workout:(opts.sport_type==="None"),locked:!!opts.locked,source:opts.source||"planner"
+  };
+}
+function defaultWorkoutForSport(sport,dateObj,existing={}){
+  const c=trainingContext(),cat=normalizeSport(sport),base={...existing,sport_type:sport,no_workout:false};
+  if(cat==="run")return makePlannedWorkout(dateObj,{...base,title:"Easy aerobic run",family:"easy_aerobic",duration_min:Math.round(clamp(c.medianRun*.9,4.5,8)*c.easyPace),distance_km:clamp(c.medianRun*.9,4.5,8),zone:"Mostly Z2",pace:fmtPace(c.easyPace+.15),wattage:""});
+  if(cat==="bike")return makePlannedWorkout(dateObj,{...base,title:"Endurance ride",family:"endurance_ride",duration_min:50,distance_km:0,zone:"Z2",pace:"",wattage:"Comfortable endurance power"});
+  if(cat==="strength")return makePlannedWorkout(dateObj,{...base,title:"Strength / prehab",family:"strength_prehab",duration_min:35,distance_km:0,zone:"Controlled",pace:"",wattage:"Bodyweight / light resistance"});
+  if(cat==="hike")return makePlannedWorkout(dateObj,{...base,title:"Easy hike",family:"easy_hike",duration_min:75,distance_km:6,zone:"Easy aerobic",pace:"Comfortable hiking pace",wattage:""});
+  return makePlannedWorkout(dateObj,{...base,title:"Rest / mobility",sport_type:"None",family:"rest_or_mobility",duration_min:0,distance_km:0,zone:"Rest",no_workout:true});
+}
+function normalizePlanOverride(raw,dateObj){
+  const w=makePlannedWorkout(dateObj,{...raw,locked:true,source:"manual_override"});
+  if(w.no_workout||normalizeSport(w.sport_type)==="other"&&String(w.sport_type).toLowerCase()==="none"){
+    w.no_workout=true;w.sport_type="None";w.family="rest_or_mobility";w.duration_min=0;w.distance_km=0;w.zone=w.zone||"Rest";
+  }
+  return w;
+}
+function buildFourteenDayPlan(){
+  const c=trainingContext(),pref=(profile&&profile.training_preferences)||{},overrides=safeJson(pref.manual_plan_overrides,{})||{};
+  const runDays=clamp(parseInt(pref.weekly_run_days||3,10),1,7),strengthTarget=clamp(parseInt(pref.strength_sessions||2,10),0,5);
+  const longDay=parseInt(pref.long_run_day==null?6:pref.long_run_day,10),aggr=clamp(parseInt(pref.training_aggressiveness||3,10),1,5);
+  const todayRec=recommendation(),start=new Date();start.setHours(12,0,0,0);
+  const out=[],plannedContext=[];
+  const weekCounts=[{run:0,strength:0,quality:0},{run:0,strength:0,quality:0}];
+
+  for(let i=0;i<14;i++){
+    const d=new Date(start.getTime()+i*86400000),key=isoPlanDate(d),week=Math.floor(i/7),counts=weekCounts[week];
+    let w;
+    if(overrides[key]){
+      w=normalizePlanOverride(overrides[key],d);
+    }else{
+      const prior24=plannedContext.filter(x=>(d-x.dateObj)/3600000<=30);
+      const prior72=plannedContext.filter(x=>(d-x.dateObj)/3600000<=78);
+      const load72=sum(prior72.map(planLoad));
+      const hardRecently=prior72.some(planIsHard);
+      const runKm72=sum(prior72.filter(x=>planSportCategory(x)==="run").map(x=>n(x.distance_km,0)));
+      const remaining=7-(i%7),runNeed=Math.max(0,runDays-counts.run),strengthNeed=Math.max(0,strengthTarget-counts.strength);
+
+      if(i===0){
+        if(todayRec.family==="rest")w=makePlannedWorkout(d,{title:"Rest / mobility",sport_type:"None",family:"rest_or_mobility",zone:"Rest",no_workout:true,start_time:new Date().toTimeString().slice(0,5)});
+        else if(todayRec.family==="recovery")w=makePlannedWorkout(d,{title:"Recovery run",sport_type:"Run",family:"recovery_aerobic",duration_min:35,distance_km:n(todayRec.distance,4),zone:"Z1–low Z2",pace:fmtPace(c.easyPace+.5),start_time:new Date().toTimeString().slice(0,5)});
+        else if(todayRec.family==="quality")w=makePlannedWorkout(d,{title:"Controlled quality run",sport_type:"Run",family:"quality",duration_min:50,distance_km:clamp(c.medianRun,5,9),zone:"Z4 work / easy recoveries",pace:"5 × 3 min controlled",notes:"10–15 min easy + 5 × 3 min Z4 / 2 min easy + cool-down",start_time:new Date().toTimeString().slice(0,5)});
+        else w=makePlannedWorkout(d,{title:"Easy aerobic run",sport_type:"Run",family:"easy_aerobic",duration_min:Math.round(n(todayRec.distance,c.medianRun)*c.easyPace),distance_km:n(todayRec.distance,c.medianRun),zone:"Mostly Z2",pace:fmtPace(c.easyPace+.15),start_time:new Date().toTimeString().slice(0,5)});
+      }else if(prior24.some(x=>planIsHard(x))||load72>Math.max(340,c.weeklyBaseline*2.2)){
+        if(runNeed>=remaining)w=makePlannedWorkout(d,{title:"Recovery run",sport_type:"Run",family:"recovery_aerobic",duration_min:30,distance_km:clamp(c.medianRun*.6,3,5),zone:"Z1–low Z2",pace:fmtPace(c.easyPace+.5)});
+        else w=makePlannedWorkout(d,{title:"Rest / mobility",sport_type:"None",family:"rest_or_mobility",zone:"Recovery after recent load",no_workout:true});
+      }else if(d.getDay()===longDay&&counts.run<runDays&&runKm72<c.longestRun*1.4){
+        const dist=clamp(Math.max(c.longestRun*.95,c.medianRun*(1.1+.05*aggr)),7,c.longestRun+1.5);
+        w=makePlannedWorkout(d,{title:"Long easy run",sport_type:"Run",family:"long_run",duration_min:Math.round(dist*(c.easyPace+.2)),distance_km:dist,zone:"Z2",pace:fmtPace(c.easyPace+.2)});
+      }else if(strengthNeed>0&&(i%7===1||i%7===4)&&!prior24.length){
+        w=makePlannedWorkout(d,{title:"Strength / prehab",sport_type:"Strength",family:"strength_prehab",duration_min:35,zone:"Controlled",wattage:"Bodyweight / light resistance",notes:"Calves, hips, core, knee stability"});
+      }else if(counts.quality<1&&counts.run<runDays&&!hardRecently&&i%7>=2&&i%7<=5&&c.lastHardHours+i*24>=54){
+        w=makePlannedWorkout(d,{title:"Quality run",sport_type:"Run",family:"quality",duration_min:48,distance_km:clamp(c.medianRun,5,9),zone:"Z4 intervals",pace:"5 × 3 min controlled",notes:"Warm up 10–15 min; 5 × 3 min Z4 with 2 min easy; cool down"});
+      }else if(runNeed>0&&(i%2===0||runNeed>=remaining)){
+        const dist=clamp(c.medianRun*(.88+.03*aggr),4.5,8.5);
+        w=makePlannedWorkout(d,{title:"Easy aerobic run",sport_type:"Run",family:"easy_aerobic",duration_min:Math.round(dist*(c.easyPace+.15)),distance_km:dist,zone:"Mostly Z2",pace:fmtPace(c.easyPace+.15)});
+      }else if(strengthNeed>0){
+        w=makePlannedWorkout(d,{title:"Strength / prehab",sport_type:"Strength",family:"strength_prehab",duration_min:35,zone:"Controlled",wattage:"Bodyweight / light resistance"});
+      }else{
+        w=makePlannedWorkout(d,{title:"Rest / mobility",sport_type:"None",family:"rest_or_mobility",zone:"Recovery",no_workout:true});
+      }
+    }
+
+    const cat=planSportCategory(w);if(!w.no_workout){if(cat==="run")counts.run++;if(cat==="strength")counts.strength++;if(planIsHard(w))counts.quality++;}
+    out.push(w);plannedContext.push(w);
+  }
+  currentPlan=out;return out;
+}
+function renderPlan(){
+  const plan=buildFourteenDayPlan();
+  el("weekPlan").innerHTML=plan.slice(0,7).map((p,i)=>
+    '<div class="day-card '+(i===0?"today ":"")+(p.locked?"manual":"")+'" data-plan-date="'+escapeHtml(p.date)+'">'+
+    '<div class="day-date">'+escapeHtml(shortDay(p.dateObj))+(p.locked?' · manual':'')+'</div>'+
+    '<div class="day-title">'+escapeHtml(p.title)+'</div><div class="day-meta">'+escapeHtml(planMeta(p))+"</div></div>"
   ).join("");
+  qsa("#weekPlan [data-plan-date]").forEach(card=>card.addEventListener("click",()=>openPlanEditor(card.dataset.planDate)));
+  renderPlanner();
+}
+function renderPlanner(){
+  const plan=currentPlan.length?currentPlan:buildFourteenDayPlan();
+  const runKm=sum(plan.filter(w=>planSportCategory(w)==="run").map(w=>n(w.distance_km,0)));
+  const rideMin=sum(plan.filter(w=>planSportCategory(w)==="bike").map(w=>n(w.duration_min,0)));
+  const totalMin=sum(plan.map(w=>n(w.duration_min,0)));
+  const manual=plan.filter(w=>w.locked).length;
+  el("plannerSummary").textContent="Next 14 days: "+runKm.toFixed(1)+" run km · "+Math.round(rideMin)+" ride min · "+Math.round(totalMin)+" total min · "+manual+" manual override"+(manual===1?"":"s");
+  el("plannerCalendar").innerHTML=plan.map((w,i)=>
+    '<div class="plan-card '+(i===0?"today ":"")+(w.locked?"manual":"")+'" data-plan-date="'+escapeHtml(w.date)+'">'+
+    '<div class="plan-date">'+escapeHtml(w.weekday+" "+w.date)+(w.locked?'<span class="plan-manual">MANUAL</span>':'')+'</div>'+
+    '<div class="plan-title">'+escapeHtml(w.title)+'</div><div class="plan-meta">'+escapeHtml(planMeta(w))+
+    (w.notes?"\n"+escapeHtml(w.notes):"")+"</div></div>"
+  ).join("");
+  qsa("#plannerCalendar [data-plan-date]").forEach(card=>card.addEventListener("click",()=>openPlanEditor(card.dataset.planDate)));
+}
+function openPlanEditor(dateKey){
+  const w=currentPlan.find(x=>x.date===dateKey);if(!w)return;
+  el("planEditDate").value=w.date;el("planEditHeading").textContent="Edit "+w.weekday+" "+w.date;
+  el("planEditTime").value=w.start_time||"18:00";el("planEditRest").checked=!!w.no_workout;
+  el("planEditSport").value=w.sport_type||"Run";el("planEditFamily").value=w.family||"easy_aerobic";el("planEditTitle").value=w.title||"";
+  el("planEditDuration").value=n(w.duration_min,0);el("planEditDistance").value=n(w.distance_km,0);el("planEditZone").value=w.zone||"";
+  el("planEditPace").value=w.pace||"";el("planEditPower").value=w.wattage||"";el("planEditNotes").value=w.notes||"";
+  el("planEditClearButton").disabled=!w.locked;el("planEditStatus").textContent="";
+  adaptPlanEditorForSport(false);el("planEditDialog").showModal();
+}
+function adaptPlanEditorForSport(autoFill=true){
+  const rest=el("planEditRest").checked,sport=rest?"None":el("planEditSport").value,cat=normalizeSport(sport);
+  ["planEditDuration","planEditDistance","planEditZone","planEditPace","planEditPower"].forEach(id=>el(id).disabled=rest);
+  if(rest){el("planEditSport").value="None";el("planEditFamily").value="rest_or_mobility";if(autoFill)el("planEditTitle").value="Rest / mobility";return;}
+  if(autoFill){
+    const d=new Date(el("planEditDate").value+"T12:00:00"),fresh=defaultWorkoutForSport(sport,d);
+    el("planEditFamily").value=fresh.family;el("planEditTitle").value=fresh.title;el("planEditDuration").value=fresh.duration_min;
+    el("planEditDistance").value=fresh.distance_km;el("planEditZone").value=fresh.zone;el("planEditPace").value=fresh.pace;el("planEditPower").value=fresh.wattage;
+  }
+  el("planEditPace").disabled=!(cat==="run"||cat==="hike");el("planEditPower").disabled=!(cat==="bike"||cat==="strength");
+}
+async function persistTrainingPreferences(next){
+  const merged={...((profile&&profile.training_preferences)||{}),...next};
+  const res=await client.from("profiles").update({training_preferences:merged}).eq("user_id",userId()).select().single();
+  if(res.error)throw res.error;profile=res.data;profile.hr_zones=safeJson(profile.hr_zones,{});profile.goals=safeJson(profile.goals,{});profile.training_preferences=safeJson(profile.training_preferences,{});
+}
+async function savePlanOverride(event){
+  event.preventDefault();
+  const dateKey=el("planEditDate").value;if(!dateKey)return;
+  const rest=el("planEditRest").checked;
+  const raw={date:dateKey,start_time:el("planEditTime").value||"18:00",no_workout:rest,
+    sport_type:rest?"None":el("planEditSport").value,family:rest?"rest_or_mobility":el("planEditFamily").value,
+    title:el("planEditTitle").value.trim()||(rest?"Rest / mobility":"Manual workout"),
+    duration_min:rest?0:n(el("planEditDuration").value,0),distance_km:rest?0:n(el("planEditDistance").value,0),
+    zone:rest?"Rest":el("planEditZone").value.trim(),pace:rest?"":el("planEditPace").value.trim(),
+    wattage:rest?"":el("planEditPower").value.trim(),notes:el("planEditNotes").value.trim(),locked:true,source:"manual_override"};
+  const pref=(profile&&profile.training_preferences)||{},overrides={...(safeJson(pref.manual_plan_overrides,{})||{})};overrides[dateKey]=raw;
+  el("planEditStatus").textContent="Saving override and recalculating…";
+  try{await persistTrainingPreferences({manual_plan_overrides:overrides});el("planEditDialog").close();renderPlan();toast("Manual override saved; following schedule recalculated.");}
+  catch(err){el("planEditStatus").textContent=err.message||String(err);}
+}
+async function clearPlanOverride(){
+  const dateKey=el("planEditDate").value,pref=(profile&&profile.training_preferences)||{},overrides={...(safeJson(pref.manual_plan_overrides,{})||{})};
+  if(!overrides[dateKey]){el("planEditDialog").close();return;}delete overrides[dateKey];
+  try{await persistTrainingPreferences({manual_plan_overrides:overrides});el("planEditDialog").close();renderPlan();toast("Manual override cleared; schedule recalculated.");}
+  catch(err){el("planEditStatus").textContent=err.message||String(err);}
 }
 
 function workoutRow(a, clickable=true) {
