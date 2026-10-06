@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const payload = await req.json();
-    const model = Deno.env.get("OPENAI_MODEL") || "gpt-5.6-luna";
+    const model = Deno.env.get("OPENAI_MODEL") || "gpt-6-luna";
 
     const instructions =
       "You are WorkOutBuddy, an evidence-focused endurance training analyst. " +
