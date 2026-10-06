@@ -1007,6 +1007,7 @@ function renderStreamViewer(rows,target){
     let range;
     if(key==="heart_rate")range="white/pale = low HR · dark red ≥180 bpm";
     else if(key==="zone")range="Z1 blue · Z2 green · Z3 yellow · Z4 orange · Z5 red · Z6 purple";
+    else if(key==="pace_min_km"||key==="speed_kmh")range="derived from DistanceMeters / time · "+stats.lo.toFixed(1)+"–"+stats.hi.toFixed(1)+" "+def.unit+" (5th–95th percentile)";
     else range=stats.lo.toFixed(1)+"–"+stats.hi.toFixed(1)+" "+def.unit+" (5th–95th percentile)";
     el(legendId).innerHTML='<span class="legend-label">'+escapeHtml(def.label)+'</span><span class="legend-gradient" style="background:'+def.gradient+'"></span><span>'+escapeHtml(range)+'</span>';
   }else el(legendId).classList.add("hidden");
