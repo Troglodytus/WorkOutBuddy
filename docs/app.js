@@ -1126,20 +1126,35 @@ async function askAiCoach() {
 }
 
 function openUpload(){ el("uploadStatus").textContent=""; el("tcxInput").value=""; el("uploadDialog").showModal(); }
+
+function resolveDuplicateDecision(decision){
+  if(!duplicateResolver)return;
+  const r=duplicateResolver;duplicateResolver=null;
+  if(el("duplicateDialog").open)el("duplicateDialog").close();
+  r(decision);
+}
+function askDuplicateDecision(file,existing,matchType){
+  el("duplicateInfo").innerHTML='<strong>'+escapeHtml(file.name)+'</strong><br>matches <strong>'+escapeHtml(existing.name||"Existing workout")+
+    '</strong> · '+escapeHtml(localDate(existing.start_time))+'<br><span class="muted">Detected by '+escapeHtml(matchType)+'.</span>';
+  el("duplicateDialog").showModal();
+  return new Promise(resolve=>{duplicateResolver=resolve;});
+}
 async function importSelectedFiles() {
   const files=Array.from(el("tcxInput").files||[]);
   if(!files.length){el("uploadStatus").textContent="Choose at least one TCX file.";return;}
   el("importFilesButton").disabled=true;
-  let ok=0, skipped=0;
+  let ok=0, skipped=0, overwritten=0;
   for(let i=0;i<files.length;i++){
     el("uploadStatus").textContent="Importing "+(i+1)+" / "+files.length+": "+files[i].name;
-    try { const result=await importTcx(files[i]); if(result==="skipped")skipped++;else ok++; }
-    catch(err){ console.error(err); toast(files[i].name+": "+err.message,5000); }
+    try {
+      const result=await importTcx(files[i]);
+      if(result==="skipped")skipped++;else if(result==="overwritten")overwritten++;else ok++;
+    } catch(err){ console.error(err); toast(files[i].name+": "+err.message,5000); }
   }
   el("importFilesButton").disabled=false;
-  await loadActivities(); renderAll();
-  el("uploadStatus").textContent="Imported "+ok+(skipped?" · skipped duplicates "+skipped:"")+".";
-  if(ok) setTimeout(()=>el("uploadDialog").close(),900);
+  await loadActivities(); streamCache.clear(); renderAll();
+  el("uploadStatus").textContent="Imported "+ok+(overwritten?" · overwritten "+overwritten:"")+(skipped?" · skipped "+skipped:"")+".";
+  if(ok||overwritten)setTimeout(()=>el("uploadDialog").close(),900);
 }
 
 async function sha256(file) {
@@ -1253,22 +1268,50 @@ async function parseTcx(file) {
     stream:{points:streamPoints}
   };
 }
+
 async function importTcx(file) {
   const parsed=await parseTcx(file);
-  const existing=await client.from("activities").select("id").eq("user_id",userId()).eq("file_sha256",parsed.activity.file_sha256).limit(1);
-  if(existing.data&&existing.data.length){return "skipped";}
-  const byKey=await client.from("activities").select("id").eq("user_id",userId()).eq("dedupe_key",parsed.activity.dedupe_key).limit(1);
-  if(byKey.data&&byKey.data.length){return "skipped";}
+  const fields="id,name,start_time,raw_file_path,file_sha256,dedupe_key,apple_vo2max,body_weight_kg";
+  const byHash=await client.from("activities").select(fields).eq("user_id",userId()).eq("file_sha256",parsed.activity.file_sha256).limit(1);
+  if(byHash.error)throw byHash.error;
+  let existing=byHash.data&&byHash.data[0],matchType="identical file hash";
+  if(!existing){
+    const byKey=await client.from("activities").select(fields).eq("user_id",userId()).eq("dedupe_key",parsed.activity.dedupe_key).limit(1);
+    if(byKey.error)throw byKey.error;
+    existing=byKey.data&&byKey.data[0];matchType="same start time / sport / duration / distance";
+  }
+
   const year=new Date(parsed.activity.start_time).getFullYear();
   const safeName=file.name.replace(/[^A-Za-z0-9_.-]/g,"_");
-  const path=userId()+"/"+year+"/"+parsed.activity.start_time.replace(/[:.]/g,"-")+"_"+safeName;
-  const up=await client.storage.from("workout-files").upload(path,file,{upsert:false,contentType:file.type||"application/xml"});
+  const newPath=userId()+"/"+year+"/"+parsed.activity.start_time.replace(/[:.]/g,"-")+"_"+safeName;
+
+  if(existing){
+    const decision=await askDuplicateDecision(file,existing,matchType);
+    if(decision!=="overwrite")return "skipped";
+    const path=existing.raw_file_path||newPath;
+    const up=await client.storage.from("workout-files").upload(path,file,{upsert:true,contentType:file.type||"application/xml"});
+    if(up.error)throw up.error;
+
+    parsed.activity.user_id=userId();parsed.activity.raw_file_path=path;
+    // Preserve manual per-workout values unless this import explicitly provides them.
+    if(parsed.activity.apple_vo2max==null&&existing.apple_vo2max!=null)parsed.activity.apple_vo2max=existing.apple_vo2max;
+    if(parsed.activity.body_weight_kg==null&&existing.body_weight_kg!=null)parsed.activity.body_weight_kg=existing.body_weight_kg;
+
+    const upd=await client.from("activities").update(parsed.activity).eq("id",existing.id).eq("user_id",userId()).select("id").single();
+    if(upd.error)throw upd.error;
+    const st=await client.from("activity_streams").upsert({activity_id:existing.id,user_id:userId(),stream_data:parsed.stream},{onConflict:"activity_id"});
+    if(st.error)throw st.error;
+    streamCache.delete(existing.id);
+    return "overwritten";
+  }
+
+  const up=await client.storage.from("workout-files").upload(newPath,file,{upsert:false,contentType:file.type||"application/xml"});
   if(up.error)throw up.error;
-  parsed.activity.user_id=userId();parsed.activity.raw_file_path=path;
+  parsed.activity.user_id=userId();parsed.activity.raw_file_path=newPath;
   const ins=await client.from("activities").insert(parsed.activity).select("id").single();
   if(ins.error)throw ins.error;
-  const s=await client.from("activity_streams").insert({activity_id:ins.data.id,user_id:userId(),stream_data:parsed.stream});
-  if(s.error)console.warn("Stream insert failed",s.error);
+  const st=await client.from("activity_streams").insert({activity_id:ins.data.id,user_id:userId(),stream_data:parsed.stream});
+  if(st.error)throw st.error;
   return "ok";
 }
 
@@ -1286,7 +1329,7 @@ async function saveSettings(event){
   const row={user_id:userId(),display_name:el("profileName").value.trim(),birthdate:el("profileBirthdate").value||null,
     height_cm:n(el("profileHeight").value),current_weight_kg:n(el("profileWeight").value),profile_vo2max:n(el("profileVo2").value),
     goals:{primary_goal:el("goalType").value,goal_date:el("goalDate").value||null},
-    training_preferences:{weekly_run_days:n(el("weeklyRunDays").value,3),strength_sessions:n(el("weeklyStrengthDays").value,2),long_run_day:n(el("longRunDay").value,6)},
+    training_preferences:{...((profile&&profile.training_preferences)||{}),weekly_run_days:n(el("weeklyRunDays").value,3),strength_sessions:n(el("weeklyStrengthDays").value,2),long_run_day:n(el("longRunDay").value,6)},
     hr_zones:{z1_max:n(el("z1Max").value,130),z2_max:n(el("z2Max").value,150),z3_max:n(el("z3Max").value,165),z4_max:n(el("z4Max").value,178),z5_max:n(el("z5Max").value,220)}
   };
   el("settingsStatus").textContent="Saving…";
