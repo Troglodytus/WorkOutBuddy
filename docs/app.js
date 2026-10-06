@@ -557,6 +557,12 @@ function zoneIndex(hr,z) {
   if(hr==null)return null;
   if(hr<=n(z.z1_max,130))return 1;if(hr<=n(z.z2_max,150))return 2;if(hr<=n(z.z3_max,165))return 3;if(hr<=n(z.z4_max,178))return 4;return 5;
 }
+function downsamplePoints(points,maxPoints=4000){
+  if(points.length<=maxPoints)return points;
+  const step=(points.length-1)/(maxPoints-1),out=[];
+  for(let i=0;i<maxPoints;i++) out.push(points[Math.min(points.length-1,Math.round(i*step))]);
+  return out;
+}
 async function parseTcx(file) {
   const xml=new DOMParser().parseFromString(await file.text(),"application/xml");
   if(xml.querySelector("parsererror")) throw new Error("Invalid TCX XML.");
@@ -576,7 +582,8 @@ async function parseTcx(file) {
     const hr=hrNode?n(textByLocal(hrNode,"Value")):null;
     const cad=n(textByLocal(tp,"Cadence")) ?? n(textByLocal(tp,"RunCadence"));
     const watts=n(textByLocal(tp,"Watts"));
-    points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts});
+    const speed=n(textByLocal(tp,"Speed"));
+    points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts,speed_mps:speed});
   }
   if(!points.length)throw new Error("TCX contains no trackpoints.");
   const firstTime=new Date(points.find(p=>p.time)?.time||idText);
@@ -621,6 +628,7 @@ async function parseTcx(file) {
   const e1=eff(0),e2=eff(1),drift=e1&&e2?100*(e2/e1-1):null;
   const fileHash=await sha256(file);
   const pace=distance>0&&duration>0?(duration/60)/(distance/1000):null;
+  const streamPoints=downsamplePoints(points,4000);
   const startIso=firstTime.toISOString();
   const dedupe=[startIso.slice(0,19),normalizeSport(sport),Math.round(duration/10),Math.round(distance/10)].join("|");
   return {
@@ -630,9 +638,9 @@ async function parseTcx(file) {
       elevation_gain_m:elevation,avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,training_load_score:load,
       easy_zone_fraction:easy,hard_zone_fraction:hard,z1_s:zones[0],z2_s:zones[1],z3_s:zones[2],z4_s:zones[3],z5_s:zones[4],
       average_power:avgPower,cadence_spm:cadence,hr_efficiency_drift_pct:drift,file_sha256:fileHash,dedupe_key:dedupe,
-      metrics_json:{parser:"workoutbuddy-web-tcx-v1",trackpoints:points.length}
+      metrics_json:{parser:"workoutbuddy-web-tcx-v1",trackpoints:points.length,stored_trackpoints:streamPoints.length}
     },
-    stream:{points}
+    stream:{points:streamPoints}
   };
 }
 async function importTcx(file) {
