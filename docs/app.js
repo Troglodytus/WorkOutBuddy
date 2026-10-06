@@ -974,10 +974,10 @@ function renderStreamViewer(rows,target){
   const state={rows,key,def,stats,xKey,mapId,plotId,legendId,readoutId,map:null,cursorMarker:null,plotReady:false};
   viewerStates[target]=state;
 
-  const gps=streamRowsDownsample(rows.filter(r=>r.lat!=null&&r.lon!=null),1200);
+  const gps=rows.filter(r=>r.lat!=null&&r.lon!=null);
   if(gps.length>=2){
     el(mapId).classList.remove("hidden");
-    const map=L.map(mapId);routeMaps[target]=map;state.map=map;
+    const map=L.map(mapId,{renderer:L.canvas({padding:.5})});routeMaps[target]=map;state.map=map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
     for(let i=1;i<gps.length;i++){
       const c=colorForStreamMetric(key,gps[i][key],stats);
@@ -1001,7 +1001,7 @@ function renderStreamViewer(rows,target){
   // This preserves recovery/stop gaps. Filtering first used to connect the end
   // of one interval directly to the beginning of another and visually stretched
   // intervals across the workout.
-  const plotRows=streamRowsDownsample(rows,1200);
+  const plotRows=rows;
   const validCount=plotRows.filter(r=>n(r[xKey])!=null&&n(r[key])!=null).length;
   if(validCount>=2){
     el(plotId).classList.remove("hidden");
