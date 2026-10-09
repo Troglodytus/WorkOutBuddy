@@ -72,3 +72,10 @@ dialog{border:0;border-radius:20px;padding:0;box-shadow:0 30px 80px rgba(15,23,4
 textarea{font:inherit;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;color:var(--text);width:100%;resize:vertical}
 .checkbox-label{display:flex;flex-direction:row;align-items:center;gap:9px;align-self:end;min-height:42px}.checkbox-label input{min-height:auto;width:18px;height:18px}
 @media(max-width:900px){.planner-calendar{grid-template-columns:repeat(7,155px)}}
+
+.stats-full-toggle{margin-top:8px;max-width:max-content}
+.ai-history{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.ai-history details{border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-top:8px;background:#fbfcfe}
+.ai-history summary{cursor:pointer;font-weight:700;color:#344054}
+.ai-history .history-body{margin-top:8px;font-size:.82rem;color:#475467}
+.advanced-metric{background:#fbfcfe}
