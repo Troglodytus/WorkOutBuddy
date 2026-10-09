@@ -1336,9 +1336,11 @@ function updateViewerCursor(target,row){
 
   const xv=n(row[state.xKey]),yv=n(row[state.key]);
   if(state.plotReady&&xv!=null){
-    const plot=el(state.plotId);
-    if(yv!=null) Plotly.restyle(plot,{x:[[xv]],y:[[yv]]},[2]);
-    else Plotly.restyle(plot,{x:[[]],y:[[]]},[2]);
+    const plot=el(state.plotId),cursorIndex=state.cursorTraceIndex;
+    if(cursorIndex!=null){
+      if(yv!=null)Plotly.restyle(plot,{x:[[xv]],y:[[yv]]},[cursorIndex]);
+      else Plotly.restyle(plot,{x:[[]],y:[[]]},[cursorIndex]);
+    }
     Plotly.relayout(plot,{"shapes[0].x0":xv,"shapes[0].x1":xv});
   }
 }
@@ -1371,6 +1373,31 @@ function bindPlotCursor(target){
   plot.addEventListener("pointerdown",plot._wbPointerDown,true);
   plot.addEventListener("pointermove",plot._wbPointerMove,true);
   window.addEventListener("pointerup",plot._wbPointerUp,true);
+}
+function quantizeLineColor(hex,step=16){
+  const m=/^#([0-9a-f]{6})$/i.exec(String(hex||""));
+  if(!m)return hex||"#64748b";
+  const q=v=>clamp(Math.round(v/step)*step,0,255);
+  const r=q(parseInt(m[1].slice(0,2),16)),g=q(parseInt(m[1].slice(2,4),16)),b=q(parseInt(m[1].slice(4,6),16));
+  return "#"+[r,g,b].map(v=>v.toString(16).padStart(2,"0")).join("");
+}
+function buildColoredProfileTraces(rows,xKey,key,stats){
+  const groups=new Map();
+  for(let i=1;i<rows.length;i++){
+    const a=rows[i-1],b=rows[i],x0=n(a[xKey]),x1=n(b[xKey]),y0=n(a[key]),y1=n(b[key]);
+    if(x0==null||x1==null||y0==null||y1==null)continue;
+    // Preserve genuine gaps/stops rather than drawing across missing sections.
+    const dt=n(b.elapsed_s)-n(a.elapsed_s);
+    if(dt!=null&&dt>30)continue;
+    const color=quantizeLineColor(colorForStreamMetric(key,b[key],stats),key==="zone"?1:16);
+    if(!groups.has(color))groups.set(color,{x:[],y:[]});
+    const g=groups.get(color);
+    g.x.push(x0,x1,null);g.y.push(y0,y1,null);
+  }
+  return Array.from(groups.entries()).map(([color,g])=>({
+    x:g.x,y:g.y,mode:"lines",type:"scattergl",connectgaps:false,showlegend:false,hoverinfo:"skip",
+    line:{color,width:3}
+  }));
 }
 function renderStreamViewer(rows,target){
   const mapId=target==="home"?"homeRouteMap":"routeMap",plotId=target==="home"?"homeStreamPlot":"streamPlot",
@@ -1428,13 +1455,27 @@ function renderStreamViewer(rows,target){
     const xs=plotRows.map(r=>n(r[xKey]));
     const ys=plotRows.map(r=>n(r[key]));
     const custom=plotRows.map(r=>[r.time_min,r.distance_km,r.altitude_m,r.heart_rate,r.speed_kmh,r.power_w,r.cadence,r.grade_pct,r.i]);
-    const colors=plotRows.map(r=>colorForStreamMetric(key,r[key],stats));
-    const traces=[
-      {x:xs,y:ys,mode:"lines",type:"scattergl",connectgaps:false,showlegend:false,hoverinfo:"skip",line:{color:"rgba(83,97,113,.28)",width:1.2}},
-      {x:xs,y:ys,mode:"markers",type:"scattergl",connectgaps:false,showlegend:false,marker:{size:5,color:colors},customdata:custom,
-       hovertemplate:"Time %{customdata[0]:.1f} min · Distance %{customdata[1]:.2f} km<br>"+escapeHtml(def.label)+": %{y:.2f} "+escapeHtml(def.unit)+"<br>Altitude %{customdata[2]:.0f} m · HR %{customdata[3]:.0f}<br>Speed %{customdata[4]:.1f} km/h · Power %{customdata[5]:.0f} W · Cadence %{customdata[6]:.0f} · Grade %{customdata[7]:.1f}%<extra></extra>"},
-      {x:[],y:[],mode:"markers",type:"scatter",showlegend:false,hoverinfo:"skip",marker:{size:12,color:"#111827",line:{width:3,color:"#ffffff"}}}
-    ];
+    const traces=buildColoredProfileTraces(plotRows,xKey,key,stats);
+
+    // Invisible hit-test layer: keeps precise hover/click interaction without
+    // drawing thousands of visible sample points.
+    const interactionTraceIndex=traces.length;
+    traces.push({
+      x:xs,y:ys,mode:"markers",type:"scattergl",connectgaps:false,showlegend:false,
+      marker:{size:10,color:"rgba(0,0,0,0.001)"},
+      customdata:custom,
+      hovertemplate:"Time %{customdata[0]:.1f} min · Distance %{customdata[1]:.2f} km<br>"+escapeHtml(def.label)+": %{y:.2f} "+escapeHtml(def.unit)+"<br>Altitude %{customdata[2]:.0f} m · HR %{customdata[3]:.0f}<br>Speed %{customdata[4]:.1f} km/h · Power %{customdata[5]:.0f} W · Cadence %{customdata[6]:.0f} · Grade %{customdata[7]:.1f}%<extra></extra>"
+    });
+
+    // Cursor is the final WebGL trace, guaranteeing that it is painted over
+    // both the colored profile lines and the invisible interaction layer.
+    const cursorTraceIndex=traces.length;
+    traces.push({
+      x:[],y:[],mode:"markers",type:"scattergl",showlegend:false,hoverinfo:"skip",
+      marker:{size:15,color:"#111827",line:{width:4,color:"#ffffff"}}
+    });
+    state.interactionTraceIndex=interactionTraceIndex;
+    state.cursorTraceIndex=cursorTraceIndex;
     const firstValid=plotRows.find(r=>n(r[xKey])!=null&&n(r[key])!=null);
     const firstX=firstValid?n(firstValid[xKey]):0;
     Plotly.react(plotId,traces,{margin:{l:60,r:20,t:20,b:45},hovermode:"closest",dragmode:false,
