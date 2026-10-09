@@ -15,6 +15,8 @@ let routeMaps = {history:null, home:null};
 let viewerStates = {history:null, home:null};
 let currentPlan = [];
 let duplicateResolver = null;
+let aiHistory = [];
+let metricsEnrichmentRunning = false;
 const streamCache = new Map();
 
 const el = id => document.getElementById(id);
@@ -139,9 +141,11 @@ function bindUi() {
   el("historySportFilter").addEventListener("change", renderHistory);
   el("historyPeriodFilter").addEventListener("change", renderHistory);
   ["historyXMetric","historyYMetric","historyPlotType","historyColorBy"].forEach(id => el(id).addEventListener("change", renderHistory));
+  el("fullStatisticsToggle").addEventListener("change", renderHistory);
   initWorkoutViewerControls();
   el("regeneratePlanButton").addEventListener("click", renderPlan);
-  el("plannerRegenerateButton").addEventListener("click", renderPlan);
+  el("plannerRegenerateButton").addEventListener("click", recalculateAndPersistPlan);
+  el("plannerAiButton").addEventListener("click", askAiPlanner);
   el("planEditForm").addEventListener("submit", savePlanOverride);
   el("planEditCloseButton").addEventListener("click",()=>el("planEditDialog").close());
   el("planEditCancelButton").addEventListener("click",()=>el("planEditDialog").close());
@@ -180,9 +184,10 @@ async function enterApp() {
   el("loginView").classList.add("hidden");
   el("appView").classList.remove("hidden");
   setSync("Loading…");
-  await Promise.all([loadProfile(), loadActivities()]);
+  await Promise.all([loadProfile(), loadActivities(), loadAiHistory(), loadLatestTrainingPlan()]);
   renderAll();
   setSync("Synced");
+  enrichMetricsInBackground();
 }
 
 function openView(name) {
