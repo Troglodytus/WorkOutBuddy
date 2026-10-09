@@ -17,6 +17,39 @@ function extractText(data: any): string {
   return parts.join("\n").trim();
 }
 
+const planSchema = {
+  type: "object",
+  properties: {
+    summary: { type: "string" },
+    plan: {
+      type: "array",
+      minItems: 14,
+      maxItems: 14,
+      items: {
+        type: "object",
+        properties: {
+          date: { type: "string" },
+          start_time: { type: "string" },
+          title: { type: "string" },
+          sport_type: { type: "string" },
+          family: { type: "string" },
+          duration_min: { type: "number" },
+          distance_km: { type: "number" },
+          zone: { type: "string" },
+          pace: { type: "string" },
+          wattage: { type: "string" },
+          notes: { type: "string" },
+          no_workout: { type: "boolean" },
+        },
+        required: ["date","start_time","title","sport_type","family","duration_min","distance_km","zone","pace","wattage","notes","no_workout"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["summary","plan"],
+  additionalProperties: false,
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
@@ -48,20 +81,58 @@ Deno.serve(async (req: Request) => {
   try {
     const payload = await req.json();
     const model = Deno.env.get("OPENAI_MODEL") || "gpt-6-luna";
+    const mode = payload?.mode === "plan" ? "plan" : "analysis";
 
-    const instructions =
+    const analysisInstructions =
       "You are WorkOutBuddy, an evidence-focused endurance training analyst. " +
       "Use only the supplied training data. Do not diagnose medical conditions. " +
-      "Do not summarize every workout individually. Distinguish real longitudinal signals from heat, hills, route, intensity and recovery confounders. " +
+      "The activity payload covers up to 180 days and includes advanced stream-derived metrics. " +
+      "Pay particular attention to first-half versus second-half HR, speed/HR efficiency, grade-adjusted efficiency, " +
+      "raw and GAP efficiency drift, km-based drift, best efforts, power/HR efficiency, normalized power, cadence/step estimates, " +
+      "impact-load heuristic, zone distribution, load, elevation and longitudinal VO2max evidence. " +
+      "Treat heuristic fields as supportive rather than measured physiology. " +
+      "Prior AI evaluations are historical context, not ground truth: explicitly update or disagree with them when new data warrants it. " +
+      "Do not summarize every workout individually. Distinguish longitudinal signals from hills, route, intensity and recovery confounders. " +
       "Prioritize running fitness while treating cycling, hiking and strength as supporting load. " +
       "Return concise Markdown with exactly these sections: " +
       "## Fitness trend, ## Main limiter, ## Evidence, ## Next 14 days, ## Metrics to watch. " +
-      "When the evidence is weak or missing, say so explicitly. Keep recommendations progressive and avoid abrupt volume jumps.";
+      "When evidence is weak or missing, say so explicitly. Keep recommendations progressive and avoid abrupt volume jumps.";
+
+    const planInstructions =
+      "You are WorkOutBuddy's conservative endurance training planner. " +
+      "Evaluate the supplied current 14-day deterministic plan against the last 30 days of training, advanced workout metrics, profile/goals and prior AI evaluations. " +
+      "Return a complete revised 14-day plan using exactly the dates supplied in current_plan. " +
+      "Manual/locked days in current_plan are constraints and must not be changed. " +
+      "Use first/second-half efficiency, raw/GAP HR drift, km drift, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
+      "Do not chase noisy single-session metrics. Avoid abrupt volume jumps and generally avoid more than two genuinely hard endurance sessions in any rolling seven-day block. " +
+      "Use rest/recovery when recent load, durability or efficiency evidence supports it. " +
+      "The summary should briefly explain the important changes and why they were made. " +
+      "Do not diagnose medical conditions.";
 
     const input =
-      "Analyze this structured WorkOutBuddy payload. The deterministic analysis is primary evidence; the activity rows are supporting context. " +
-      "No raw GPS route is included.\n\n" +
+      (mode === "plan"
+        ? "Review and revise this structured WorkOutBuddy plan payload. No raw GPS route is included.\n\n"
+        : "Analyze this structured WorkOutBuddy payload. The deterministic analysis is primary evidence; activity rows and prior evaluations are supporting context. No raw GPS route is included.\n\n") +
       JSON.stringify(payload);
+
+    const body: any = {
+      model,
+      instructions: mode === "plan" ? planInstructions : analysisInstructions,
+      input,
+      reasoning: { effort: "low" },
+      max_output_tokens: mode === "plan" ? 3200 : 1400,
+      store: false,
+    };
+    if (mode === "plan") {
+      body.text = {
+        format: {
+          type: "json_schema",
+          name: "workoutbuddy_training_plan",
+          strict: true,
+          schema: planSchema,
+        },
+      };
+    }
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -69,14 +140,7 @@ Deno.serve(async (req: Request) => {
         "Authorization": "Bearer " + apiKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        instructions,
-        input,
-        reasoning: { effort: "low" },
-        max_output_tokens: 1200,
-        store: false,
-      }),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
@@ -85,7 +149,17 @@ Deno.serve(async (req: Request) => {
       return Response.json({ error: message }, { status: response.status, headers: corsHeaders });
     }
 
-    return Response.json({ text: extractText(data), model }, { headers: corsHeaders });
+    const text = extractText(data);
+    if (mode === "plan") {
+      try {
+        const parsed = JSON.parse(text);
+        return Response.json({ summary: parsed.summary, plan: parsed.plan, model }, { headers: corsHeaders });
+      } catch {
+        return Response.json({ error: "AI returned invalid structured plan JSON" }, { status: 502, headers: corsHeaders });
+      }
+    }
+
+    return Response.json({ text, model }, { headers: corsHeaders });
   } catch (error) {
     return Response.json(
       { error: String((error as any)?.message || error) },
