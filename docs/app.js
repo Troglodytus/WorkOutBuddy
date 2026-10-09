@@ -143,7 +143,7 @@ function bindUi() {
   ["historyXMetric","historyYMetric","historyPlotType","historyColorBy"].forEach(id => el(id).addEventListener("change", renderHistory));
   el("fullStatisticsToggle").addEventListener("change", renderHistory);
   initWorkoutViewerControls();
-  el("regeneratePlanButton").addEventListener("click", renderPlan);
+  el("regeneratePlanButton").addEventListener("click", recalculateAndPersistPlan);
   el("plannerRegenerateButton").addEventListener("click", recalculateAndPersistPlan);
   el("plannerAiButton").addEventListener("click", askAiPlanner);
   el("planEditForm").addEventListener("submit", savePlanOverride);
@@ -422,18 +422,51 @@ function buildFourteenDayPlan(){
   }
   currentPlan=out;return out;
 }
+
+async function loadLatestTrainingPlan(){
+  if(!client||!userId())return;
+  const today=isoPlanDate(new Date());
+  const res=await client.from("training_plans").select("*").eq("user_id",userId()).eq("start_date",today).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(res.error){console.warn("Could not load saved plan",res.error);return;}
+  const saved=safeJson(res.data&&res.data.plan,{});
+  if(Array.isArray(saved.planned_workouts)&&saved.planned_workouts.length===14){
+    currentPlan=saved.planned_workouts.map(w=>({...w,dateObj:new Date(w.date+"T12:00:00")}));
+    if(saved.ai_summary){
+      el("plannerAiSummary").classList.remove("hidden");
+      el("plannerAiSummary").innerHTML=window.marked?marked.parse(saved.ai_summary):escapeHtml(saved.ai_summary);
+    }
+  }
+}
+async function persistPlan(plan,engineVersion,extra={}){
+  if(!client||!userId()||!plan.length)return;
+  const row={user_id:userId(),start_date:plan[0].date,engine_version:engineVersion,
+    plan:{planned_workouts:plan.map(({dateObj,...w})=>w),generated_at:new Date().toISOString(),...extra}};
+  const res=await client.from("training_plans").insert(row);
+  if(res.error)console.warn("Could not persist plan",res.error);
+}
 function renderPlan(){
-  const plan=buildFourteenDayPlan();
+  const plan=currentPlan.length?currentPlan:buildFourteenDayPlan();
+  currentPlan=plan;
   el("weekPlan").innerHTML=plan.slice(0,7).map((p,i)=>
     '<div class="day-card '+(i===0?"today ":"")+(p.locked?"manual":"")+'" data-plan-date="'+escapeHtml(p.date)+'">'+
-    '<div class="day-date">'+escapeHtml(shortDay(p.dateObj))+(p.locked?' · manual':'')+'</div>'+
+    '<div class="day-date">'+escapeHtml(shortDay(p.dateObj||new Date(p.date+"T12:00:00")))+(p.locked?' · manual':'')+'</div>'+
     '<div class="day-title">'+escapeHtml(p.title)+'</div><div class="day-meta">'+escapeHtml(planMeta(p))+"</div></div>"
   ).join("");
   qsa("#weekPlan [data-plan-date]").forEach(card=>card.addEventListener("click",()=>openPlanEditor(card.dataset.planDate)));
   renderPlanner();
 }
+async function recalculateAndPersistPlan(){
+  currentPlan=[];
+  const plan=buildFourteenDayPlan();
+  currentPlan=plan;
+  await persistPlan(plan,"deterministic_web_v2");
+  el("plannerAiSummary").classList.add("hidden");
+  el("plannerAiStatus").textContent="Deterministic plan recalculated.";
+  renderPlan();
+}
 function renderPlanner(){
   const plan=currentPlan.length?currentPlan:buildFourteenDayPlan();
+  currentPlan=plan;
   const runKm=sum(plan.filter(w=>planSportCategory(w)==="run").map(w=>n(w.distance_km,0)));
   const rideMin=sum(plan.filter(w=>planSportCategory(w)==="bike").map(w=>n(w.duration_min,0)));
   const totalMin=sum(plan.map(w=>n(w.duration_min,0)));
@@ -485,14 +518,20 @@ async function savePlanOverride(event){
     wattage:rest?"":el("planEditPower").value.trim(),notes:el("planEditNotes").value.trim(),locked:true,source:"manual_override"};
   const pref=(profile&&profile.training_preferences)||{},overrides={...(safeJson(pref.manual_plan_overrides,{})||{})};overrides[dateKey]=raw;
   el("planEditStatus").textContent="Saving override and recalculating…";
-  try{await persistTrainingPreferences({manual_plan_overrides:overrides});el("planEditDialog").close();renderPlan();toast("Manual override saved; following schedule recalculated.");}
-  catch(err){el("planEditStatus").textContent=err.message||String(err);}
+  try{
+    await persistTrainingPreferences({manual_plan_overrides:overrides});el("planEditDialog").close();
+    currentPlan=[];const plan=buildFourteenDayPlan();currentPlan=plan;await persistPlan(plan,"manual_override_web_v2");renderPlan();
+    toast("Manual override saved; following schedule recalculated.");
+  }catch(err){el("planEditStatus").textContent=err.message||String(err);}
 }
 async function clearPlanOverride(){
   const dateKey=el("planEditDate").value,pref=(profile&&profile.training_preferences)||{},overrides={...(safeJson(pref.manual_plan_overrides,{})||{})};
   if(!overrides[dateKey]){el("planEditDialog").close();return;}delete overrides[dateKey];
-  try{await persistTrainingPreferences({manual_plan_overrides:overrides});el("planEditDialog").close();renderPlan();toast("Manual override cleared; schedule recalculated.");}
-  catch(err){el("planEditStatus").textContent=err.message||String(err);}
+  try{
+    await persistTrainingPreferences({manual_plan_overrides:overrides});el("planEditDialog").close();
+    currentPlan=[];const plan=buildFourteenDayPlan();currentPlan=plan;await persistPlan(plan,"manual_override_cleared_web_v2");renderPlan();
+    toast("Manual override cleared; schedule recalculated.");
+  }catch(err){el("planEditStatus").textContent=err.message||String(err);}
 }
 
 function workoutRow(a, clickable=true) {
