@@ -1433,24 +1433,140 @@ function renderAnalysis() {
     {margin:{l:45,r:15,t:15,b:40},xaxis:{title:"HR zone"},yaxis:{title:"minutes"},paper_bgcolor:"transparent",plot_bgcolor:"transparent"});
 }
 
+
+function scalarMetricsJson(a){
+  const src=safeJson(a.metrics_json,{}),out={};
+  for(const [k,v] of Object.entries(src)){
+    if(typeof v==="number"&&Number.isFinite(v))out[k]=v;
+    else if(typeof v==="boolean")out[k]=v;
+    else if(typeof v==="string"&&["advanced_metrics_version","step_frequency_source","speed_source","metrics_quality"].includes(k))out[k]=v;
+  }
+  return out;
+}
+function activityForAi(a){
+  return {
+    start_time:a.start_time,name:a.name,sport:a.sport_category||a.sport_type,
+    distance_km:distanceKm(a),duration_min:durationMin(a),elevation_gain_m:n(a.elevation_gain_m),elevation_loss_m:n(a.elevation_loss_m),
+    avg_hr:n(a.avg_hr),max_hr:n(a.max_hr),pace_min_km:n(a.avg_pace_min_km),gap_pace_min_km:n(a.avg_gap_pace_min_km),
+    training_load_score:n(a.training_load_score),trimp_score:n(a.trimp_score),easy_zone_fraction:n(a.easy_zone_fraction),hard_zone_fraction:n(a.hard_zone_fraction),
+    z1_min:n(a.z1_s)!=null?n(a.z1_s)/60:null,z2_min:n(a.z2_s)!=null?n(a.z2_s)/60:null,z3_min:n(a.z3_s)!=null?n(a.z3_s)/60:null,
+    z4_min:n(a.z4_s)!=null?n(a.z4_s)/60:null,z5_min:n(a.z5_s)!=null?n(a.z5_s)/60:null,
+    apple_vo2max:n(a.apple_vo2max),estimated_vo2max:n(a.own_vo2max_estimate)??n(a.estimated_vo2max),
+    average_power:n(a.average_power),normalized_power:n(a.normalized_power),cadence_spm:n(a.cadence_spm),
+    hr_efficiency_drift_pct:n(a.hr_efficiency_drift_pct),gap_hr_efficiency_drift_pct:n(a.gap_hr_efficiency_drift_pct),
+    km_gap_hr_efficiency_drift_pct:n(a.km_gap_hr_efficiency_drift_pct),
+    advanced:scalarMetricsJson(a)
+  };
+}
+async function activitiesForAi(days){
+  const rows=activities.filter(a=>new Date(a.start_time)>=daysAgo(days));
+  await enrichMetricsForActivities(rows);
+  return rows.map(activityForAi);
+}
+async function loadAiHistory(){
+  if(!client||!userId())return;
+  const res=await client.from("analysis_snapshots").select("*").eq("user_id",userId()).order("created_at",{ascending:false}).limit(10);
+  if(res.error){console.warn("Could not load AI history",res.error);aiHistory=[];return;}
+  aiHistory=res.data||[];
+  renderAiHistory();
+}
+function aiHistoryPayload(limit=6){
+  return aiHistory.slice(0,limit).map(h=>{
+    const d=safeJson(h.deterministic,{});
+    return {created_at:h.created_at,evaluation_type:d.evaluation_type||"analysis",model:h.model,text:h.llm_markdown||""};
+  });
+}
+function renderAiHistory(){
+  const host=el("aiHistory");if(!host)return;
+  if(!aiHistory.length){host.innerHTML="";return;}
+  host.innerHTML='<div class="eyebrow">RECENT AI EVALUATIONS</div>'+
+    aiHistory.slice(0,6).map(h=>{
+      const d=safeJson(h.deterministic,{}),type=d.evaluation_type||"analysis";
+      return '<details><summary>'+escapeHtml(localDate(h.created_at))+' · '+escapeHtml(type)+' · '+escapeHtml(h.model||"model")+
+        '</summary><div class="history-body">'+(window.marked?marked.parse(h.llm_markdown||""):escapeHtml(h.llm_markdown||""))+'</div></details>';
+    }).join("");
+}
+async function saveAiEvaluation(type,context,text,model,responseJson=null){
+  if(!client||!userId())return;
+  const deterministic={evaluation_type:type,...context};
+  if(responseJson!=null)deterministic.response_json=responseJson;
+  const res=await client.from("analysis_snapshots").insert({
+    user_id:userId(),deterministic,llm_markdown:text||"",model:model||"unknown"
+  });
+  if(res.error){console.warn("Could not save AI evaluation",res.error);return;}
+  await loadAiHistory();
+}
 async function askAiCoach() {
   if (!client) return;
   const d=analysisData();
-  el("aiCoachOutput").textContent="Analyzing…";
+  el("aiCoachOutput").textContent="Deriving 180-day metrics and analyzing…";
   el("aiCoachButton").disabled=true;
-  const compact=activities.slice(0,60).map(a=>({
-    start_time:a.start_time,sport:a.sport_category||a.sport_type,distance_km:distanceKm(a),duration_min:durationMin(a),
-    avg_hr:n(a.avg_hr),pace_min_km:n(a.avg_pace_min_km),elevation_gain_m:n(a.elevation_gain_m),
-    easy_zone_fraction:n(a.easy_zone_fraction),hard_zone_fraction:n(a.hard_zone_fraction),
-    hr_drift_pct:n(a.hr_efficiency_drift_pct),apple_vo2max:n(a.apple_vo2max),load:derivedLoad(a)
-  }));
-  const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{analysis:d,activities:compact,profile:{
-    profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
-  }}});
-  el("aiCoachButton").disabled=false;
-  if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+result.error.message;return;}
-  const text=(result.data&&result.data.text)||"No response returned.";
-  el("aiCoachOutput").innerHTML=window.marked?marked.parse(text):escapeHtml(text);
+  try{
+    const compact=await activitiesForAi(180);
+    const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
+      mode:"analysis",analysis:d,activities:compact,history:aiHistoryPayload(6),profile:{
+        profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
+      }
+    }});
+    if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+result.error.message;return;}
+    const text=(result.data&&result.data.text)||"No response returned.",model=(result.data&&result.data.model)||"unknown";
+    el("aiCoachOutput").innerHTML=window.marked?marked.parse(text):escapeHtml(text);
+    await saveAiEvaluation("analysis",{window_days:180,activity_count:compact.length,analysis:d},text,model);
+  }catch(err){
+    el("aiCoachOutput").textContent="AI coach failed: "+(err.message||String(err));
+  }finally{el("aiCoachButton").disabled=false;}
+}
+function validateAiPlan(raw,base){
+  if(!Array.isArray(raw)||raw.length!==14)return null;
+  const byDate=new Map(raw.map(w=>[String(w.date||""),w])),out=[];
+  for(const b of base){
+    if(b.locked){out.push({...b});continue;}
+    const r=byDate.get(b.date);if(!r)return null;
+    const rest=!!r.no_workout||String(r.sport_type||"").toLowerCase()==="none";
+    const w=makePlannedWorkout(new Date(b.date+"T12:00:00"),{
+      start_time:String(r.start_time||b.start_time||"18:00").slice(0,5),
+      title:String(r.title||b.title||"Planned workout").slice(0,120),
+      sport_type:rest?"None":String(r.sport_type||b.sport_type||"Run").slice(0,40),
+      family:rest?"rest_or_mobility":String(r.family||b.family||"easy_aerobic").slice(0,50),
+      duration_min:rest?0:clamp(n(r.duration_min,n(b.duration_min,0)),0,300),
+      distance_km:rest?0:clamp(n(r.distance_km,n(b.distance_km,0)),0,80),
+      zone:rest?"Rest":String(r.zone||b.zone||"").slice(0,100),
+      pace:rest?"":String(r.pace||b.pace||"").slice(0,120),
+      wattage:rest?"":String(r.wattage||b.wattage||"").slice(0,120),
+      notes:String(r.notes||"").slice(0,500),
+      no_workout:rest,locked:false,source:"ai_coach"
+    });
+    out.push(w);
+  }
+  return out;
+}
+async function askAiPlanner(){
+  if(!client)return;
+  el("plannerAiButton").disabled=true;
+  el("plannerAiStatus").textContent="Deriving the last 30 days and asking AI to evaluate the 14-day plan…";
+  try{
+    const base=currentPlan.length?currentPlan:buildFourteenDayPlan();
+    const compact=await activitiesForAi(30);
+    const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
+      mode:"plan",activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(6),profile:{
+        profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
+      }
+    }});
+    if(result.error)throw result.error;
+    const candidate=validateAiPlan(result.data&&result.data.plan,base);
+    if(!candidate)throw new Error("AI returned an invalid 14-day plan; existing plan was left unchanged.");
+    const summary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan."),model=(result.data&&result.data.model)||"unknown";
+    currentPlan=candidate;
+    await persistPlan(candidate,"ai_coach_v1",{ai_summary:summary,model});
+    await saveAiEvaluation("planner",{window_days:30,activity_count:compact.length,current_plan:base.map(({dateObj,...w})=>w)},summary,model,
+      {summary,plan:candidate.map(({dateObj,...w})=>w)});
+    el("plannerAiStatus").textContent="AI-adjusted plan saved.";
+    el("plannerAiSummary").classList.remove("hidden");
+    el("plannerAiSummary").innerHTML=window.marked?marked.parse(summary):escapeHtml(summary);
+    renderPlan();
+  }catch(err){
+    el("plannerAiStatus").textContent="AI plan update failed: "+(err.message||String(err));
+  }finally{el("plannerAiButton").disabled=false;}
 }
 
 function openUpload(){ el("uploadStatus").textContent=""; el("tcxInput").value=""; el("uploadDialog").showModal(); }
