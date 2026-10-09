@@ -106,7 +106,7 @@ function defaultProfile() {
     current_weight_kg: 75,
     profile_vo2max: 45,
     hr_zones: {z1_max:130,z2_max:150,z3_max:165,z4_max:178,z5_max:220},
-    goals: {primary_goal:"general",goal_date:null},
+    goals: {primary_goal:"general",goal_date:null,target_minutes:null},
     training_preferences: {weekly_run_days:3,strength_sessions:2,long_run_day:6,training_aggressiveness:3,manual_plan_overrides:{}}
   };
 }
@@ -1775,11 +1775,29 @@ async function importTcx(file) {
   return "ok";
 }
 
+function parseRaceTimeInput(value){
+  const raw=String(value||"").trim();if(!raw)return null;
+  if(/^\d+(?:\.\d+)?$/.test(raw))return n(raw);
+  const p=raw.split(":").map(x=>Number(x));if(p.some(x=>!Number.isFinite(x)||x<0))return null;
+  if(p.length===3)return p[0]*60+p[1]+p[2]/60;
+  if(p.length===2){
+    // "1:45" is interpreted as 1 h 45 min; "45:00" as 45 min 00 s.
+    return p[0]<10?p[0]*60+p[1]:p[0]+p[1]/60;
+  }
+  return null;
+}
+function formatRaceTimeInput(minutes){
+  const v=n(minutes);if(v==null||v<=0)return "";
+  const total=Math.round(v*60),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),sec=total%60;
+  return h>0?h+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0"):m+":"+String(sec).padStart(2,"0");
+}
+function raceTimeText(minutes){return formatRaceTimeInput(minutes)||"—";}
+
 function openSettings(){
   const p=profile||defaultProfile(),g=p.goals||{},t=p.training_preferences||{},z=p.hr_zones||{};
   el("profileName").value=p.display_name||"";el("profileBirthdate").value=p.birthdate||"";el("profileHeight").value=n(p.height_cm,178);
   el("profileWeight").value=n(p.current_weight_kg,75);el("profileVo2").value=n(p.profile_vo2max,45);
-  el("goalType").value=g.primary_goal||"general";el("goalDate").value=g.goal_date||"";
+  el("goalType").value=g.primary_goal||"general";el("goalDate").value=g.goal_date||"";el("goalTargetTime").value=formatRaceTimeInput(n(g.target_minutes));
   el("weeklyRunDays").value=n(t.weekly_run_days,3);el("weeklyStrengthDays").value=n(t.strength_sessions,2);el("trainingAggressiveness").value=String(n(t.training_aggressiveness,3));el("longRunDay").value=String(t.long_run_day==null?6:t.long_run_day);
   el("z1Max").value=n(z.z1_max,130);el("z2Max").value=n(z.z2_max,150);el("z3Max").value=n(z.z3_max,165);el("z4Max").value=n(z.z4_max,178);el("z5Max").value=n(z.z5_max,220);
   el("settingsStatus").textContent="";el("settingsDialog").showModal();
@@ -1788,7 +1806,7 @@ async function saveSettings(event){
   event.preventDefault();
   const row={user_id:userId(),display_name:el("profileName").value.trim(),birthdate:el("profileBirthdate").value||null,
     height_cm:n(el("profileHeight").value),current_weight_kg:n(el("profileWeight").value),profile_vo2max:n(el("profileVo2").value),
-    goals:{primary_goal:el("goalType").value,goal_date:el("goalDate").value||null},
+    goals:{primary_goal:el("goalType").value,goal_date:el("goalDate").value||null,target_minutes:parseRaceTimeInput(el("goalTargetTime").value)},
     training_preferences:{...((profile&&profile.training_preferences)||{}),weekly_run_days:n(el("weeklyRunDays").value,3),strength_sessions:n(el("weeklyStrengthDays").value,2),training_aggressiveness:n(el("trainingAggressiveness").value,3),long_run_day:n(el("longRunDay").value,6)},
     hr_zones:{z1_max:n(el("z1Max").value,130),z2_max:n(el("z2Max").value,150),z3_max:n(el("z3Max").value,165),z4_max:n(el("z4Max").value,178),z5_max:n(el("z5Max").value,220)}
   };
