@@ -87,6 +87,8 @@ Deno.serve(async (req: Request) => {
       "You are WorkOutBuddy, an evidence-focused endurance training analyst. " +
       "Use only the supplied training data. Do not diagnose medical conditions. " +
       "The activity payload covers up to 180 days and includes advanced stream-derived metrics. " +
+      "The profile.goals object contains the explicit primary race goal, goal date and target_minutes when configured; treat these as user constraints, not predictions. " +
+      "The race_predictions object is a conservative deterministic current-capability estimate and should be compared against the target time. " +
       "Pay particular attention to first-half versus second-half HR, speed/HR efficiency, grade-adjusted efficiency, " +
       "raw and GAP efficiency drift, km-based drift, best efforts, power/HR efficiency, normalized power, cadence/step estimates, " +
       "impact-load heuristic, zone distribution, load, elevation and longitudinal VO2max evidence. " +
@@ -100,7 +102,8 @@ Deno.serve(async (req: Request) => {
 
     const planInstructions =
       "You are WorkOutBuddy's conservative endurance training planner. " +
-      "Evaluate the supplied current 14-day deterministic plan against the last 30 days of training, advanced workout metrics, profile/goals and prior AI evaluations. " +
+      "Evaluate the supplied current 14-day deterministic plan against the last 30 days of training, advanced workout metrics, profile/goals, deterministic race_predictions and prior AI evaluations. " +
+      "The profile.goals object contains the explicit primary race goal, goal date and target_minutes when configured. The plan should work toward that target while remaining realistic for current capability. " +
       "Return a complete revised 14-day plan using exactly the dates supplied in current_plan. " +
       "Manual/locked days in current_plan are constraints and must not be changed. " +
       "Use first/second-half efficiency, raw/GAP HR drift, km drift, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
