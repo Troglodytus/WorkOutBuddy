@@ -574,24 +574,28 @@ function activityMetricValue(a,key) {
 }
 function activityMetricIsDate(key){ return key==="start_time"; }
 
-function activityMetricKeys() {
-  const preferred=[
+function coreActivityMetricKeys(){
+  return [
     "start_time","distance_km","duration_min","moving_time_min","avg_pace_min_km","avg_gap_pace_min_km",
-    "avg_hr","max_hr","elevation_gain_m","elevation_loss_m","derived_load","training_load_score","trimp_score",
-    "apple_vo2max","own_vo2max_estimate","estimated_vo2max","body_weight_kg","average_power","normalized_power","cadence_spm",
-    "hr_efficiency_drift_pct","gap_hr_efficiency_drift_pct","km_gap_hr_efficiency_drift_pct",
-    "easy_zone_fraction","hard_zone_fraction","z1_min","z2_min","z3_min","z4_min","z5_min"
+    "avg_hr","max_hr","elevation_gain_m","derived_load","training_load_score","trimp_score",
+    "apple_vo2max","own_vo2max_estimate","body_weight_kg","average_power","normalized_power","cadence_spm",
+    "hr_efficiency_drift_pct","gap_hr_efficiency_drift_pct","easy_zone_fraction","hard_zone_fraction"
   ];
-  const keys=new Set(preferred);
+}
+function activityMetricKeys() {
+  const full=!!el("fullStatisticsToggle").checked;
+  const keys=new Set(coreActivityMetricKeys());
+  if(!full)return Array.from(keys);
+  ["elevation_loss_m","estimated_vo2max","km_gap_hr_efficiency_drift_pct","z1_min","z2_min","z3_min","z4_min","z5_min"].forEach(k=>keys.add(k));
   const skip=new Set(["id","user_id","source_external_id","raw_file_path","file_sha256","dedupe_key","metrics_json","created_at","updated_at","original_start_time","name","sport_type","sport_category","source","local_timezone"]);
   for(const a of activities){
     for(const [k,v] of Object.entries(a)){
       if(skip.has(k)||keys.has(k)) continue;
-      if(n(v)!=null) keys.add(k);
+      if(n(v)!=null)keys.add(k);
     }
     const mj=safeJson(a.metrics_json,{});
     for(const [k,v] of Object.entries(mj)){
-      if(n(v)!=null) keys.add("metrics."+k);
+      if(n(v)!=null)keys.add("metrics."+k);
     }
   }
   return Array.from(keys);
@@ -642,12 +646,39 @@ function renderHistory() {
   },{responsive:true,displaylogo:false});
 }
 
+function fullTableMetricKeys(rows){
+  if(!el("fullStatisticsToggle").checked)return [];
+  const keys=[
+    "trimp_score","easy_zone_fraction","hard_zone_fraction","z1_min","z2_min","z3_min","z4_min","z5_min",
+    "hr_efficiency_drift_pct","gap_hr_efficiency_drift_pct","km_gap_hr_efficiency_drift_pct",
+    "normalized_power"
+  ];
+  const seen=new Set(keys);
+  for(const a of rows){
+    const mj=safeJson(a.metrics_json,{});
+    for(const [k,v] of Object.entries(mj)){
+      if(n(v)!=null&&!seen.has("metrics."+k)){keys.push("metrics."+k);seen.add("metrics."+k);}
+    }
+  }
+  return keys;
+}
+function tableMetricText(a,key){
+  const v=activityMetricValue(a,key);
+  if(v==null)return "—";
+  const label=humanMetricName(key).toLowerCase();
+  if(label.includes("pace"))return fmtPace(v);
+  if(label.includes("fraction"))return fmt(v*100,1,"%");
+  if(label.includes("distance")&&key!=="distance_km")return fmt(v,2);
+  return fmt(v,2);
+}
 function renderWorkoutTable(rows){
   const wrap=el("historyTableWrap");
   if(!rows.length){wrap.innerHTML='<div class="muted" style="padding:14px">No workouts match these filters.</div>';return;}
-  const head=["Date","Sport","Name","Distance","Duration","Pace","GAP","Avg HR","Max HR","Elevation","Power","Cadence","Load","VO₂ est.","Apple VO₂max","Weight"];
+  const extras=fullTableMetricKeys(rows);
+  const head=["Date","Sport","Name","Distance","Duration","Pace","GAP","Avg HR","Max HR","Elevation","Power","Cadence","Load","VO₂ est.","Apple VO₂max","Weight",...extras.map(humanMetricName)];
   const body=rows.map(a=>{
     const selected=a.id===selectedActivityId?" selected":"";
+    const extraCells=extras.map(k=>'<td class="advanced-metric">'+escapeHtml(tableMetricText(a,k))+'</td>').join("");
     return '<tr class="workout-table-row'+selected+'" data-activity-id="'+escapeHtml(a.id)+'">'+
       '<td>'+escapeHtml(localDate(a.start_time))+'</td><td>'+escapeHtml(a.sport_type||a.sport_category||"—")+'</td><td>'+escapeHtml(a.name||"Workout")+'</td>'+
       '<td>'+escapeHtml(fmt(distanceKm(a),2," km"))+'</td><td>'+escapeHtml(fmt(durationMin(a),0," min"))+'</td><td>'+escapeHtml(fmtPace(a.avg_pace_min_km))+'</td>'+
@@ -655,7 +686,8 @@ function renderWorkoutTable(rows){
       '<td>'+escapeHtml(fmt(a.elevation_gain_m,0," m"))+'</td><td>'+escapeHtml(fmt(a.average_power,0," W"))+'</td><td>'+escapeHtml(fmt(a.cadence_spm,0))+'</td>'+
       '<td>'+escapeHtml(fmt(derivedLoad(a),1))+'</td><td>'+escapeHtml(fmt(a.own_vo2max_estimate??a.estimated_vo2max,1))+'</td>'+
       '<td><input class="inline-number manual-cell" data-field="apple_vo2max" data-id="'+escapeHtml(a.id)+'" type="number" min="15" max="90" step="0.1" value="'+escapeHtml(n(a.apple_vo2max)!=null?n(a.apple_vo2max):"")+'"></td>'+
-      '<td><input class="inline-number manual-cell" data-field="body_weight_kg" data-id="'+escapeHtml(a.id)+'" type="number" min="30" max="250" step="0.1" value="'+escapeHtml(n(a.body_weight_kg)!=null?n(a.body_weight_kg):"")+'"></td></tr>';
+      '<td><input class="inline-number manual-cell" data-field="body_weight_kg" data-id="'+escapeHtml(a.id)+'" type="number" min="30" max="250" step="0.1" value="'+escapeHtml(n(a.body_weight_kg)!=null?n(a.body_weight_kg):"")+'"></td>'+
+      extraCells+'</tr>';
   }).join("");
   wrap.innerHTML='<table class="workout-table"><thead><tr>'+head.map(h=>"<th>"+escapeHtml(h)+"</th>").join("")+"</tr></thead><tbody>"+body+"</tbody></table>";
   qsa("#historyTableWrap .workout-table-row").forEach(r=>r.addEventListener("click",e=>{
