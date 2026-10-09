@@ -1059,8 +1059,9 @@ function calculateAdvancedMetrics(rows,activity){
     power_hr_efficiency:avgPower!=null&&avgHr?avgPower/avgHr:null,
     run_step_frequency_spm:stepMean,max_step_frequency_spm:stepMax,estimated_total_steps:steps,step_frequency_source:isRun?stepSource:null,
     avg_impact_bw:avgImpact,max_impact_bw:maxImpact,impact_load_index:impactLoad,
-    avg_grade_pct:weightedRowMean(rows,"grade_pct"),min_grade_pct:rows.length?Math.min(...rows.map(r=>n(r.grade_pct,Infinity))):null,
-    max_grade_pct:rows.length?Math.max(...rows.map(r=>n(r.grade_pct,-Infinity))):null,
+    avg_grade_pct:weightedRowMean(rows,"grade_pct"),
+    min_grade_pct:(()=>{const v=rows.map(r=>n(r.grade_pct)).filter(Number.isFinite);return v.length?Math.min(...v):null;})(),
+    max_grade_pct:(()=>{const v=rows.map(r=>n(r.grade_pct)).filter(Number.isFinite);return v.length?Math.max(...v):null;})(),
     data_point_count:rows.length,gps_point_count:gpsCount,hr_point_count:hrCount,power_point_count:powerCount,
     has_gps:gpsCount>0?1:0,has_altitude:rows.some(r=>r.altitude_m!=null)?1:0,has_hr:hrCount>0?1:0,has_power:powerCount>0?1:0,
     bmi:bmi,age_years_at_activity:ageAtActivity(activity),time_since_previous_h:previousActivityHours(activity),
@@ -1544,7 +1545,9 @@ async function parseTcx(file) {
   const fileHash=await sha256(file);
   const pace=distance>0&&duration>0?(duration/60)/(distance/1000):null;
   const derivedRows=buildStreamRows({points});
-  const streamDerived=derivedStreamSummary(derivedRows,{sport_type:sport,sport_category:normalizeSport(sport),max_hr:maxHr});
+  const parsedActivityForMetrics={sport_type:sport,sport_category:normalizeSport(sport),max_hr:maxHr,start_time:firstTime.toISOString(),moving_time_s:duration,duration_s:duration};
+  const streamDerived=derivedStreamSummary(derivedRows,parsedActivityForMetrics);
+  const advanced=streamDerived.advanced||{};
   const streamPoints=downsamplePoints(points,4000);
   const startIso=firstTime.toISOString();
   const dedupe=[startIso.slice(0,19),normalizeSport(sport),Math.round(duration/10),Math.round(distance/10)].join("|");
@@ -1552,14 +1555,18 @@ async function parseTcx(file) {
     activity:{
       source:"tcx_upload",name:file.name.replace(/\.tcx$/i,""),sport_type:sport,sport_category:normalizeSport(sport),
       start_time:startIso,original_start_time:idText||startIso,duration_s:duration,moving_time_s:duration,distance_m:distance,
-      elevation_gain_m:elevation,avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,avg_gap_pace_min_km:streamDerived.gap,
-      training_load_score:load,easy_zone_fraction:easy,hard_zone_fraction:hard,z1_s:zones[0],z2_s:zones[1],z3_s:zones[2],z4_s:zones[3],z5_s:zones[4],
-      own_vo2max_estimate:streamDerived.vo2,estimated_vo2max:streamDerived.vo2,average_power:avgPower,cadence_spm:cadence,
-      hr_efficiency_drift_pct:drift,file_sha256:fileHash,dedupe_key:dedupe,
-      metrics_json:{parser:"workoutbuddy-web-tcx-v2",trackpoints:points.length,stored_trackpoints:streamPoints.length,
+      elevation_gain_m:elevation,elevation_loss_m:n(advanced.elevation_loss_m),avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,avg_gap_pace_min_km:streamDerived.gap,
+      training_load_score:load,trimp_score:(zones[0]/60*.8+zones[1]/60*1.5+zones[2]/60*2.7+zones[3]/60*5+zones[4]/60*7),
+      easy_zone_fraction:easy,hard_zone_fraction:hard,z1_s:zones[0],z2_s:zones[1],z3_s:zones[2],z4_s:zones[3],z5_s:zones[4],
+      own_vo2max_estimate:streamDerived.vo2,estimated_vo2max:streamDerived.vo2,average_power:avgPower,normalized_power:n(advanced.normalized_power_w),cadence_spm:cadence,
+      hr_efficiency_drift_pct:n(advanced.hr_efficiency_drift_pct)??drift,gap_hr_efficiency_drift_pct:n(advanced.gap_hr_efficiency_drift_pct),
+      km_gap_hr_efficiency_drift_pct:n(advanced.km_gap_hr_efficiency_drift_pct),elapsed_time_s:duration,file_sha256:fileHash,dedupe_key:dedupe,
+      metrics_json:{parser:"workoutbuddy-web-tcx-v3",trackpoints:points.length,stored_trackpoints:streamPoints.length,
+        ...advanced,
         max_speed_kmh:streamDerived.max_speed_kmh,max_power_w:streamDerived.max_power_w,max_cadence:streamDerived.max_cadence,
         avg_grade_pct:streamDerived.avg_grade_pct,min_grade_pct:streamDerived.min_grade_pct,max_grade_pct:streamDerived.max_grade_pct,
         vo2_estimate_method:"ACSM running oxygen cost + grade + HR-reserve heuristic",
+        metrics_quality:"stream-derived; corrected distance/time speed; advanced metrics v3",
         speed_source:derivedOk?"distance_over_time_8s_centered":"tcx_speed_fallback"}
     },
     stream:{points:streamPoints}
