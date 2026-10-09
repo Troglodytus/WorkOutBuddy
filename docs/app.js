@@ -464,6 +464,97 @@ async function recalculateAndPersistPlan(){
   el("plannerAiStatus").textContent="Deterministic plan recalculated.";
   renderPlan();
 }
+function vdotForTime(distanceKm,timeMin){
+  const v=distanceKm*1000/timeMin;
+  const vo2=-4.60+0.182258*v+0.000104*v*v;
+  const pct=0.8+0.1894393*Math.exp(-0.012778*timeMin)+0.2989558*Math.exp(-0.1932605*timeMin);
+  return vo2/pct;
+}
+function vdotTimeFromVo2(vo2,distanceKm){
+  const v=n(vo2);if(v==null||v<=20)return null;
+  let lo=Math.max(4,distanceKm*2.4),hi=Math.max(45,distanceKm*12);
+  for(let i=0;i<80;i++){
+    const mid=(lo+hi)/2,vd=vdotForTime(distanceKm,mid);
+    if(vd>v)lo=mid;else hi=mid;
+  }
+  return (lo+hi)/2;
+}
+function recentVo2Evidence(){
+  const recent=activities.filter(a=>new Date(a.start_time)>=daysAgo(180));
+  const apple=recent.map(a=>n(a.apple_vo2max)).filter(v=>v!=null&&v>=20&&v<=80).slice(0,8);
+  if(apple.length)return {value:median(apple),source:"recent Apple VO₂max"};
+  const own=recent.map(a=>n(a.own_vo2max_estimate)??n(a.estimated_vo2max)).filter(v=>v!=null&&v>=20&&v<=80).slice(0,8);
+  if(own.length)return {value:median(own),source:"WorkOutBuddy VO₂ estimate"};
+  const p=n(profile&&profile.profile_vo2max);
+  return p&&p>=20?{value:p,source:"profile VO₂max"}:{value:null,source:"none"};
+}
+function riegelProjection(targetKm,runs){
+  const minDistance=targetKm>=42?10:targetKm>=21?5:3;
+  const est=[];
+  for(const a of runs){
+    const d=distanceKm(a),t=durationMin(a),pace=d>0?t/d:null;
+    if(d<minDistance||t<10||pace==null||pace<3||pace>12)continue;
+    est.push(t*Math.pow(targetKm/d,1.07));
+  }
+  est.sort((a,b)=>a-b);
+  if(!est.length)return null;
+  return mean(est.slice(0,Math.min(3,est.length)));
+}
+function conservativeRacePredictions(){
+  const races={tenk:{label:"10 km",km:10,goalKey:"10k"},hm:{label:"Half marathon",km:21.0975,goalKey:"hm"},m:{label:"Marathon",km:42.195,goalKey:"m"}};
+  const runs=activities.filter(a=>normalizeSport(a.sport_category||a.sport_type)==="run"&&new Date(a.start_time)>=daysAgo(120));
+  const c=trainingContext(),longest=runs.length?Math.max(...runs.map(distanceKm)):0,vo2=recentVo2Evidence(),goals=(profile&&profile.goals)||{};
+  const out={};
+  for(const [key,race] of Object.entries(races)){
+    const riegel=riegelProjection(race.km,runs);
+    const vdotBase=vdotTimeFromVo2(vo2.value,race.km);
+    const vdotConservative=vdotBase!=null?vdotBase*1.06:null;
+    let base=null,source=[];
+    if(riegel!=null&&vdotConservative!=null){
+      // Use the slower signal, but cap an easy-training Riegel estimate at 15%
+      // slower than the buffered VDOT projection so one recovery run cannot dominate.
+      base=Math.max(vdotConservative,Math.min(riegel,vdotConservative*1.15));
+      source=["recent runs",vo2.source];
+    }else if(riegel!=null){base=riegel;source=["recent runs"];}
+    else if(vdotConservative!=null){base=vdotConservative;source=[vo2.source];}
+
+    let penalty=1,readiness=[],confidence="moderate";
+    if(race.km===10){
+      if(longest<6){penalty*=1.03;readiness.push("limited recent long-run evidence");confidence="low";}
+      if(c.runKm28Weekly<10){penalty*=1.02;readiness.push("low recent weekly volume");confidence="low";}
+    }else if(race.km<30){
+      if(longest<8){penalty*=1.09;readiness.push("longest recent run <8 km");confidence="low";}
+      else if(longest<12){penalty*=1.05;readiness.push("longest recent run <12 km");confidence="low";}
+      if(c.runKm28Weekly<12){penalty*=1.07;readiness.push("weekly running <12 km");confidence="low";}
+      else if(c.runKm28Weekly<20){penalty*=1.04;readiness.push("weekly running <20 km");}
+    }else{
+      if(longest<15){penalty*=1.15;readiness.push("longest recent run <15 km");confidence="low";}
+      else if(longest<22){penalty*=1.10;readiness.push("longest recent run <22 km");confidence="low";}
+      else if(longest<28){penalty*=1.05;readiness.push("longest recent run <28 km");}
+      if(c.runKm28Weekly<20){penalty*=1.12;readiness.push("weekly running <20 km");confidence="low";}
+      else if(c.runKm28Weekly<30){penalty*=1.07;readiness.push("weekly running <30 km");confidence="low";}
+      else if(c.runKm28Weekly<40){penalty*=1.03;readiness.push("weekly running <40 km");}
+    }
+    const minutes=base!=null?base*penalty:null;
+    const target=goals.primary_goal===race.goalKey?n(goals.target_minutes):null;
+    out[race.goalKey]={label:race.label,minutes,target_minutes:target,delta_minutes:minutes!=null&&target!=null?minutes-target:null,
+      source:source.join(" + ")||"insufficient data",confidence,readiness,base_minutes:base,endurance_penalty:penalty};
+  }
+  return out;
+}
+function renderRacePredictions(){
+  const p=conservativeRacePredictions(),host=el("racePredictions");if(!host)return;
+  host.innerHTML=Object.values(p).map(r=>{
+    let note="Current conservative capability · "+r.source+" · "+r.confidence+" confidence";
+    if(r.readiness.length)note+=" · "+r.readiness.join(", ");
+    if(r.target_minutes!=null&&r.minutes!=null){
+      const delta=r.delta_minutes;
+      note+=" · target "+raceTimeText(r.target_minutes)+" · "+(delta<=0?"estimate is "+raceTimeText(Math.abs(delta))+" faster":"estimate is "+raceTimeText(delta)+" slower");
+    }
+    return '<div class="analysis-card"><div class="eyebrow">'+escapeHtml(r.label)+'</div><div class="value">'+escapeHtml(raceTimeText(r.minutes))+
+      '</div><div class="note">'+escapeHtml(note)+'</div></div>';
+  }).join("");
+}
 function renderPlanner(){
   const plan=currentPlan.length?currentPlan:buildFourteenDayPlan();
   currentPlan=plan;
@@ -472,6 +563,7 @@ function renderPlanner(){
   const totalMin=sum(plan.map(w=>n(w.duration_min,0)));
   const manual=plan.filter(w=>w.locked).length;
   el("plannerSummary").textContent="Next 14 days: "+runKm.toFixed(1)+" run km · "+Math.round(rideMin)+" ride min · "+Math.round(totalMin)+" total min · "+manual+" manual override"+(manual===1?"":"s");
+  renderRacePredictions();
   el("plannerCalendar").innerHTML=plan.map((w,i)=>
     '<div class="plan-card '+(i===0?"today ":"")+(w.locked?"manual":"")+'" data-plan-date="'+escapeHtml(w.date)+'">'+
     '<div class="plan-date">'+escapeHtml(w.weekday+" "+w.date)+(w.locked?'<span class="plan-manual">MANUAL</span>':'')+'</div>'+
@@ -1504,7 +1596,7 @@ async function askAiCoach() {
   try{
     const compact=await activitiesForAi(180);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"analysis",analysis:d,activities:compact,history:aiHistoryPayload(6),profile:{
+      mode:"analysis",analysis:d,race_predictions:conservativeRacePredictions(),activities:compact,history:aiHistoryPayload(6),profile:{
         profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
       }
     }});
@@ -1548,7 +1640,7 @@ async function askAiPlanner(){
     const base=currentPlan.length?currentPlan:buildFourteenDayPlan();
     const compact=await activitiesForAi(30);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"plan",activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(6),profile:{
+      mode:"plan",race_predictions:conservativeRacePredictions(),activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(6),profile:{
         profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
       }
     }});
