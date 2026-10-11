@@ -1719,18 +1719,37 @@ function renderAnalysis() {
 }
 
 
+
 function scalarMetricsJson(a){
   const src=safeJson(a.metrics_json,{}),out={};
   for(const [k,v] of Object.entries(src)){
     if(typeof v==="number"&&Number.isFinite(v))out[k]=v;
     else if(typeof v==="boolean")out[k]=v;
-    else if(typeof v==="string"&&["advanced_metrics_version","step_frequency_source","speed_source","metrics_quality"].includes(k))out[k]=v;
+    else if(typeof v==="string"&&["advanced_metrics_version","step_frequency_source","speed_source","metrics_quality","fatigue_model_version"].includes(k))out[k]=v;
   }
   return out;
 }
-function activityForAi(a){
+function compactKmEfficiencyForAi(a){
+  const splits=safeJson(a.metrics_json,{}).km_splits;
+  if(!Array.isArray(splits))return [];
+  return splits.map(s=>({
+    km:n(s.km),avg_hr:n(s.avg_hr),gap_pace_min_km:n(s.avg_gap_pace_min_km),
+    prior_load:n(s.cumulative_hr_load_before),prior_z45_min:n(s.cumulative_z45_before_min),
+    prior_time_min:n(s.cumulative_duration_before_min),expected_hr:n(s.expected_hr_personal),
+    fatigue_efficiency:n(s.fatigue_adjusted_efficiency_score),hr_residual_bpm:n(s.hr_residual_vs_expected_bpm)
+  }));
+}
+function activityForAi(a,detailLevel="full"){
+  if(detailLevel==="compact"){
+    return {
+      detail_level:"compact",start_time:a.start_time,sport:a.sport_category||a.sport_type,
+      distance_km:distanceKm(a),duration_min:durationMin(a),avg_hr:n(a.avg_hr),
+      training_load_score:n(a.training_load_score)??n(a.trimp_score),
+      vo2max:n(a.apple_vo2max)??n(a.own_vo2max_estimate)??n(a.estimated_vo2max)
+    };
+  }
   return {
-    start_time:a.start_time,name:a.name,sport:a.sport_category||a.sport_type,
+    detail_level:"full",start_time:a.start_time,name:a.name,sport:a.sport_category||a.sport_type,
     distance_km:distanceKm(a),duration_min:durationMin(a),elevation_gain_m:n(a.elevation_gain_m),elevation_loss_m:n(a.elevation_loss_m),
     avg_hr:n(a.avg_hr),max_hr:n(a.max_hr),pace_min_km:n(a.avg_pace_min_km),gap_pace_min_km:n(a.avg_gap_pace_min_km),
     training_load_score:n(a.training_load_score),trimp_score:n(a.trimp_score),easy_zone_fraction:n(a.easy_zone_fraction),hard_zone_fraction:n(a.hard_zone_fraction),
@@ -1740,13 +1759,25 @@ function activityForAi(a){
     average_power:n(a.average_power),normalized_power:n(a.normalized_power),cadence_spm:n(a.cadence_spm),
     hr_efficiency_drift_pct:n(a.hr_efficiency_drift_pct),gap_hr_efficiency_drift_pct:n(a.gap_hr_efficiency_drift_pct),
     km_gap_hr_efficiency_drift_pct:n(a.km_gap_hr_efficiency_drift_pct),
-    advanced:scalarMetricsJson(a)
+    advanced:scalarMetricsJson(a),km_efficiency:compactKmEfficiencyForAi(a)
   };
 }
 async function activitiesForAi(days){
   const rows=activities.filter(a=>new Date(a.start_time)>=daysAgo(days));
   await enrichMetricsForActivities(rows);
-  return rows.map(activityForAi);
+  await applyPersonalFatigueEfficiency();
+  const fullCutoff=daysAgo(28);
+  return rows.map(a=>activityForAi(a,new Date(a.start_time)>=fullCutoff?"full":"compact"));
+}
+function profileForAi(){
+  const t=(profile&&profile.training_preferences)||{};
+  return {
+    profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,
+    training_preferences:{
+      weekly_run_days:n(t.weekly_run_days),strength_sessions:n(t.strength_sessions),
+      training_aggressiveness:n(t.training_aggressiveness),long_run_day:n(t.long_run_day)
+    }
+  };
 }
 async function loadAiHistory(){
   if(!client||!userId())return;
@@ -1755,12 +1786,14 @@ async function loadAiHistory(){
   aiHistory=res.data||[];
   renderAiHistory();
 }
-function aiHistoryPayload(limit=6){
+function aiHistoryPayload(limit=4,maxChars=1200){
   return aiHistory.slice(0,limit).map(h=>{
     const d=safeJson(h.deterministic,{});
-    return {created_at:h.created_at,evaluation_type:d.evaluation_type||"analysis",model:h.model,text:h.llm_markdown||""};
+    const raw=String(h.llm_markdown||"");
+    return {created_at:h.created_at,evaluation_type:d.evaluation_type||"analysis",model:h.model,text:raw.slice(0,maxChars)};
   });
 }
+
 function renderAiHistory(){
   const host=el("aiHistory");if(!host)return;
   if(!aiHistory.length){host.innerHTML="";return;}
@@ -1789,9 +1822,7 @@ async function askAiCoach() {
   try{
     const compact=await activitiesForAi(180);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"analysis",analysis:d,race_predictions:conservativeRacePredictions(),activities:compact,history:aiHistoryPayload(6),profile:{
-        profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
-      }
+      mode:"analysis",analysis:d,race_predictions:conservativeRacePredictions(),activities:compact,history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+result.error.message;return;}
     const text=(result.data&&result.data.text)||"No response returned.",model=(result.data&&result.data.model)||"unknown";
@@ -1833,9 +1864,7 @@ async function askAiPlanner(){
     const base=currentPlan.length?currentPlan:buildFourteenDayPlan();
     const compact=await activitiesForAi(30);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"plan",race_predictions:conservativeRacePredictions(),activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(6),profile:{
-        profile_vo2max:n(profile&&profile.profile_vo2max),goals:profile&&profile.goals,training_preferences:profile&&profile.training_preferences
-      }
+      mode:"plan",race_predictions:conservativeRacePredictions(),activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error)throw result.error;
     const candidate=validateAiPlan(result.data&&result.data.plan,base);
@@ -1881,7 +1910,7 @@ async function importSelectedFiles() {
     } catch(err){ console.error(err); toast(files[i].name+": "+err.message,5000); }
   }
   el("importFilesButton").disabled=false;
-  await loadActivities(); streamCache.clear(); renderAll();
+  await loadActivities(); streamCache.clear(); renderAll(); enrichMetricsInBackground();
   el("uploadStatus").textContent="Imported "+ok+(overwritten?" · overwritten "+overwritten:"")+(skipped?" · skipped "+skipped:"")+".";
   if(ok||overwritten)setTimeout(()=>el("uploadDialog").close(),900);
 }
