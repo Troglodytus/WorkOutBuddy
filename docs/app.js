@@ -1074,15 +1074,37 @@ function kmEfficiencySummary(rows,isRun){
   const maxD=Math.max(0,...rows.map(r=>n(r.distance_m,0)));
   const kmCount=Math.floor(maxD/1000),rawEff=[],gapEff=[],splits=[];
   if(kmCount<1)return {raw_drift:null,gap_drift:null,splits:[]};
+  const zoneWeights=[0,1,2,3,5,8,10];
+
   for(let km=1;km<=kmCount;km++){
     const lo=(km-1)*1000,hi=km*1000,sub=rows.filter(r=>n(r.distance_m)!=null&&r.distance_m>=lo&&r.distance_m<hi);
     if(sub.length<5)continue;
+
+    let priorLoad=0,priorZ45=0,priorGapDistance=0,priorElevGain=0,priorTime=0;
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i],prev=rows[i-1],d=n(r.distance_m);
+      if(d==null||d>=lo)break;
+      const dt=rowDuration(rows,i);if(dt<=0)continue;
+      priorTime+=dt;
+      const zi=clamp(Math.round(n(r.zone,0)),0,6);
+      priorLoad+=(dt/60)*(zoneWeights[zi]||0);
+      if(zi>=4)priorZ45+=dt/60;
+      const gs=n(r.gap_speed_mps);if(gs!=null&&gs>0)priorGapDistance+=gs*dt/1000;
+      const a=n(prev.altitude_m),b=n(r.altitude_m);
+      if(a!=null&&b!=null&&b>a&&b-a<50)priorElevGain+=b-a;
+    }
+
     const hr=weightedRowMean(sub,"heart_rate"),speed=weightedRowMean(sub,"speed_mps"),grade=weightedRowMean(sub,"grade_pct");
     const gap=weightedRowMean(sub,"gap_speed_mps");
     const eff=speed!=null&&hr?speed/hr:null,geff=gap!=null&&hr?gap/hr:null;
     if(eff!=null)rawEff.push(eff);if(geff!=null)gapEff.push(geff);
-    splits.push({km,avg_hr:hr,avg_speed_mps:speed,avg_pace_min_km:speed?1000/speed/60:null,avg_gap_speed_mps:gap,
-      avg_gap_pace_min_km:gap?1000/gap/60:null,avg_grade_pct:grade,eff_speed_per_hr:eff,eff_gap_speed_per_hr:geff});
+    splits.push({
+      km,avg_hr:hr,avg_speed_mps:speed,avg_pace_min_km:speed?1000/speed/60:null,avg_gap_speed_mps:gap,
+      avg_gap_pace_min_km:gap?1000/gap/60:null,avg_grade_pct:grade,eff_speed_per_hr:eff,eff_gap_speed_per_hr:geff,
+      cumulative_duration_before_min:priorTime/60,cumulative_distance_before_km:lo/1000,
+      cumulative_hr_load_before:priorLoad,cumulative_z45_before_min:priorZ45,
+      cumulative_gap_distance_before_km:priorGapDistance,cumulative_elevation_gain_before_m:priorElevGain
+    });
   }
   return {raw_drift:firstLastDrift(rawEff),gap_drift:isRun?firstLastDrift(gapEff):null,splits};
 }
@@ -1172,7 +1194,7 @@ function calculateAdvancedMetrics(rows,activity){
   const vo2Demand=weightedRowMean(rows,"vo2_demand");
 
   return {
-    advanced_metrics_version:"web_v3",
+    advanced_metrics_version:"web_v4",
     avg_speed_mps:avgSpeed,max_speed_mps:Number.isFinite(maxSpeed)?maxSpeed:null,max_speed_kmh:Number.isFinite(maxSpeed)?maxSpeed*3.6:null,
     moving_ratio:movingRatio,elevation_loss_m:elevLoss||null,avg_vertical_speed_m_per_h:verticalSpeed,
     first_half_avg_hr:firstHr,second_half_avg_hr:secondHr,first_half_avg_speed_mps:firstSpeed,second_half_avg_speed_mps:secondSpeed,
@@ -1213,7 +1235,7 @@ async function persistAdvancedMetrics(activity,rows){
   for(const [k,v] of Object.entries(adv))if(k!=="km_splits"&&v!==undefined)mj[k]=v;
   if(Array.isArray(adv.km_splits))mj.km_splits=adv.km_splits;
   mj.vo2_estimate_method="ACSM running oxygen cost + grade + HR-reserve heuristic";
-  mj.metrics_quality="stream-derived; corrected distance/time speed; advanced metrics v3";
+  mj.metrics_quality="stream-derived; corrected distance/time speed; advanced metrics v4";
 
   if(d.vo2!=null){updates.own_vo2max_estimate=Math.round(d.vo2*10)/10;updates.estimated_vo2max=Math.round(d.vo2*10)/10;}
   if(d.gap!=null)updates.avg_gap_pace_min_km=d.gap;
@@ -1230,11 +1252,11 @@ async function persistAdvancedMetrics(activity,rows){
 }
 async function maybePersistDerivedMetrics(activity,rows){
   const mj=safeJson(activity.metrics_json,{});
-  if(mj.advanced_metrics_version==="web_v3")return derivedStreamSummary(rows,activity);
+  if(mj.advanced_metrics_version==="web_v4")return derivedStreamSummary(rows,activity);
   return persistAdvancedMetrics(activity,rows);
 }
 async function enrichMetricsForActivities(rows){
-  const todo=rows.filter(a=>safeJson(a.metrics_json,{}).advanced_metrics_version!=="web_v3");
+  const todo=rows.filter(a=>safeJson(a.metrics_json,{}).advanced_metrics_version!=="web_v4");
   let done=0;
   for(const a of todo){
     try{
@@ -1849,12 +1871,12 @@ async function parseTcx(file) {
       own_vo2max_estimate:streamDerived.vo2,estimated_vo2max:streamDerived.vo2,average_power:avgPower,normalized_power:n(advanced.normalized_power_w),cadence_spm:cadence,
       hr_efficiency_drift_pct:n(advanced.hr_efficiency_drift_pct)??drift,gap_hr_efficiency_drift_pct:n(advanced.gap_hr_efficiency_drift_pct),
       km_gap_hr_efficiency_drift_pct:n(advanced.km_gap_hr_efficiency_drift_pct),elapsed_time_s:duration,file_sha256:fileHash,dedupe_key:dedupe,
-      metrics_json:{parser:"workoutbuddy-web-tcx-v3",trackpoints:points.length,stored_trackpoints:streamPoints.length,
+      metrics_json:{parser:"workoutbuddy-web-tcx-v4",trackpoints:points.length,stored_trackpoints:streamPoints.length,
         ...advanced,
         max_speed_kmh:streamDerived.max_speed_kmh,max_power_w:streamDerived.max_power_w,max_cadence:streamDerived.max_cadence,
         avg_grade_pct:streamDerived.avg_grade_pct,min_grade_pct:streamDerived.min_grade_pct,max_grade_pct:streamDerived.max_grade_pct,
         vo2_estimate_method:"ACSM running oxygen cost + grade + HR-reserve heuristic",
-        metrics_quality:"stream-derived; corrected distance/time speed; advanced metrics v3",
+        metrics_quality:"stream-derived; corrected distance/time speed; advanced metrics v4",
         speed_source:derivedOk?"distance_over_time_8s_centered":"tcx_speed_fallback"}
     },
     stream:{points:streamPoints}
