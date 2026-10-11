@@ -1317,10 +1317,11 @@ function fatigueFeatureVector(split){
   if([gap,time,load,z45,dist].some(v=>v==null))return null;
   return [gap,gap*gap,time,load,z45,dist];
 }
-function fitPersonalFatigueReference(){
+
+function personalFatigueSamples(excludeActivityId=null){
   const cutoff=daysAgo(180),samples=[],runIds=new Set(),dates=[];
   for(const a of activities){
-    if(normalizeSport(a.sport_category||a.sport_type)!=="run"||new Date(a.start_time)<cutoff)continue;
+    if(a.id===excludeActivityId||normalizeSport(a.sport_category||a.sport_type)!=="run"||new Date(a.start_time)<cutoff)continue;
     const splits=safeJson(a.metrics_json,{}).km_splits;
     if(!Array.isArray(splits))continue;
     for(const split of splits){
@@ -1329,20 +1330,24 @@ function fitPersonalFatigueReference(){
       samples.push({x,y:hr,activity_id:a.id});runIds.add(a.id);dates.push(new Date(a.start_time).getTime());
     }
   }
-  if(samples.length<24||runIds.size<4)return null;
+  return {samples,runIds,dates};
+}
+function fitPersonalFatigueReference(excludeActivityId=null){
+  const {samples,runIds,dates}=personalFatigueSamples(excludeActivityId);
+  if(samples.length<20||runIds.size<3)return null;
 
   let fit=fitRidgeRegression(samples,.8);if(!fit)return null;
   const residuals=samples.map(v=>v.y-fit.predict(v.x)),med=median(residuals)??0;
   const mad=median(residuals.map(r=>Math.abs(r-med)))??0,limit=Math.max(10,3*1.4826*mad);
   const clean=samples.filter((v,i)=>Math.abs(residuals[i]-med)<=limit);
-  if(clean.length>=Math.max(20,Math.floor(samples.length*.65))){
+  if(clean.length>=Math.max(18,Math.floor(samples.length*.65))){
     const robust=fitRidgeRegression(clean,.8);if(robust)fit=robust;
   }
-  const used=clean.length>=20?clean:samples;
+  const used=clean.length>=18?clean:samples;
   const rmse=Math.sqrt(mean(used.map(v=>Math.pow(v.y-fit.predict(v.x),2)))??0);
   const latest=dates.length?Math.max(...dates):0;
   const coeff=fit.beta.map(v=>Math.round(v*1000)/1000).join(",");
-  const signature=[latest,samples.length,runIds.size,coeff].join("|");
+  const signature=[latest,samples.length,runIds.size,coeff,excludeActivityId||"global"].join("|");
   return {...fit,n_splits:samples.length,n_runs:runIds.size,rmse,signature};
 }
 function fatigueScoreSummary(splits){
@@ -1357,13 +1362,16 @@ function fatigueScoreSummary(splits){
   };
 }
 async function applyPersonalFatigueEfficiency(){
-  const model=fitPersonalFatigueReference();if(!model)return 0;
-  const cutoff=daysAgo(180),todo=[];
-  for(const a of activities){
-    if(normalizeSport(a.sport_category||a.sport_type)!=="run"||new Date(a.start_time)<cutoff)continue;
+  const cutoff=daysAgo(180),candidates=activities.filter(a=>
+    normalizeSport(a.sport_category||a.sport_type)==="run"&&new Date(a.start_time)>=cutoff
+  );
+  let changed=0;
+  for(const a of candidates){
+    const model=fitPersonalFatigueReference(a.id);
+    if(!model)continue;
     const mj=safeJson(a.metrics_json,{}),splits=Array.isArray(mj.km_splits)?mj.km_splits.map(x=>({...x})):[];
     if(!splits.length)continue;
-    if(mj.fatigue_model_version==="personal180_v1"&&mj.fatigue_model_signature===model.signature)continue;
+    if(mj.fatigue_model_version==="personal180_loo_v2"&&mj.fatigue_model_signature===model.signature)continue;
 
     for(const split of splits){
       const x=fatigueFeatureVector(split),actual=n(split.avg_hr);
@@ -1383,19 +1391,15 @@ async function applyPersonalFatigueEfficiency(){
     mj.fatigue_reference_n_splits=model.n_splits;
     mj.fatigue_reference_n_runs=model.n_runs;
     mj.fatigue_reference_rmse_bpm=Math.round(model.rmse*10)/10;
-    mj.fatigue_model_version="personal180_v1";
+    mj.fatigue_model_version="personal180_loo_v2";
     mj.fatigue_model_signature=model.signature;
-    mj.fatigue_efficiency_note="100 = personal expected HR for current GAP speed and prior cumulative fatigue; >100 = lower HR than expected.";
-    todo.push({a,mj});
-  }
-
-  let changed=0;
-  for(const {a,mj} of todo){
+    mj.fatigue_efficiency_note="100 = personal expected HR for current GAP speed and prior cumulative fatigue, learned from other runs in the previous 180 days; >100 = lower HR than expected.";
     const res=await client.from("activities").update({metrics_json:mj}).eq("id",a.id).eq("user_id",userId());
     if(!res.error){a.metrics_json=mj;changed++;}
   }
   return changed;
 }
+
 async function enrichMetricsInBackground(){
   if(metricsEnrichmentRunning||!client||!userId())return;
   metricsEnrichmentRunning=true;
