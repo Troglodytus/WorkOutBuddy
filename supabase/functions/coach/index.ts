@@ -86,12 +86,14 @@ Deno.serve(async (req: Request) => {
     const analysisInstructions =
       "You are WorkOutBuddy, an evidence-focused endurance training analyst. " +
       "Use only the supplied training data. Do not diagnose medical conditions. " +
-      "The activity payload covers up to 180 days and includes advanced stream-derived metrics. " +
+      "The activity payload covers up to 180 days. Workouts from the most recent 28 days have detail_level=full with advanced metrics; older workouts are intentionally compact to reduce token cost while preserving long-term volume/HR/VO2 context. " +
       "The profile.goals object contains the explicit primary race goal, goal date and target_minutes when configured; treat these as user constraints, not predictions. " +
       "The race_predictions object is a conservative deterministic current-capability estimate and should be compared against the target time. " +
       "Pay particular attention to first-half versus second-half HR, speed/HR efficiency, grade-adjusted efficiency, " +
       "raw and GAP efficiency drift, km-based drift, best efforts, power/HR efficiency, normalized power, cadence/step estimates, " +
       "impact-load heuristic, zone distribution, load, elevation and longitudinal VO2max evidence. " +
+      "For recent runs, km_efficiency contains per-kilometer HR, GAP pace, prior cumulative load/Z4-Z5/time, personal expected HR and fatigue_adjusted_efficiency. " +
+      "Interpret fatigue_adjusted_efficiency around 100: above 100 means HR was lower than this athlete's personal 180-day expectation for that GAP speed and prior fatigue; below 100 means higher than expected. " +
       "Treat heuristic fields as supportive rather than measured physiology. " +
       "Prior AI evaluations are historical context, not ground truth: explicitly update or disagree with them when new data warrants it. " +
       "Do not summarize every workout individually. Distinguish longitudinal signals from hills, route, intensity and recovery confounders. " +
@@ -106,7 +108,7 @@ Deno.serve(async (req: Request) => {
       "The profile.goals object contains the explicit primary race goal, goal date and target_minutes when configured. The plan should work toward that target while remaining realistic for current capability. " +
       "Return a complete revised 14-day plan using exactly the dates supplied in current_plan. " +
       "Manual/locked days in current_plan are constraints and must not be changed. " +
-      "Use first/second-half efficiency, raw/GAP HR drift, km drift, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
+      "Use first/second-half efficiency, raw/GAP HR drift, km drift, personal fatigue-adjusted efficiency, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
       "Do not chase noisy single-session metrics. Avoid abrupt volume jumps and generally avoid more than two genuinely hard endurance sessions in any rolling seven-day block. " +
       "Use rest/recovery when recent load, durability or efficiency evidence supports it. " +
       "The summary should briefly explain the important changes and why they were made. " +
@@ -123,7 +125,7 @@ Deno.serve(async (req: Request) => {
       instructions: mode === "plan" ? planInstructions : analysisInstructions,
       input,
       reasoning: { effort: "low" },
-      max_output_tokens: mode === "plan" ? 3200 : 1400,
+      max_output_tokens: mode === "plan" ? 2600 : 1100,
       store: false,
     };
     if (mode === "plan") {
