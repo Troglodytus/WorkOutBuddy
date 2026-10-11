@@ -1255,6 +1255,7 @@ async function maybePersistDerivedMetrics(activity,rows){
   if(mj.advanced_metrics_version==="web_v4")return derivedStreamSummary(rows,activity);
   return persistAdvancedMetrics(activity,rows);
 }
+
 async function enrichMetricsForActivities(rows){
   const todo=rows.filter(a=>safeJson(a.metrics_json,{}).advanced_metrics_version!=="web_v4");
   let done=0;
@@ -1268,12 +1269,141 @@ async function enrichMetricsForActivities(rows){
   }
   return done;
 }
+function solveLinearSystem(matrix,vector){
+  const n=vector.length,a=matrix.map((row,i)=>row.slice().concat([vector[i]]));
+  for(let col=0;col<n;col++){
+    let pivot=col;
+    for(let r=col+1;r<n;r++)if(Math.abs(a[r][col])>Math.abs(a[pivot][col]))pivot=r;
+    if(Math.abs(a[pivot][col])<1e-10)return null;
+    [a[col],a[pivot]]=[a[pivot],a[col]];
+    const div=a[col][col];for(let c=col;c<=n;c++)a[col][c]/=div;
+    for(let r=0;r<n;r++){
+      if(r===col)continue;
+      const factor=a[r][col];if(!factor)continue;
+      for(let c=col;c<=n;c++)a[r][c]-=factor*a[col][c];
+    }
+  }
+  return a.map(row=>row[n]);
+}
+function fitRidgeRegression(samples,lambda=.8){
+  if(samples.length<10)return null;
+  const p=samples[0].x.length,means=[],stds=[];
+  for(let j=0;j<p;j++){
+    const vals=samples.map(s=>s.x[j]);const m=mean(vals)??0;
+    const variance=mean(vals.map(v=>(v-m)*(v-m)))??0;
+    means[j]=m;stds[j]=Math.sqrt(variance)>1e-8?Math.sqrt(variance):1;
+  }
+  const dim=p+1,xtx=Array.from({length:dim},()=>Array(dim).fill(0)),xty=Array(dim).fill(0);
+  for(const sample of samples){
+    const x=[1,...sample.x.map((v,j)=>(v-means[j])/stds[j])],y=sample.y;
+    for(let r=0;r<dim;r++){
+      xty[r]+=x[r]*y;
+      for(let c=0;c<dim;c++)xtx[r][c]+=x[r]*x[c];
+    }
+  }
+  for(let j=1;j<dim;j++)xtx[j][j]+=lambda;
+  const beta=solveLinearSystem(xtx,xty);if(!beta)return null;
+  const predict=x=>{
+    let y=beta[0];
+    for(let j=0;j<p;j++)y+=beta[j+1]*((x[j]-means[j])/stds[j]);
+    return y;
+  };
+  return {beta,means,stds,predict};
+}
+function fatigueFeatureVector(split){
+  const gap=n(split.avg_gap_speed_mps),time=n(split.cumulative_duration_before_min),
+    load=n(split.cumulative_hr_load_before),z45=n(split.cumulative_z45_before_min),
+    dist=n(split.cumulative_distance_before_km);
+  if([gap,time,load,z45,dist].some(v=>v==null))return null;
+  return [gap,gap*gap,time,load,z45,dist];
+}
+function fitPersonalFatigueReference(){
+  const cutoff=daysAgo(180),samples=[],runIds=new Set(),dates=[];
+  for(const a of activities){
+    if(normalizeSport(a.sport_category||a.sport_type)!=="run"||new Date(a.start_time)<cutoff)continue;
+    const splits=safeJson(a.metrics_json,{}).km_splits;
+    if(!Array.isArray(splits))continue;
+    for(const split of splits){
+      const hr=n(split.avg_hr),x=fatigueFeatureVector(split);
+      if(hr==null||hr<90||hr>205||!x||x[0]<1.2||x[0]>7)continue;
+      samples.push({x,y:hr,activity_id:a.id});runIds.add(a.id);dates.push(new Date(a.start_time).getTime());
+    }
+  }
+  if(samples.length<24||runIds.size<4)return null;
+
+  let fit=fitRidgeRegression(samples,.8);if(!fit)return null;
+  const residuals=samples.map(v=>v.y-fit.predict(v.x)),med=median(residuals)??0;
+  const mad=median(residuals.map(r=>Math.abs(r-med)))??0,limit=Math.max(10,3*1.4826*mad);
+  const clean=samples.filter((v,i)=>Math.abs(residuals[i]-med)<=limit);
+  if(clean.length>=Math.max(20,Math.floor(samples.length*.65))){
+    const robust=fitRidgeRegression(clean,.8);if(robust)fit=robust;
+  }
+  const used=clean.length>=20?clean:samples;
+  const rmse=Math.sqrt(mean(used.map(v=>Math.pow(v.y-fit.predict(v.x),2)))??0);
+  const latest=dates.length?Math.max(...dates):0;
+  const coeff=fit.beta.map(v=>Math.round(v*1000)/1000).join(",");
+  const signature=[latest,samples.length,runIds.size,coeff].join("|");
+  return {...fit,n_splits:samples.length,n_runs:runIds.size,rmse,signature};
+}
+function fatigueScoreSummary(splits){
+  const valid=splits.filter(s=>n(s.fatigue_adjusted_efficiency_score)!=null);
+  if(!valid.length)return null;
+  const scores=valid.map(s=>n(s.fatigue_adjusted_efficiency_score)),residuals=valid.map(s=>n(s.hr_residual_vs_expected_bpm)).filter(Number.isFinite);
+  const k=Math.max(1,Math.floor(scores.length/3)),first=mean(scores.slice(0,k)),last=mean(scores.slice(-k));
+  return {
+    mean:mean(scores),median:median(scores),last_third:last,min:Math.min(...scores),
+    drift:first&&last!=null?100*(last/first-1):null,
+    residual_bpm:mean(residuals)
+  };
+}
+async function applyPersonalFatigueEfficiency(){
+  const model=fitPersonalFatigueReference();if(!model)return 0;
+  const cutoff=daysAgo(180),todo=[];
+  for(const a of activities){
+    if(normalizeSport(a.sport_category||a.sport_type)!=="run"||new Date(a.start_time)<cutoff)continue;
+    const mj=safeJson(a.metrics_json,{}),splits=Array.isArray(mj.km_splits)?mj.km_splits.map(x=>({...x})):[];
+    if(!splits.length)continue;
+    if(mj.fatigue_model_version==="personal180_v1"&&mj.fatigue_model_signature===model.signature)continue;
+
+    for(const split of splits){
+      const x=fatigueFeatureVector(split),actual=n(split.avg_hr);
+      if(!x||actual==null||actual<90||actual>205)continue;
+      const expected=clamp(model.predict(x),85,205);
+      split.expected_hr_personal=Math.round(expected*10)/10;
+      split.hr_residual_vs_expected_bpm=Math.round((actual-expected)*10)/10;
+      split.fatigue_adjusted_efficiency_score=Math.round((100*expected/actual)*10)/10;
+    }
+    const summary=fatigueScoreSummary(splits);if(!summary)continue;
+    mj.km_splits=splits;
+    mj.fatigue_adjusted_efficiency_score=Math.round(n(summary.median,summary.mean)*10)/10;
+    mj.fatigue_adjusted_efficiency_mean=Math.round(n(summary.mean)*10)/10;
+    mj.fatigue_adjusted_efficiency_last_third=Math.round(n(summary.last_third)*10)/10;
+    mj.fatigue_adjusted_efficiency_drift_pct=summary.drift==null?null:Math.round(summary.drift*10)/10;
+    mj.fatigue_hr_residual_bpm=summary.residual_bpm==null?null:Math.round(summary.residual_bpm*10)/10;
+    mj.fatigue_reference_n_splits=model.n_splits;
+    mj.fatigue_reference_n_runs=model.n_runs;
+    mj.fatigue_reference_rmse_bpm=Math.round(model.rmse*10)/10;
+    mj.fatigue_model_version="personal180_v1";
+    mj.fatigue_model_signature=model.signature;
+    mj.fatigue_efficiency_note="100 = personal expected HR for current GAP speed and prior cumulative fatigue; >100 = lower HR than expected.";
+    todo.push({a,mj});
+  }
+
+  let changed=0;
+  for(const {a,mj} of todo){
+    const res=await client.from("activities").update({metrics_json:mj}).eq("id",a.id).eq("user_id",userId());
+    if(!res.error){a.metrics_json=mj;changed++;}
+  }
+  return changed;
+}
 async function enrichMetricsInBackground(){
   if(metricsEnrichmentRunning||!client||!userId())return;
   metricsEnrichmentRunning=true;
   try{
     const changed=await enrichMetricsForActivities(activities);
-    if(changed){renderHistory();renderAnalysis();}
+    setSync("Learning personal fatigue-adjusted HR reference…");
+    const fatigueChanged=await applyPersonalFatigueEfficiency();
+    if(changed||fatigueChanged){renderHistory();renderAnalysis();renderPlanner();}
   }finally{metricsEnrichmentRunning=false;setSync("Synced");}
 }
 
