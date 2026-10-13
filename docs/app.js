@@ -405,7 +405,7 @@ function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
       const longDay=runSet.find(w=>w.family==="long_run");
       const candidate=unlocked.filter(w=>w.family!=="long_run").sort((a,b)=>
         Math.abs(new Date(b.date)-new Date(longDay?longDay.date:subset[0].date))-
-        Math.abs(new Date(a.date)-new Date(longDay?longDay.date)))[0];
+        Math.abs(new Date(a.date)-new Date(longDay?longDay.date:subset[0].date)))[0];
       if(candidate){
         candidate.family="quality";candidate.title="Controlled quality run";candidate.zone="Z3–Z4 work with easy recoveries";
         candidate.notes="Warm up 10–12 min; 3 × 3 min Z3–low Z4 / 2 min easy; cool down. Only progress if recovering well.";
