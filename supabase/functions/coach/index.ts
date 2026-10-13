@@ -96,7 +96,8 @@ Deno.serve(async (req: Request) => {
       "For recent runs, km_efficiency contains per-kilometer HR, GAP pace, prior cumulative load/Z4-Z5/time, personal expected HR and fatigue_adjusted_efficiency. " +
       "Interpret fatigue_adjusted_efficiency around 100: above 100 means HR was lower than this athlete's personal 180-day expectation for that GAP speed and prior fatigue; below 100 means higher than expected. When fatigue_reference_uses_weather=1, that expectation already includes workout temperature and humidity. " +
       "Treat heuristic fields as supportive rather than measured physiology. " +
-      "Prior AI evaluations are historical context, not ground truth: explicitly update or disagree with them when new data warrants it. " +
+      "The history array contains at most one compact summary of the last completed AI analysis. Use it for continuity, not as ground truth, and do not restate it unnecessarily. " +
+      "The ml_model object contains whole-workout cross-validated Ridge and Gradient Boosting errors, the selected HR predictor and non-causal feature importance. Use these as reliability evidence and never claim a model is superior when cross-validation does not support it. " +
       "Do not summarize every workout individually. Distinguish longitudinal signals from hills, route, intensity and recovery confounders. " +
       "Prioritize running fitness while treating cycling, hiking and strength as supporting load. " +
       "Return concise Markdown with exactly these sections: " +
@@ -109,7 +110,8 @@ Deno.serve(async (req: Request) => {
       "The profile.goals object contains the explicit primary race goal, goal date and target_minutes when configured. The plan should work toward that target while remaining realistic for current capability. " +
       "Return a complete revised 14-day plan using exactly the dates supplied in current_plan. " +
       "Manual/locked days in current_plan are constraints and must not be changed. " +
-      "Use first/second-half efficiency, raw/GAP HR drift, km drift, personal fatigue-adjusted efficiency, temperature/humidity, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
+      "Use first/second-half efficiency, raw/GAP HR drift, km drift, personal fatigue-adjusted efficiency, held-out ML accuracy, temperature/humidity, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
+      "History contains only the last analysis as a brief stored summary; do not over-weight it. " +
       "Do not chase noisy single-session metrics. Avoid abrupt volume jumps and generally avoid more than two genuinely hard endurance sessions in any rolling seven-day block. " +
       "Use rest/recovery when recent load, durability or efficiency evidence supports it. " +
       "The summary should briefly explain the important changes and why they were made. " +
