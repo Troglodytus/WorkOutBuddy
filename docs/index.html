@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=1.0.1">
+  <link rel="stylesheet" href="./styles.css?v=1.0.2">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -200,6 +200,21 @@
         <div id="plannerSummary" class="status"></div>
         <div id="racePredictions" class="analysis-cards"></div>
         <div class="muted small-note">Conservative current race capability from recent running performance + VO₂ evidence. Longer distances include endurance-readiness penalties.</div>
+        <div class="race-trend-panel">
+          <div class="panel-head">
+            <div><div class="eyebrow">RACE CAPABILITY TREND</div><h3>Estimated race times over time</h3></div>
+            <label class="race-trend-picker">Distance
+              <select id="raceTrendDistance">
+                <option value="hm" selected>Half marathon</option>
+                <option value="10k">10 km</option>
+                <option value="m">Marathon</option>
+              </select>
+            </label>
+          </div>
+          <div id="raceTrendPlot" class="plot compact"></div>
+          <div id="raceTrendInfo" class="muted small-note"></div>
+        </div>
+        <div id="plannerIntensitySummary" class="status"></div>
         <div id="plannerAiStatus" class="status"></div>
         <div id="plannerAiSummary" class="markdown-output muted hidden"></div>
         <p class="muted small-note">Click any day to override it. Manual workouts stay locked; all following days are recalculated using that override as training load/context.</p>
@@ -373,7 +388,7 @@
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="./config.js?v=1.0.1"></script>
-  <script src="./app.js?v=1.0.1"></script>
+  <script src="./config.js?v=1.0.2"></script>
+  <script src="./app.js?v=1.0.2"></script>
 </body>
 </html>
