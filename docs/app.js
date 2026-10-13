@@ -142,6 +142,7 @@ function bindUi() {
   el("historyPeriodFilter").addEventListener("change", renderHistory);
   ["historyXMetric","historyYMetric","historyPlotType","historyColorBy"].forEach(id => el(id).addEventListener("change", renderHistory));
   el("fullStatisticsToggle").addEventListener("change", renderHistory);
+  el("refreshWeatherButton").addEventListener("click",()=>refreshAllWeather(true));
   initWorkoutViewerControls();
   el("regeneratePlanButton").addEventListener("click", recalculateAndPersistPlan);
   el("plannerRegenerateButton").addEventListener("click", recalculateAndPersistPlan);
@@ -1417,6 +1418,162 @@ async function getWorkoutStream(id){
   const stream=res.data?safeJson(res.data.stream_data,{}):{};
   streamCache.set(id,stream);return stream;
 }
+
+const WEATHER_VERSION="openmeteo_v1";
+function utcDateString(ms){return new Date(ms).toISOString().slice(0,10);}
+function weatherNumbers(a){
+  const m=safeJson(a&&a.metrics_json,{});
+  return {
+    start_temp_c:n(m.weather_start_temp_c),start_humidity_pct:n(m.weather_start_humidity_pct),
+    end_temp_c:n(m.weather_end_temp_c),end_humidity_pct:n(m.weather_end_humidity_pct),
+    min_temp_c:n(m.weather_min_temp_c),max_temp_c:n(m.weather_max_temp_c),
+    min_humidity_pct:n(m.weather_min_humidity_pct),max_humidity_pct:n(m.weather_max_humidity_pct),
+    mean_temp_c:n(m.weather_mean_temp_c),mean_humidity_pct:n(m.weather_mean_humidity_pct)
+  };
+}
+function nearestOrInterpolatedWeather(series,targetMs){
+  if(!series||!series.times||!series.times.length)return {temp:null,humidity:null};
+  const times=series.times;let hi=0;
+  while(hi<times.length&&times[hi]<targetMs)hi++;
+  if(hi<=0)return {temp:n(series.temp[0]),humidity:n(series.humidity[0])};
+  if(hi>=times.length){const i=times.length-1;return {temp:n(series.temp[i]),humidity:n(series.humidity[i])};}
+  const lo=hi-1,t0=times[lo],t1=times[hi],f=t1>t0?clamp((targetMs-t0)/(t1-t0),0,1):0;
+  const interp=(arr)=>{
+    const a=n(arr[lo]),b=n(arr[hi]);
+    if(a==null)return b;if(b==null)return a;return a+(b-a)*f;
+  };
+  return {temp:interp(series.temp),humidity:interp(series.humidity)};
+}
+function seriesWindowValues(series,startMs,endMs,padMs){
+  const out=[];
+  if(!series||!series.times)return out;
+  for(let i=0;i<series.times.length;i++){
+    const t=series.times[i];if(t<startMs-padMs||t>endMs+padMs)continue;
+    const temp=n(series.temp[i]),humidity=n(series.humidity[i]);
+    if(temp!=null||humidity!=null)out.push({t,temp,humidity});
+  }
+  return out;
+}
+async function fetchOpenMeteoSeries(lat,lon,startMs,endMs){
+  const startDate=utcDateString(startMs-3600000),endDate=utcDateString(endMs+3600000);
+  const recent=endMs>=Date.now()-91*86400000;
+  const modern=startMs>=Date.UTC(2022,0,1);
+  const candidates=[];
+  if(recent)candidates.push({url:"https://api.open-meteo.com/v1/forecast",label:"Open-Meteo forecast archive",fine:true});
+  if(modern)candidates.push({url:"https://historical-forecast-api.open-meteo.com/v1/forecast",label:"Open-Meteo historical forecast",fine:true});
+  candidates.push({url:"https://archive-api.open-meteo.com/v1/archive",label:"Open-Meteo historical weather",fine:false});
+
+  let lastError=null;
+  for(const c of candidates){
+    try{
+      const p=new URLSearchParams({
+        latitude:String(lat),longitude:String(lon),start_date:startDate,end_date:endDate,
+        hourly:"temperature_2m,relative_humidity_2m",timezone:"GMT",timeformat:"unixtime"
+      });
+      if(c.fine)p.set("minutely_15","temperature_2m,relative_humidity_2m");
+      const response=await fetch(c.url+"?"+p.toString());
+      if(!response.ok){lastError=new Error(c.label+" HTTP "+response.status);continue;}
+      const data=await response.json();
+      let src=data.minutely_15;
+      let resolutionMin=15;
+      if(!src||!Array.isArray(src.time)||src.time.length<2){src=data.hourly;resolutionMin=60;}
+      if(!src||!Array.isArray(src.time)||!src.time.length)continue;
+      const temp=src.temperature_2m||[],humidity=src.relative_humidity_2m||[];
+      if(!temp.length&&!humidity.length)continue;
+      return {
+        times:src.time.map(v=>Number(v)*1000),temp,humidity,
+        source:c.label,resolution_min:resolutionMin
+      };
+    }catch(err){lastError=err;}
+  }
+  if(lastError)throw lastError;
+  return null;
+}
+async function workoutWeatherGeometry(activity){
+  const stream=await getWorkoutStream(activity.id),pts=Array.isArray(stream&&stream.points)?stream.points:[];
+  const gps=pts.filter(p=>n(p.lat)!=null&&n(p.lon)!=null);
+  if(!gps.length)return null;
+  const first=gps[0],last=gps[gps.length-1];
+  const startMs=new Date(activity.start_time).getTime();
+  if(!Number.isFinite(startMs))return null;
+  const streamEnd=Math.max(...pts.map(p=>n(p.elapsed_s,0)));
+  const durationMs=Math.max(0,(n(activity.duration_s)??streamEnd??0)*1000);
+  const endMs=startMs+durationMs;
+  return {startMs,endMs,start:{lat:n(first.lat),lon:n(first.lon)},end:{lat:n(last.lat),lon:n(last.lon)}};
+}
+async function fetchWeatherForActivity(activity){
+  const geo=await workoutWeatherGeometry(activity);if(!geo)return null;
+  const same=Math.abs(geo.start.lat-geo.end.lat)<.002&&Math.abs(geo.start.lon-geo.end.lon)<.002;
+  const startSeries=await fetchOpenMeteoSeries(geo.start.lat,geo.start.lon,geo.startMs,geo.endMs);
+  if(!startSeries)return null;
+  const endSeries=same?startSeries:await fetchOpenMeteoSeries(geo.end.lat,geo.end.lon,geo.startMs,geo.endMs);
+  if(!endSeries)return null;
+
+  const start=nearestOrInterpolatedWeather(startSeries,geo.startMs);
+  const end=nearestOrInterpolatedWeather(endSeries,geo.endMs);
+  const pad=Math.max(startSeries.resolution_min,endSeries.resolution_min)*30000;
+  const values=[
+    ...seriesWindowValues(startSeries,geo.startMs,geo.endMs,pad),
+    ...(same?[]:seriesWindowValues(endSeries,geo.startMs,geo.endMs,pad))
+  ];
+  values.push({t:geo.startMs,temp:start.temp,humidity:start.humidity},{t:geo.endMs,temp:end.temp,humidity:end.humidity});
+  const temps=values.map(x=>n(x.temp)).filter(Number.isFinite),hums=values.map(x=>n(x.humidity)).filter(Number.isFinite);
+  if(!temps.length&&!hums.length)return null;
+  return {
+    weather_version:WEATHER_VERSION,
+    weather_start_temp_c:start.temp,weather_start_humidity_pct:start.humidity,
+    weather_end_temp_c:end.temp,weather_end_humidity_pct:end.humidity,
+    weather_min_temp_c:temps.length?Math.min(...temps):null,weather_max_temp_c:temps.length?Math.max(...temps):null,
+    weather_mean_temp_c:temps.length?mean(temps):null,
+    weather_min_humidity_pct:hums.length?Math.min(...hums):null,weather_max_humidity_pct:hums.length?Math.max(...hums):null,
+    weather_mean_humidity_pct:hums.length?mean(hums):null,
+    weather_resolution_min:Math.min(startSeries.resolution_min,endSeries.resolution_min),
+    weather_start_source:startSeries.source,weather_end_source:endSeries.source,
+    weather_fetched_at:new Date().toISOString()
+  };
+}
+async function persistWeatherForActivity(activity,force=false){
+  const existing=safeJson(activity.metrics_json,{});
+  if(!force&&existing.weather_version===WEATHER_VERSION)return "skipped";
+  const weather=await fetchWeatherForActivity(activity);
+  if(!weather)return "no-gps";
+  const mj={...existing,...weather};
+  // Weather changes the personalized HR expectation, so force the fatigue score
+  // to be learned again after the refresh.
+  delete mj.fatigue_model_signature;
+  const res=await client.from("activities").update({metrics_json:mj}).eq("id",activity.id).eq("user_id",userId());
+  if(res.error)throw res.error;
+  activity.metrics_json=mj;
+  return "updated";
+}
+async function refreshAllWeather(force=true){
+  const btn=el("refreshWeatherButton"),status=el("weatherRefreshStatus");
+  if(btn)btn.disabled=true;
+  let updated=0,skipped=0,failed=0,noGps=0;
+  try{
+    for(let i=0;i<activities.length;i++){
+      const a=activities[i];
+      if(status)status.textContent="Weather "+(i+1)+" / "+activities.length+": "+(a.name||a.sport_type||"Workout");
+      try{
+        const r=await persistWeatherForActivity(a,force);
+        if(r==="updated")updated++;else if(r==="no-gps")noGps++;else skipped++;
+      }catch(err){failed++;console.warn("Weather refresh failed",a.id,err);}
+      // Stay friendly to the free public endpoint during a bulk refresh.
+      if(i<activities.length-1)await new Promise(resolve=>setTimeout(resolve,90));
+    }
+    if(status)status.textContent="Weather: "+updated+" updated · "+skipped+" already current · "+noGps+" without GPS · "+failed+" failed.";
+    setSync("Relearning weather-aware HR efficiency…");
+    await applyPersonalFatigueEfficiency();
+    renderHistory();renderAnalysis();renderPlanner();
+  }finally{
+    if(btn)btn.disabled=false;
+    setSync("Synced");
+  }
+}
+async function refreshMissingWeather(){
+  return refreshAllWeather(false);
+}
+
 async function renderLatestWorkout(){
   if(!activities.length){
     el("homeWorkoutDetail").innerHTML='<div class="muted">Upload a workout to use the viewer.</div>';
