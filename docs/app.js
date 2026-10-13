@@ -17,6 +17,9 @@ let currentPlan = [];
 let duplicateResolver = null;
 let aiHistory = [];
 let metricsEnrichmentRunning = false;
+let mlModelReport = null;
+let mlModelSignature = null;
+let mlAnalysisBusy = false;
 const streamCache = new Map();
 
 const el = id => document.getElementById(id);
@@ -1357,6 +1360,187 @@ function fitPersonalFatigueReference(excludeActivityId=null,useWeather=false){
   return {...fit,n_splits:samples.length,n_runs:runIds.size,rmse,signature,use_weather:useWeather};
 }
 
+
+const ML_FEATURE_LABELS=["GAP speed","GAP speed²","Prior duration","Cumulative HR load","Prior Z4/Z5","Prior distance","Temperature","Humidity"];
+function mlTreeValue(tree,x){
+  if(tree.value!=null)return tree.value;
+  return mlTreeValue(x[tree.feature]<=tree.threshold?tree.left:tree.right,x);
+}
+function trainMlTree(X,y,idx,depth,minLeaf,maxDepth=2){
+  const vals=idx.map(i=>y[i]),base=mean(vals)??0;
+  if(depth>=maxDepth||idx.length<minLeaf*2)return {value:base};
+  const baseSse=vals.reduce((v,z)=>v+(z-base)**2,0);
+  let best=null,features=X[0].length;
+  for(let j=0;j<features;j++){
+    const sorted=idx.slice().sort((a,b)=>X[a][j]-X[b][j]);
+    const candidates=[];
+    for(let q=1;q<=9;q++){
+      const k=Math.floor(q*sorted.length/10);
+      if(k<minLeaf||k>sorted.length-minLeaf)continue;
+      const lo=X[sorted[k-1]][j],hi=X[sorted[k]][j];
+      if(hi>lo)candidates.push((lo+hi)/2);
+    }
+    for(const threshold of candidates){
+      let ln=0,rn=0,ls=0,rs=0,lss=0,rss=0;
+      for(const i of idx){
+        const v=y[i];if(X[i][j]<=threshold){ln++;ls+=v;lss+=v*v;}else{rn++;rs+=v;rss+=v*v;}
+      }
+      if(ln<minLeaf||rn<minLeaf)continue;
+      const gain=baseSse-(lss-ls*ls/ln+rss-rs*rs/rn);
+      if(gain>1e-5&&(!best||gain>best.gain))best={feature:j,threshold,gain};
+    }
+  }
+  if(!best)return {value:base};
+  const left=[],right=[];
+  for(const i of idx)(X[i][best.feature]<=best.threshold?left:right).push(i);
+  return {feature:best.feature,threshold:best.threshold,gain:best.gain,
+    left:trainMlTree(X,y,left,depth+1,minLeaf,maxDepth),right:trainMlTree(X,y,right,depth+1,minLeaf,maxDepth)};
+}
+function fitGradientBoostResidual(samples,ridge,options={}){
+  if(!ridge||samples.length<24)return null;
+  const X=samples.map(s=>s.x),y=samples.map(s=>s.y-ridge.predict(s.x));
+  const pred=Array(samples.length).fill(0),trees=[],lr=.065;
+  const rounds=options.rounds||28,minLeaf=Math.max(6,Math.floor(samples.length*.035));
+  const importance=Array(X[0].length).fill(0),idx=X.map((_,i)=>i);
+  const addImportance=t=>{
+    if(t.value!=null)return;
+    importance[t.feature]+=t.gain;
+    addImportance(t.left);addImportance(t.right);
+  };
+  for(let it=0;it<rounds;it++){
+    const residuals=y.map((v,i)=>v-pred[i]);
+    const tree=trainMlTree(X,residuals,idx,0,minLeaf,2);
+    if(tree.value!=null)break;
+    addImportance(tree);
+    trees.push(tree);
+    for(let i=0;i<X.length;i++)pred[i]+=lr*mlTreeValue(tree,X[i]);
+  }
+  if(!trees.length)return null;
+  return {trees,learning_rate:lr,importance,
+    predict:x=>ridge.predict(x)+lr*trees.reduce((acc,tree)=>acc+mlTreeValue(tree,x),0)};
+}
+function mlSamplesSignature(samples){
+  return samples.map(s=>[s.activity_id,s.y.toFixed(2),s.x.map(x=>x.toFixed(2)).join(",")].join(":")).join("|");
+}
+function mlErrorSummary(errors){
+  if(!errors.length)return null;
+  const byRun=new Map();
+  for(const e of errors){
+    if(!byRun.has(e.id))byRun.set(e.id,[]);
+    byRun.get(e.id).push(e.error);
+  }
+  const perRun=Array.from(byRun.values()).map(v=>mean(v.map(x=>Math.abs(x))));
+  return {
+    mae:mean(errors.map(e=>Math.abs(e.error))),
+    workout_mae:mean(perRun),
+    rmse:Math.sqrt(mean(errors.map(e=>e.error*e.error))),
+    bias:mean(errors.map(e=>e.error)),
+    runs:byRun.size,points:errors.length
+  };
+}
+async function computeMlModelReport(force=false){
+  const weatherData=personalFatigueSamples(null,true);
+  const basicData=personalFatigueSamples(null,false);
+  const useWeather=weatherData.runIds.size>=8&&weatherData.samples.length>=Math.max(100,basicData.samples.length*.7);
+  const data=useWeather?weatherData:basicData;
+  const signature=mlSamplesSignature(data.samples)+"|"+useWeather;
+  if(!force&&mlModelReport&&mlModelSignature===signature)return mlModelReport;
+  if(mlAnalysisBusy)return mlModelReport;
+  mlAnalysisBusy=true;
+  const status=el("mlAnalysisStatus");
+  const report={version:"hr_ml_v1",status:"insufficient",selected:"ridge",uses_weather:useWeather,
+    n_runs:data.runIds.size,n_km_splits:data.samples.length,feature_importance:[]};
+  try{
+    if(status)status.textContent="Validating Ridge vs Gradient Boosting across whole workouts…";
+    if(data.runIds.size<4||data.samples.length<24){
+      report.reason="Need at least 4 runs and 24 reliable kilometre splits for a personal reference.";
+    }else{
+      const groups=Array.from(data.runIds),testRidge=[],testBoost=[],mlEligible=data.runIds.size>=8&&data.samples.length>=100;
+      for(let k=0;k<groups.length;k++){
+        const hold=groups[k],train=data.samples.filter(s=>s.activity_id!==hold),test=data.samples.filter(s=>s.activity_id===hold);
+        if(train.length<20)continue;
+        const ridge=fitRidgeRegression(train,useWeather?1.1:.8);
+        if(!ridge)continue;
+        const boosting=mlEligible?fitGradientBoostResidual(train,ridge):null;
+        for(const sample of test){
+          testRidge.push({id:hold,error:sample.y-ridge.predict(sample.x)});
+          if(boosting)testBoost.push({id:hold,error:sample.y-boosting.predict(sample.x)});
+        }
+        if(k%3===0)await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      const ridge=mlErrorSummary(testRidge),boost=mlEligible?mlErrorSummary(testBoost):null;
+      report.ridge_cv=ridge;
+      report.boost_cv=boost;
+      report.status=ridge?"ready":"insufficient";
+      report.reason=mlEligible?null:"Gradient Boosting requires ≥8 independent runs and ≥100 valid kilometre splits.";
+      // Require a material MAE improvement, no worse RMSE, and no material additional bias.
+      if(ridge&&boost&&boost.runs===ridge.runs&&boost.workout_mae<=ridge.workout_mae*.95&&
+        boost.rmse<=ridge.rmse*1.01&&Math.abs(boost.bias)<=Math.abs(ridge.bias)+.75){
+        report.selected="gradient_boosting";
+      }
+      const allRidge=fitRidgeRegression(data.samples,useWeather?1.1:.8);
+      const fullBoost=allRidge&&mlEligible?fitGradientBoostResidual(data.samples,allRidge):null;
+      if(fullBoost){
+        const tot=sum(fullBoost.importance);
+        report.feature_importance=fullBoost.importance.map((gain,i)=>({
+          name:ML_FEATURE_LABELS[i],importance:tot>0?100*gain/tot:0
+        })).sort((a,b)=>b.importance-a.importance).slice(0,6);
+      }
+    }
+    mlModelReport=report;mlModelSignature=signature;
+    renderMlAnalysis();
+    return report;
+  }finally{
+    mlAnalysisBusy=false;
+    if(status&&report.status!=="ready")status.textContent=report.reason||"Not enough data yet.";
+  }
+}
+function compactMlForAi(){
+  const r=mlModelReport;if(!r)return {status:"not_calculated"};
+  return {
+    method:r.selected,validation:"leave_one_workout_out",runs:r.n_runs,km_splits:r.n_km_splits,
+    weather_in_model:r.uses_weather,
+    ridge_mae_bpm:r.ridge_cv&&Math.round(r.ridge_cv.workout_mae*100)/100,
+    boosting_mae_bpm:r.boost_cv&&Math.round(r.boost_cv.workout_mae*100)/100,
+    ridge_rmse_bpm:r.ridge_cv&&Math.round(r.ridge_cv.rmse*100)/100,
+    boosting_rmse_bpm:r.boost_cv&&Math.round(r.boost_cv.rmse*100)/100,
+    main_features:(r.feature_importance||[]).slice(0,4)
+  };
+}
+function renderMlAnalysis(){
+  const r=mlModelReport,host=el("mlAnalysisMetrics"),status=el("mlAnalysisStatus");
+  if(!host||!status)return;
+  if(!r){
+    status.textContent="Computing personal model after advanced workout metrics have been enriched.";
+    host.innerHTML="";return;
+  }
+  const ready=r.status==="ready";
+  status.textContent=ready?
+    "Leave-one-workout-out validation · "+r.n_runs+" runs / "+r.n_km_splits+" kilometre splits"+
+      (r.uses_weather?" · weather-aware":" · insufficient weather coverage for weather-aware fitting"):
+    (r.reason||"Not enough comparable running data.");
+  const cards=[
+    ["Selected model",ready?(r.selected==="gradient_boosting"?"Gradient Boosting":"Ridge"):"Insufficient data","Selected only when boosted model wins on held-out runs"],
+    ["Ridge error",r.ridge_cv?fmt(r.ridge_cv.workout_mae,1," bpm"):"—","Average per-workout cross-validated MAE"],
+    ["Boosting error",r.boost_cv?fmt(r.boost_cv.workout_mae,1," bpm"):"Not eligible","Same held-out workout comparison"],
+    ["Training evidence",r.n_km_splits+" km",r.n_runs+" independent runs · 180-day window"]
+  ];
+  host.innerHTML=cards.map(c=>'<div class="analysis-card"><div class="eyebrow">'+escapeHtml(c[0])+'</div><div class="value">'+escapeHtml(c[1])+
+    '</div><div class="note">'+escapeHtml(c[2])+"</div></div>").join("");
+  const names=["Ridge","Gradient Boosting"],vals=[r.ridge_cv&&r.ridge_cv.workout_mae,r.boost_cv&&r.boost_cv.workout_mae];
+  const valid=names.map((name,i)=>({name,value:vals[i]})).filter(x=>x.value!=null);
+  Plotly.react("mlModelComparison",[{x:valid.map(x=>x.name),y:valid.map(x=>x.value),type:"bar"}],
+    {margin:{l:52,r:15,t:15,b:45},yaxis:{title:"Held-out MAE (bpm)",rangemode:"tozero"},paper_bgcolor:"transparent",plot_bgcolor:"transparent"},
+    {responsive:true,displaylogo:false});
+  const imp=r.feature_importance||[],top=imp.slice(0,6).reverse();
+  Plotly.react("mlFeatureImportance",[{x:top.map(x=>x.importance),y:top.map(x=>x.name),type:"bar",orientation:"h"}],
+    {margin:{l:118,r:12,t:15,b:45},xaxis:{title:"Relative split-gain (%)",rangemode:"tozero"},paper_bgcolor:"transparent",plot_bgcolor:"transparent"},
+    {responsive:true,displaylogo:false});
+  el("mlAnalysisExplanation").textContent=
+    "Tree split-gain is a predictive importance, not causal attribution. The selected model predicts HR conditioned on GAP speed, prior effort and "+
+    (r.uses_weather?"weather.":"available prior-effort metrics.")+
+    " The current run is always excluded from its own HR reference. Read differences below about 2–3 bpm cautiously; training state, hydration and sensor noise also affect HR.";
+}
 function fatigueScoreSummary(splits){
   const valid=splits.filter(s=>n(s.fatigue_adjusted_efficiency_score)!=null);
   if(!valid.length)return null;
