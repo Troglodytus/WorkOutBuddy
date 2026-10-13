@@ -1600,11 +1600,16 @@ async function showWorkout(id,target="history") {
   const a=activities.find(x=>x.id===id);if(!a)return;
   const detailId=target==="home"?"homeWorkoutDetail":"workoutDetail";
   const stream=await getWorkoutStream(id),rows=buildStreamRows(stream),derived=rows.length?await maybePersistDerivedMetrics(a,rows):{};
+  const w=weatherNumbers(a);
   const items=[
     ["Date",localDate(a.start_time)],["Sport",a.sport_type||a.sport_category],["Distance",fmt(distanceKm(a),2," km")],["Duration",fmt(durationMin(a),0," min")],
     ["Average HR",fmt(a.avg_hr,0," bpm")],["Max HR",fmt(a.max_hr,0," bpm")],["Pace",fmtPace(a.avg_pace_min_km)],["Gradient-adjusted pace",fmtPace(a.avg_gap_pace_min_km)],
     ["Elevation",fmt(a.elevation_gain_m,0," m")],["Training load",fmt(derivedLoad(a),1)],["Average power",fmt(a.average_power,0," W")],["Normalized power",fmt(a.normalized_power,0," W")],
-    ["Cadence",fmt(a.cadence_spm,0)],["HR drift",fmt(a.hr_efficiency_drift_pct,1,"%")],["Gradient-normalized VO₂max",fmt(a.own_vo2max_estimate??derived.vo2,1)],["Apple VO₂max",fmt(a.apple_vo2max,1)]
+    ["Cadence",fmt(a.cadence_spm,0)],["HR drift",fmt(a.hr_efficiency_drift_pct,1,"%")],["Gradient-normalized VO₂max",fmt(a.own_vo2max_estimate??derived.vo2,1)],["Apple VO₂max",fmt(a.apple_vo2max,1)],
+    ["Weather start",(w.start_temp_c==null&&w.start_humidity_pct==null)?"—":fmt(w.start_temp_c,1," °C")+" · "+fmt(w.start_humidity_pct,0,"% RH")],
+    ["Weather finish",(w.end_temp_c==null&&w.end_humidity_pct==null)?"—":fmt(w.end_temp_c,1," °C")+" · "+fmt(w.end_humidity_pct,0,"% RH")],
+    ["Temperature range",(w.min_temp_c==null&&w.max_temp_c==null)?"—":fmt(w.min_temp_c,1," °C")+" – "+fmt(w.max_temp_c,1," °C")],
+    ["Humidity range",(w.min_humidity_pct==null&&w.max_humidity_pct==null)?"—":fmt(w.min_humidity_pct,0,"%")+" – "+fmt(w.max_humidity_pct,0,"%")]
   ];
   el(detailId).innerHTML='<h3>'+escapeHtml(a.name||"Workout")+'</h3><div class="detail-grid">'+items.map(i=>
     '<div class="detail-item"><div class="detail-key">'+escapeHtml(i[0])+'</div><div class="detail-value">'+escapeHtml(i[1])+'</div></div>'
