@@ -160,6 +160,12 @@ function bindUi() {
   el("duplicateOverwriteButton").addEventListener("click",()=>resolveDuplicateDecision("overwrite"));
   el("duplicateDialog").addEventListener("cancel",e=>{e.preventDefault();resolveDuplicateDecision("skip");});
   el("aiCoachButton").addEventListener("click", askAiCoach);
+  el("mlRecalculateButton").addEventListener("click",async()=>{
+    el("mlRecalculateButton").disabled=true;
+    try{await computeMlModelReport(true);await applyPersonalFatigueEfficiency();renderHistory();renderAnalysis();}
+    catch(err){el("mlAnalysisStatus").textContent="ML recalculation failed: "+(err.message||String(err));}
+    finally{el("mlRecalculateButton").disabled=false;}
+  });
   el("settingsButton").addEventListener("click", openSettings);
   el("settingsCloseButton").addEventListener("click", () => el("settingsDialog").close());
   el("settingsCancelButton").addEventListener("click", () => el("settingsDialog").close());
@@ -201,7 +207,7 @@ function openView(name) {
   if (target) target.classList.add("active");
   if (name === "history") renderHistory();
   if (name === "planner") renderPlanner();
-  if (name === "analysis") renderAnalysis();
+  if (name === "analysis") {renderAnalysis();renderMlAnalysis();}
 }
 
 async function loadProfile() {
@@ -1553,7 +1559,9 @@ function fatigueScoreSummary(splits){
   };
 }
 
+
 async function applyPersonalFatigueEfficiency(){
+  const report=await computeMlModelReport();
   const cutoff=daysAgo(180),candidates=activities.filter(a=>
     normalizeSport(a.sport_category||a.sport_type)==="run"&&new Date(a.start_time)>=cutoff
   );
@@ -1561,21 +1569,32 @@ async function applyPersonalFatigueEfficiency(){
   for(const a of candidates){
     const ownWeather=weatherNumbers(a);
     const canWeather=ownWeather.mean_temp_c!=null&&ownWeather.mean_humidity_pct!=null;
-    let model=canWeather?fitPersonalFatigueReference(a.id,true):null;
-    if(!model)model=fitPersonalFatigueReference(a.id,false);
-    if(!model)continue;
+    // Compare and train on identical feature spaces. For runs without weather,
+    // use the established no-weather Ridge reference rather than fake imputation.
+    const useWeather=!!(report&&report.uses_weather&&canWeather);
+    let ridge=fitPersonalFatigueReference(a.id,useWeather);
+    if(!ridge&&useWeather)ridge=fitPersonalFatigueReference(a.id,false);
+    if(!ridge)continue;
+
+    const useBoost=report&&report.selected==="gradient_boosting"&&
+      ridge.use_weather===!!report.uses_weather;
+    const heldOutTraining=personalFatigueSamples(a.id,ridge.use_weather).samples;
+    const boosted=useBoost?fitGradientBoostResidual(heldOutTraining,ridge):null;
+    const model=boosted||ridge,method=boosted?"gradient_boosting":"ridge";
+    const signature=ridge.signature+"|"+method+"|hr_ml_v1";
     const mj=safeJson(a.metrics_json,{}),splits=Array.isArray(mj.km_splits)?mj.km_splits.map(x=>({...x})):[];
     if(!splits.length)continue;
-    if(mj.fatigue_model_version==="personal180_weather_loo_v3"&&mj.fatigue_model_signature===model.signature)continue;
+    if(mj.fatigue_model_version==="personal180_ml_loo_v4"&&mj.fatigue_model_signature===signature)continue;
 
     for(const split of splits){
-      const x=fatigueFeatureVector(split,ownWeather,model.use_weather),actual=n(split.avg_hr);
+      const x=fatigueFeatureVector(split,ownWeather,ridge.use_weather),actual=n(split.avg_hr);
       if(!x||actual==null||actual<90||actual>205)continue;
       const expected=clamp(model.predict(x),85,205);
       split.expected_hr_personal=Math.round(expected*10)/10;
       split.hr_residual_vs_expected_bpm=Math.round((actual-expected)*10)/10;
       split.fatigue_adjusted_efficiency_score=Math.round((100*expected/actual)*10)/10;
-      split.weather_adjusted_reference=model.use_weather;
+      split.weather_adjusted_reference=ridge.use_weather;
+      split.hr_prediction_model=method;
     }
     const summary=fatigueScoreSummary(splits);if(!summary)continue;
     mj.km_splits=splits;
@@ -1584,18 +1603,20 @@ async function applyPersonalFatigueEfficiency(){
     mj.fatigue_adjusted_efficiency_last_third=Math.round(n(summary.last_third)*10)/10;
     mj.fatigue_adjusted_efficiency_drift_pct=summary.drift==null?null:Math.round(summary.drift*10)/10;
     mj.fatigue_hr_residual_bpm=summary.residual_bpm==null?null:Math.round(summary.residual_bpm*10)/10;
-    mj.fatigue_reference_n_splits=model.n_splits;
-    mj.fatigue_reference_n_runs=model.n_runs;
-    mj.fatigue_reference_rmse_bpm=Math.round(model.rmse*10)/10;
-    mj.fatigue_reference_uses_weather=model.use_weather?1:0;
-    mj.fatigue_model_version="personal180_weather_loo_v3";
-    mj.fatigue_model_signature=model.signature;
-    mj.fatigue_efficiency_note=model.use_weather
-      ?"100 = personal expected HR for current GAP speed, prior cumulative fatigue, temperature and humidity, learned from other runs in the previous 180 days; >100 = lower HR than expected."
-      :"100 = personal expected HR for current GAP speed and prior cumulative fatigue, learned from other runs in the previous 180 days; weather was unavailable or insufficient for this reference.";
+    mj.fatigue_reference_n_splits=ridge.n_splits;
+    mj.fatigue_reference_n_runs=ridge.n_runs;
+    mj.fatigue_reference_rmse_bpm=Math.round(ridge.rmse*10)/10;
+    mj.fatigue_reference_uses_weather=ridge.use_weather?1:0;
+    mj.fatigue_model_version="personal180_ml_loo_v4";
+    mj.fatigue_model_signature=signature;
+    mj.hr_prediction_model=method;
+    mj.fatigue_efficiency_note=
+      "100 = personal expected HR for GAP pace and prior fatigue, optionally weather-adjusted, using whole-run-excluded "+
+      method+"; >100 means lower HR than expected. Predictive, not medical.";
     const res=await client.from("activities").update({metrics_json:mj}).eq("id",a.id).eq("user_id",userId());
     if(!res.error){a.metrics_json=mj;changed++;}
   }
+  renderMlAnalysis();
   return changed;
 }
 
@@ -2115,6 +2136,7 @@ function renderAnalysis() {
     {margin:{l:45,r:15,t:15,b:40},xaxis:{title:"Week"},yaxis:{title:"km"},paper_bgcolor:"transparent",plot_bgcolor:"transparent"});
   Plotly.react("zonePlot",[{x:["Z1","Z2","Z3","Z4","Z5"],y:d.z.map(x=>x/60),type:"bar"}],
     {margin:{l:45,r:15,t:15,b:40},xaxis:{title:"HR zone"},yaxis:{title:"minutes"},paper_bgcolor:"transparent",plot_bgcolor:"transparent"});
+  renderMlAnalysis();
 }
 
 
