@@ -1655,7 +1655,7 @@ async function getWorkoutStream(id){
   streamCache.set(id,stream);return stream;
 }
 
-const WEATHER_VERSION="openmeteo_v2_peak";
+const WEATHER_VERSION="openmeteo_v3_peak_elevation";
 function utcDateString(ms){return new Date(ms).toISOString().slice(0,10);}
 function weatherNumbers(a){
   const m=safeJson(a&&a.metrics_json,{});
@@ -1692,7 +1692,7 @@ function seriesWindowValues(series,startMs,endMs,padMs){
   }
   return out;
 }
-async function fetchOpenMeteoSeries(lat,lon,startMs,endMs){
+async function fetchOpenMeteoSeries(lat,lon,startMs,endMs,elevation=null){
   const startDate=utcDateString(startMs-3600000),endDate=utcDateString(endMs+3600000);
   const recent=endMs>=Date.now()-91*86400000;
   const modern=startMs>=Date.UTC(2022,0,1);
@@ -1708,6 +1708,10 @@ async function fetchOpenMeteoSeries(lat,lon,startMs,endMs){
         latitude:String(lat),longitude:String(lon),start_date:startDate,end_date:endDate,
         hourly:"temperature_2m,relative_humidity_2m",timezone:"GMT",timeformat:"unixtime"
       });
+      const recordedAltitude=n(elevation);
+      // Open-Meteo supports downscaling to GPS altitude for mountain summits.
+      if(recordedAltitude!=null&&recordedAltitude>=-400&&recordedAltitude<=9000)
+        p.set("elevation",String(Math.round(recordedAltitude)));
       if(c.fine)p.set("minutely_15","temperature_2m,relative_humidity_2m");
       const response=await fetch(c.url+"?"+p.toString());
       if(!response.ok){lastError=new Error(c.label+" HTTP "+response.status);continue;}
@@ -1771,9 +1775,10 @@ async function fetchWeatherForActivity(activity){
   if(geo.peak)locations.push({name:"peak",point:geo.peak});
   const stations=[];
   for(const loc of locations){
-    const reused=stations.find(v=>nearbyWeatherStation(v.point,loc.point)<50*50);
+    const reused=stations.find(v=>nearbyWeatherStation(v.point,loc.point)<50*50&&
+      (n(v.point.alt)==null||n(loc.point.alt)==null||Math.abs(v.point.alt-loc.point.alt)<40));
     let series=reused&&reused.series;
-    if(!series)series=await fetchOpenMeteoSeries(loc.point.lat,loc.point.lon,geo.startMs,geo.endMs);
+    if(!series)series=await fetchOpenMeteoSeries(loc.point.lat,loc.point.lon,geo.startMs,geo.endMs,loc.point.alt);
     if(!series)return null;
     stations.push({...loc,series});
   }
@@ -1907,7 +1912,8 @@ async function showWorkout(id,target="history") {
     ["Weather finish",fmt(w.end_temp_c,1," °C")+" · "+fmt(w.end_humidity_pct,0,"% RH")],
     ["Temperature min–max",fmt(w.min_temp_c,1," °C")+" – "+fmt(w.max_temp_c,1," °C")],
     ["Humidity min–max",fmt(w.min_humidity_pct,0,"%")+" – "+fmt(w.max_humidity_pct,0,"%")],
-    ["Highest GPS point",w.peak_altitude_m!=null?fmt(w.peak_altitude_m,0," m")+" · "+fmt(w.peak_temp_c,1," °C")+" · "+fmt(w.peak_humidity_pct,0,"% RH"):"—"]
+    ["Highest GPS point",w.peak_altitude_m!=null?fmt(w.peak_altitude_m,0," m")+" · "+fmt(w.peak_temp_c,1," °C")+" · "+fmt(w.peak_humidity_pct,0,"% RH")+
+      (w.peak_time?" · "+new Date(w.peak_time).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):""):"—"]
   ];
   const rawSplits=Array.isArray(mj.km_splits)?mj.km_splits:[];
   const splits=rawSplits.length?
