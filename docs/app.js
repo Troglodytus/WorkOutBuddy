@@ -385,8 +385,13 @@ function normalizePlanOverride(raw,dateObj){
 
 function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
   if(!plan.length||n(c.runKm28Weekly,0)<=0)return plan;
-  const overload=c.loadRatio>1.55||c.hardMin7>65||c.lastHardHours<18;
+  const elevatedLoad=c.loadRatio>1.55||c.hardMin7>65;
+  const severeFatigue=c.loadRatio>1.9||c.hardMin7>80;
   const progression=[0,.025,.05,.08,.11][aggr-1];
+  // Combine the four-week baseline with a recent higher-volume week cautiously.
+  // This avoids treating a sporadic lower-volume month as an absolute fitness ceiling.
+  const baseline28=n(c.runKm28Weekly,0),recent7=n(c.runKm7,0);
+  const sustainableReference=baseline28+Math.min(Math.max(0,recent7-baseline28)*.35,baseline28*.35);
   for(let week=0;week<2;week++){
     const subset=plan.slice(week*7,(week+1)*7);
     const runSet=subset.filter(w=>!w.no_workout&&planSportCategory(w)==="run");
@@ -401,7 +406,10 @@ function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
       const w=eligible.slice().sort((a,b)=>n(b.distance_km,0)-n(a.distance_km,0))[0];
       if(w){w.family="long_run";w.title="Long easy run";w.zone="Z2 (conversational)";w.notes="Controlled aerobic endurance; do not turn this into a tempo run.";}
     }
-    if(aggr>=4&&runDays>=3&&n(c.runKm28Weekly,0)>=8&&!overload&&quality.length===0){
+    const allowQuality=week===1
+      ?(!severeFatigue)
+      :(!elevatedLoad&&c.lastHardHours>=36);
+    if(aggr>=4&&runDays>=3&&n(c.runKm28Weekly,0)>=8&&allowQuality&&quality.length===0){
       const longDay=runSet.find(w=>w.family==="long_run");
       const candidate=unlocked.filter(w=>w.family!=="long_run").sort((a,b)=>
         Math.abs(new Date(b.date)-new Date(longDay?longDay.date:subset[0].date))-
@@ -411,8 +419,8 @@ function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
         candidate.notes="Warm up 10–12 min; 3 × 3 min Z3–low Z4 / 2 min easy; cool down. Only progress if recovering well.";
       }
     }
-    const base=c.runKm28Weekly;
-    const maxTotal=Math.max(7,base*(1+progression)*(week===1?1.055:1));
+    const maxTotal=Math.max(7,sustainableReference*(week===0&&elevatedLoad?1:1+progression)*
+      (week===1?1.055:1));
     const lockedKm=sum(runSet.filter(w=>w.locked).map(w=>n(w.distance_km,0)));
     const kmBudget=Math.max(0,maxTotal-lockedKm);
     const weights=unlocked.map(w=>w.family==="long_run"?1.75:planIsHard(w)?1.05:1);
@@ -429,10 +437,13 @@ function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
         w.duration_min=Math.round(dist*(c.easyPace+.2));
       }else if(planIsHard(w)){
         w.title="Controlled intervals / tempo";
-        w.pace=aggr>=5?"3–4 × 3 min controlled Z4":"3 × 2–3 min Z3–Z4";
-        w.notes="10–12 min easy warm-up + "+(aggr>=5?"3–4 × 3 min":"3 × 2–3 min")+
-          " controlled faster running with 2 min easy recoveries + cool-down. Keep total distance within plan.";
-        w.duration_min=Math.round(Math.max(25,dist*c.easyPace));
+        const reps=dist>=5.5&&aggr>=5?4:dist>=4.2?3:2;
+        const minutesPerRep=aggr>=5?3:2.5;
+        w.pace=reps+" × "+minutesPerRep+" min controlled Z3–Z4";
+        w.notes="Easy warm-up 8–12 min; "+reps+" × "+minutesPerRep+
+          " min controlled Z3–Z4 with 2 min easy recoveries; easy cool-down. "+
+          "Keep total duration and distance within plan; skip intensity if fatigue develops.";
+        w.duration_min=Math.round(Math.max(24,dist*c.easyPace));
       }else{
         w.title=w.family==="recovery_aerobic"?"Recovery run":"Easy aerobic run";
         w.zone=w.family==="recovery_aerobic"?"Z1–low Z2":"Mostly Z2";
@@ -2588,7 +2599,7 @@ function plannerIntensityTargets(){
   const totalWeek1=weeklyKm>0?Math.max(5,weeklyKm*(1+gain)):null;
   const totalWeek2=totalWeek1!=null?totalWeek1*(1+Math.min(.07,gain*.65)):null;
   const sufficientBase=weeklyKm>=8&&runDays>=3;
-  const overload=c.loadRatio>1.55||c.hardMin7>65||(c.lastHardHours<18);
+  const overload=c.loadRatio>1.9||c.hardMin7>80;
   return {
     level,run_days_per_week:runDays,strength_per_week:clamp(Math.round(n(prefs.strength_sessions,1)),0,5),
     primary_goal:profile&&profile.goals&&profile.goals.primary_goal,
@@ -2603,6 +2614,7 @@ function plannerIntensityTargets(){
     desired_quality_per_week:level>=3&&sufficientBase&&!overload?1:0,
     desired_long_run_per_week:runDays>=2&&weeklyKm>=7?1:0,
     recovery_caution:overload,
+    elevated_recent_load:c.loadRatio>1.55||c.hardMin7>65,
     guidance:level>=4?"Ambitious, progressive mix of one quality, one long aerobic and remaining easy sessions when recovery permits":
       level===3?"Balanced progressive mix with occasional controlled intensity":
       "Conservative volume and low-intensity base development"
