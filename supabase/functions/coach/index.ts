@@ -21,6 +21,7 @@ const planSchema = {
   type: "object",
   properties: {
     summary: { type: "string" },
+    load_adjustment_reason: { type: "string" },
     plan: {
       type: "array",
       minItems: 14,
@@ -46,7 +47,7 @@ const planSchema = {
       },
     },
   },
-  required: ["summary","plan"],
+  required: ["summary","load_adjustment_reason","plan"],
   additionalProperties: false,
 };
 
@@ -105,17 +106,20 @@ Deno.serve(async (req: Request) => {
       "When evidence is weak or missing, say so explicitly. Keep recommendations progressive and avoid abrupt volume jumps.";
 
     const planInstructions =
-      "You are WorkOutBuddy's conservative endurance training planner. " +
-      "Evaluate the supplied current 14-day deterministic plan against the last 30 days of training, advanced workout metrics, profile/goals, deterministic race_predictions and prior AI evaluations. " +
-      "The profile.goals object contains the explicit primary race goal, goal date and target_minutes when configured. The plan should work toward that target while remaining realistic for current capability. " +
-      "Return a complete revised 14-day plan using exactly the dates supplied in current_plan. " +
-      "Manual/locked days in current_plan are constraints and must not be changed. " +
-      "Use first/second-half efficiency, raw/GAP HR drift, km drift, personal fatigue-adjusted efficiency, held-out ML accuracy, temperature/humidity, recent load, hard-zone exposure, best efforts, VO2max trend, impact heuristic and cross-training load when relevant. " +
-      "History contains only the last analysis as a brief stored summary; do not over-weight it. " +
-      "Do not chase noisy single-session metrics. Avoid abrupt volume jumps and generally avoid more than two genuinely hard endurance sessions in any rolling seven-day block. " +
-      "Use rest/recovery when recent load, durability or efficiency evidence supports it. " +
-      "The summary should briefly explain the important changes and why they were made. " +
-      "Do not diagnose medical conditions.";
+      "You are WorkOutBuddy's goal-oriented endurance training planner. Use planning_intensity.level (1-5) as a CORE constraint, not decorative metadata. " +
+      "1 = rehabilitation/conservative, 2 = conservative base, 3 = balanced, 4 = ambitious, 5 = ambitious structured progression within recovery limits. " +
+      "For levels 4-5, if recent running baseline and recovery support it, plan about one genuine controlled quality session (tempo, threshold or intervals), one progressively longer EASY aerobic run, and the remaining easy runs EACH week; preserve preferred run-days-per-week. " +
+      "Do not replace every quality session with short easy runs simply because the current goal is a half marathon or because long-term endurance is incomplete. " +
+      "Level 5 means a stronger training stimulus, NOT running hard every day or instantly doubling mileage. Include warmup, recovery intervals and cool-down inside quality session notes. " +
+      "The planning_intensity object contains historic weekly volume, long-run ability, recommended week-1/week-2 progression and a recovery caution flag. " +
+      "Use the last 30 days of actual workouts, intensity distribution, fatigue/drift, weather, cross-training load and the current 14-day plan to make the next steps realistic. " +
+      "If recent fatigue, illness, injury indications or other evidence require dropping all quality work or reducing training substantially, explain precisely why in load_adjustment_reason. " +
+      "Otherwise keep load_adjustment_reason empty. The application validates your result and may reject an unjustifiably easy or excessive plan. " +
+      "Target roughly the suggested volume progression in planning_intensity when feasible, avoid abrupt increases and never exceed two truly hard endurance sessions in any rolling seven days. " +
+      "Keep manual/locked days unchanged and use exactly the 14 dates in current_plan. Return all required plan fields for every date. " +
+      "The profile.goals object contains the primary race, date and target_minutes. Distinguish the athlete's desired finish time from conservative current capability. " +
+      "History is only one prior analysis summary. Treat ML errors/importance as predictive evidence, not medical certainty. " +
+      "State a concise rationale in summary including the selected aggressiveness level and the key quality/long-run structure. Do not diagnose medical conditions.";
 
     const input =
       (mode === "plan"
@@ -161,7 +165,7 @@ Deno.serve(async (req: Request) => {
     if (mode === "plan") {
       try {
         const parsed = JSON.parse(text);
-        return Response.json({ summary: parsed.summary, plan: parsed.plan, model }, { headers: corsHeaders });
+        return Response.json({ summary: parsed.summary, load_adjustment_reason: parsed.load_adjustment_reason, plan: parsed.plan, model }, { headers: corsHeaders });
       } catch {
         return Response.json({ error: "AI returned invalid structured plan JSON" }, { status: 502, headers: corsHeaders });
       }
