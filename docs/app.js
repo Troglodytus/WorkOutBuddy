@@ -382,6 +382,67 @@ function normalizePlanOverride(raw,dateObj){
   }
   return w;
 }
+
+function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
+  if(!plan.length||n(c.runKm28Weekly,0)<=0)return plan;
+  const overload=c.loadRatio>1.55||c.hardMin7>65||c.lastHardHours<18;
+  const progression=[0,.025,.05,.08,.11][aggr-1];
+  for(let week=0;week<2;week++){
+    const subset=plan.slice(week*7,(week+1)*7);
+    const runSet=subset.filter(w=>!w.no_workout&&planSportCategory(w)==="run");
+    const unlocked=runSet.filter(w=>!w.locked);
+    if(!unlocked.length)continue;
+    const quality=runSet.filter(planIsHard);
+    const longs=runSet.filter(w=>w.family==="long_run");
+    // Keep the manual dates exactly as entered. Use existing automatic run days
+    // to create variety rather than scheduling unrequested extra hard days.
+    if(runDays>=2&&longs.length===0){
+      const eligible=unlocked.filter(w=>!planIsHard(w));
+      const w=eligible.slice().sort((a,b)=>n(b.distance_km,0)-n(a.distance_km,0))[0];
+      if(w){w.family="long_run";w.title="Long easy run";w.zone="Z2 (conversational)";w.notes="Controlled aerobic endurance; do not turn this into a tempo run.";}
+    }
+    if(aggr>=4&&runDays>=3&&n(c.runKm28Weekly,0)>=8&&!overload&&quality.length===0){
+      const longDay=runSet.find(w=>w.family==="long_run");
+      const candidate=unlocked.filter(w=>w.family!=="long_run").sort((a,b)=>
+        Math.abs(new Date(b.date)-new Date(longDay?longDay.date:subset[0].date))-
+        Math.abs(new Date(a.date)-new Date(longDay?longDay.date)))[0];
+      if(candidate){
+        candidate.family="quality";candidate.title="Controlled quality run";candidate.zone="Z3–Z4 work with easy recoveries";
+        candidate.notes="Warm up 10–12 min; 3 × 3 min Z3–low Z4 / 2 min easy; cool down. Only progress if recovering well.";
+      }
+    }
+    const base=c.runKm28Weekly;
+    const maxTotal=Math.max(7,base*(1+progression)*(week===1?1.055:1));
+    const lockedKm=sum(runSet.filter(w=>w.locked).map(w=>n(w.distance_km,0)));
+    const kmBudget=Math.max(0,maxTotal-lockedKm);
+    const weights=unlocked.map(w=>w.family==="long_run"?1.75:planIsHard(w)?1.05:1);
+    const weightSum=sum(weights);
+    if(weightSum<=0)continue;
+    unlocked.forEach((w,i)=>{
+      // If a locked workout already consumes the weekly budget, automatic runs
+      // become short recoveries rather than multiplying total load.
+      const targetKm=kmBudget*weights[i]/weightSum;
+      const dist=clamp(targetKm,0,w.family==="long_run"?c.longestRun+1.5:10);
+      w.distance_km=Math.round(dist*10)/10;
+      if(w.family==="long_run"){
+        w.title="Long easy run";w.pace=fmtPace(c.easyPace+.2);
+        w.duration_min=Math.round(dist*(c.easyPace+.2));
+      }else if(planIsHard(w)){
+        w.title="Controlled intervals / tempo";
+        w.pace=aggr>=5?"3–4 × 3 min controlled Z4":"3 × 2–3 min Z3–Z4";
+        w.notes="10–12 min easy warm-up + "+(aggr>=5?"3–4 × 3 min":"3 × 2–3 min")+
+          " controlled faster running with 2 min easy recoveries + cool-down. Keep total distance within plan.";
+        w.duration_min=Math.round(Math.max(25,dist*c.easyPace));
+      }else{
+        w.title=w.family==="recovery_aerobic"?"Recovery run":"Easy aerobic run";
+        w.zone=w.family==="recovery_aerobic"?"Z1–low Z2":"Mostly Z2";
+        w.pace=fmtPace(c.easyPace+.15);
+        w.duration_min=Math.round(dist*(c.easyPace+.15));
+      }
+    });
+  }
+  return plan;
+}
 function buildFourteenDayPlan(){
   const c=trainingContext(),pref=(profile&&profile.training_preferences)||{},overrides=safeJson(pref.manual_plan_overrides,{})||{};
   const runDays=clamp(parseInt(pref.weekly_run_days||3,10),1,7),strengthTarget=clamp(parseInt(pref.strength_sessions||2,10),0,5);
@@ -431,6 +492,7 @@ function buildFourteenDayPlan(){
     const cat=planSportCategory(w);if(!w.no_workout){if(cat==="run")counts.run++;if(cat==="strength")counts.strength++;if(planIsHard(w))counts.quality++;}
     out.push(w);plannedContext.push(w);
   }
+  tuneDeterministicPlanIntensity(out,c,aggr,runDays);
   currentPlan=out;return out;
 }
 
