@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=1.0.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -102,6 +102,7 @@
         </div>
         <div id="homeCursorReadout" class="cursor-readout hidden"></div>
         <div id="homeStreamPlot" class="plot compact hidden"></div>
+        <div id="homeWorkoutMetrics" class="workout-extended-metrics"></div>
       </article>
     </section>
 
@@ -183,6 +184,7 @@
         </div>
         <div id="historyCursorReadout" class="cursor-readout hidden"></div>
         <div id="streamPlot" class="plot compact hidden"></div>
+        <div id="historyWorkoutMetrics" class="workout-extended-metrics"></div>
       </article>
     </section>
 
@@ -218,6 +220,19 @@
         <article class="panel"><h3>Weekly run volume</h3><div id="weeklyVolumePlot" class="plot compact"></div></article>
         <article class="panel"><h3>Intensity distribution</h3><div id="zonePlot" class="plot compact"></div></article>
       </div>
+      <article class="panel" id="mlAnalysisPanel">
+        <div class="panel-head">
+          <div><div class="eyebrow">PERSONAL MACHINE LEARNING</div><h2>Heart-rate prediction &amp; durability</h2></div>
+          <button id="mlRecalculateButton" class="secondary small">Recalculate ML</button>
+        </div>
+        <div id="mlAnalysisStatus" class="status">The model is evaluated using whole-workout cross-validation.</div>
+        <div id="mlAnalysisMetrics" class="analysis-cards"></div>
+        <div class="analysis-grid">
+          <div><h3>Ridge vs Gradient Boosting</h3><div id="mlModelComparison" class="plot compact"></div></div>
+          <div><h3>Feature influence</h3><div id="mlFeatureImportance" class="plot compact"></div></div>
+        </div>
+        <div id="mlAnalysisExplanation" class="muted small-note"></div>
+      </article>
       <article class="panel">
         <div class="panel-head"><div><div class="eyebrow">AI COACH</div><h2>Interpretation</h2></div></div>
         <div id="aiCoachOutput" class="markdown-output muted">The cards, evidence and plots above are the deterministic WorkOutBuddy analysis. “Ask AI coach” optionally adds an OpenAI interpretation; it does not replace the deterministic calculations.</div>
@@ -358,7 +373,7 @@
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="./config.js?v=1.0.0"></script>
-  <script src="./app.js?v=1.0.0"></script>
+  <script src="./config.js?v=1.0.1"></script>
+  <script src="./app.js?v=1.0.1"></script>
 </body>
 </html>
