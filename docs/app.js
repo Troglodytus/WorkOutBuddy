@@ -720,9 +720,12 @@ function renderRaceTrend(){
     yaxis:{title:"Estimated finish time",tickvals:ticks,ticktext:ticks.map(raceTimeText),automargin:true},
     shapes,paper_bgcolor:"transparent",plot_bgcolor:"transparent"
   },{responsive:true,displaylogo:false});
-  status.textContent="Weekly retrospective estimates using only workouts available by each date. "+
-    "Error bars are heuristic uncertainty ranges (not statistical confidence intervals). "+
-    "The 10 km, half-marathon and marathon estimates reflect training readiness as well as VO₂/pace evidence.";
+  const first=pts[0],last=pts[pts.length-1],gain=first.minutes-last.minutes;
+  const trend=Math.abs(gain)<.1?"Overall estimate approximately stable. ":
+    "Change since first displayed estimate: "+(gain>0?"faster by ":"slower by ")+raceTimeText(Math.abs(gain))+". ";
+  status.textContent=trend+(target!=null?"Dashed horizontal line = configured race target. ":"")+
+    "Each weekly estimate uses only workouts available at that time. "+
+    "Error bars are heuristic uncertainty ranges, not statistical confidence intervals; long-race capability is particularly uncertain with limited long runs.";
 }
 function renderPlanner(){
   const plan=currentPlan.length?currentPlan:buildFourteenDayPlan();
