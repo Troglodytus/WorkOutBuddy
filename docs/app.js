@@ -649,6 +649,12 @@ function renderPlanner(){
   const totalMin=sum(plan.map(w=>n(w.duration_min,0)));
   const manual=plan.filter(w=>w.locked).length;
   el("plannerSummary").textContent="Next 14 days: "+runKm.toFixed(1)+" run km · "+Math.round(rideMin)+" ride min · "+Math.round(totalMin)+" total min · "+manual+" manual override"+(manual===1?"":"s");
+  const target=plannerIntensityTargets(),quality=plan.filter(x=>!x.no_workout&&planIsHard(x)).length;
+  const longCount=plan.filter(x=>!x.no_workout&&x.family==="long_run").length;
+  el("plannerIntensitySummary").textContent="Training level "+target.level+"/5 · "+target.run_days_per_week+
+    " planned run days/week · "+quality+" quality workouts · "+longCount+" long runs / 14 days"+
+    (target.recent_weekly_run_km>0?" · recent baseline "+target.recent_weekly_run_km.toFixed(1)+" km/week":"")+
+    ". Higher intensity means purposeful quality and progression, not an unbounded volume increase.";
   renderRacePredictions();
   renderRaceTrend();
   el("plannerCalendar").innerHTML=plan.map((w,i)=>
@@ -2508,19 +2514,84 @@ function validateAiPlan(raw,base){
   }
   return out;
 }
+
+function plannerIntensityTargets(){
+  const c=trainingContext(),prefs=(profile&&profile.training_preferences)||{};
+  const level=clamp(Math.round(n(prefs.training_aggressiveness,3)),1,5);
+  const runDays=clamp(Math.round(n(prefs.weekly_run_days,3)),1,7);
+  const weeklyKm=n(c.runKm28Weekly,0);
+  // Aggressiveness controls training stimulus and allowed progressive adaptation,
+  // NOT how many hard days to run.
+  const gain=[0,.025,.05,.08,.11][level-1];
+  const totalWeek1=weeklyKm>0?Math.max(5,weeklyKm*(1+gain)):null;
+  const totalWeek2=totalWeek1!=null?totalWeek1*(1+Math.min(.07,gain*.65)):null;
+  const sufficientBase=weeklyKm>=8&&runDays>=3;
+  const overload=c.loadRatio>1.55||c.hardMin7>65||(c.lastHardHours<18);
+  return {
+    level,run_days_per_week:runDays,strength_per_week:clamp(Math.round(n(prefs.strength_sessions,1)),0,5),
+    primary_goal:profile&&profile.goals&&profile.goals.primary_goal,
+    target_minutes:n(profile&&profile.goals&&profile.goals.target_minutes),
+    goal_date:profile&&profile.goals&&profile.goals.goal_date,
+    recent_weekly_run_km:Math.round(weeklyKm*10)/10,
+    recent_longest_run_km:Math.round(n(c.longestRun,0)*10)/10,
+    acute_load_ratio:Math.round(c.loadRatio*100)/100,recent_z45_min:Math.round(c.hardMin7),
+    hours_since_last_hard:Math.round(c.lastHardHours),
+    target_week1_run_km:totalWeek1==null?null:Math.round(totalWeek1*10)/10,
+    target_week2_run_km:totalWeek2==null?null:Math.round(totalWeek2*10)/10,
+    desired_quality_per_week:level>=3&&sufficientBase&&!overload?1:0,
+    desired_long_run_per_week:runDays>=2&&weeklyKm>=7?1:0,
+    recovery_caution:overload,
+    guidance:level>=4?"Ambitious, progressive mix of one quality, one long aerobic and remaining easy sessions when recovery permits":
+      level===3?"Balanced progressive mix with occasional controlled intensity":
+      "Conservative volume and low-intensity base development"
+  };
+}
+function aiPlanWorkloadChecks(candidate,constraints,reason=""){
+  const problems=[];
+  const weeks=[candidate.slice(0,7),candidate.slice(7,14)];
+  const quality=weeks.map(w=>w.filter(x=>!x.no_workout&&planIsHard(x)).length);
+  const longs=weeks.map(w=>w.filter(x=>!x.no_workout&&x.family==="long_run").length);
+  const volume=weeks.map(w=>sum(w.filter(x=>!x.no_workout&&planSportCategory(x)==="run").map(x=>n(x.distance_km,0))));
+  const reasons=String(reason||"").trim();
+  const flags=/injur|pain|fatigue|overload|overtrain|recovery|medical|ill|illness|symptom|reduc/i.test(reasons);
+  if(constraints.level>=4&&!constraints.recovery_caution&&constraints.recent_weekly_run_km>=8){
+    if(constraints.desired_quality_per_week&&quality[0]+quality[1]===0&&!flags)
+      problems.push("All quality sessions were removed despite level "+constraints.level+" and no clear recovery justification.");
+    if(constraints.desired_long_run_per_week&&longs[0]+longs[1]===0&&!flags)
+      problems.push("Both long aerobic runs were removed without a recovery justification.");
+  }
+  const base=constraints.recent_weekly_run_km;
+  if(base>=8){
+    if(volume[0]>base*1.22+1&&volume[0]>base+4)
+      problems.push("Week 1 running volume exceeds conservative progression limits.");
+    if(volume[1]>Math.max(base*1.34+1,volume[0]*1.18+1)&&volume[1]>base+4)
+      problems.push("Week 2 running volume exceeds progression limits.");
+  }
+  for(let start=0;start<=7;start++){
+    if(candidate.slice(start,start+7).filter(planIsHard).length>2)
+      problems.push("More than two hard sessions in a rolling seven-day window.");
+  }
+  return {problems,quality,longs,volume};
+}
 async function askAiPlanner(){
   if(!client)return;
   el("plannerAiButton").disabled=true;
   el("plannerAiStatus").textContent="Deriving the last 30 days and asking AI to evaluate the 14-day plan…";
   try{
     const base=currentPlan.length?currentPlan:buildFourteenDayPlan();
+    const constraints=plannerIntensityTargets();
     const compact=await activitiesForAi(30);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"plan",ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
+      mode:"plan",ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,
+      planning_intensity:constraints,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error)throw result.error;
     const candidate=validateAiPlan(result.data&&result.data.plan,base);
     if(!candidate)throw new Error("AI returned an invalid 14-day plan; existing plan was left unchanged.");
+    const reason=String(result.data&&result.data.load_adjustment_reason||"");
+    const checks=aiPlanWorkloadChecks(candidate,constraints,reason);
+    if(checks.problems.length)throw new Error("AI plan rejected: "+checks.problems.join(" ")+
+      " Deterministic plan remains unchanged.");
     const summary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan."),model=(result.data&&result.data.model)||"unknown";
     currentPlan=candidate;
     await persistPlan(candidate,"ai_coach_v1",{ai_summary:summary,model});
