@@ -2129,7 +2129,10 @@ async function importSelectedFiles() {
   el("importFilesButton").disabled=false;
   await loadActivities(); streamCache.clear(); renderAll(); enrichMetricsInBackground();
   el("uploadStatus").textContent="Imported "+ok+(overwritten?" · overwritten "+overwritten:"")+(skipped?" · skipped "+skipped:"")+".";
-  if(ok||overwritten)setTimeout(()=>el("uploadDialog").close(),900);
+  if(ok||overwritten){
+    refreshMissingWeather().catch(err=>console.warn("Automatic weather enrichment failed",err));
+    setTimeout(()=>el("uploadDialog").close(),900);
+  }
 }
 
 async function sha256(file) {
