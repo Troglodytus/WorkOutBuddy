@@ -1956,11 +1956,13 @@ function compactKmEfficiencyForAi(a){
 }
 function activityForAi(a,detailLevel="full"){
   if(detailLevel==="compact"){
+    const w=weatherNumbers(a);
     return {
       detail_level:"compact",start_time:a.start_time,sport:a.sport_category||a.sport_type,
       distance_km:distanceKm(a),duration_min:durationMin(a),avg_hr:n(a.avg_hr),
       training_load_score:n(a.training_load_score)??n(a.trimp_score),
-      vo2max:n(a.apple_vo2max)??n(a.own_vo2max_estimate)??n(a.estimated_vo2max)
+      vo2max:n(a.apple_vo2max)??n(a.own_vo2max_estimate)??n(a.estimated_vo2max),
+      temp_c:w.mean_temp_c,humidity_pct:w.mean_humidity_pct
     };
   }
   return {
