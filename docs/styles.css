@@ -79,3 +79,13 @@ textarea{font:inherit;border:1px solid #cbd5e1;border-radius:10px;padding:10px 1
 .ai-history summary{cursor:pointer;font-weight:700;color:#344054}
 .ai-history .history-body{margin-top:8px;font-size:.82rem;color:#475467}
 .advanced-metric{background:#fbfcfe}
+
+/* v1.0.1 – compact metrics above map, extended physiology below plot */
+.workout-primary-metrics{display:grid;grid-template-columns:repeat(5,minmax(105px,1fr));gap:10px;margin:10px 0}
+.workout-primary-metrics .detail-item{padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:#fafcff}
+.workout-extended-metrics{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.workout-extended-metrics .detail-grid{margin-top:8px}
+.workout-metrics-title{font-weight:750;margin:6px 0 10px}
+#mlAnalysisMetrics{margin:12px 0}
+#mlAnalysisPanel .analysis-grid{margin-top:8px}
+@media(max-width:800px){.workout-primary-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
