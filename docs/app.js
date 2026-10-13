@@ -1852,25 +1852,60 @@ async function renderLatestWorkout(){
   }
   await showWorkout(activities[0].id,"home");
 }
+
 async function showWorkout(id,target="history") {
   if(target==="history")selectedActivityId=id;
   const a=activities.find(x=>x.id===id);if(!a)return;
   const detailId=target==="home"?"homeWorkoutDetail":"workoutDetail";
+  const belowId=target==="home"?"homeWorkoutMetrics":"historyWorkoutMetrics";
   const stream=await getWorkoutStream(id),rows=buildStreamRows(stream),derived=rows.length?await maybePersistDerivedMetrics(a,rows):{};
-  const w=weatherNumbers(a);
-  const items=[
-    ["Date",localDate(a.start_time)],["Sport",a.sport_type||a.sport_category],["Distance",fmt(distanceKm(a),2," km")],["Duration",fmt(durationMin(a),0," min")],
-    ["Average HR",fmt(a.avg_hr,0," bpm")],["Max HR",fmt(a.max_hr,0," bpm")],["Pace",fmtPace(a.avg_pace_min_km)],["Gradient-adjusted pace",fmtPace(a.avg_gap_pace_min_km)],
-    ["Elevation",fmt(a.elevation_gain_m,0," m")],["Training load",fmt(derivedLoad(a),1)],["Average power",fmt(a.average_power,0," W")],["Normalized power",fmt(a.normalized_power,0," W")],
-    ["Cadence",fmt(a.cadence_spm,0)],["HR drift",fmt(a.hr_efficiency_drift_pct,1,"%")],["Gradient-normalized VO₂max",fmt(a.own_vo2max_estimate??derived.vo2,1)],["Apple VO₂max",fmt(a.apple_vo2max,1)],
-    ["Weather start",(w.start_temp_c==null&&w.start_humidity_pct==null)?"—":fmt(w.start_temp_c,1," °C")+" · "+fmt(w.start_humidity_pct,0,"% RH")],
-    ["Weather finish",(w.end_temp_c==null&&w.end_humidity_pct==null)?"—":fmt(w.end_temp_c,1," °C")+" · "+fmt(w.end_humidity_pct,0,"% RH")],
-    ["Temperature range",(w.min_temp_c==null&&w.max_temp_c==null)?"—":fmt(w.min_temp_c,1," °C")+" – "+fmt(w.max_temp_c,1," °C")],
-    ["Humidity range",(w.min_humidity_pct==null&&w.max_humidity_pct==null)?"—":fmt(w.min_humidity_pct,0,"%")+" – "+fmt(w.max_humidity_pct,0,"%")]
+  const w=weatherNumbers(a),mj=safeJson(a.metrics_json,{});
+  const primary=[
+    ["Date",localDate(a.start_time)],["Type",a.sport_type||a.sport_category],
+    ["Distance",fmt(distanceKm(a),2," km")],["Duration",fmt(durationMin(a),0," min")],
+    ["Avg HR",fmt(a.avg_hr,0," bpm")]
   ];
-  el(detailId).innerHTML='<h3>'+escapeHtml(a.name||"Workout")+'</h3><div class="detail-grid">'+items.map(i=>
-    '<div class="detail-item"><div class="detail-key">'+escapeHtml(i[0])+'</div><div class="detail-value">'+escapeHtml(i[1])+'</div></div>'
-  ).join("")+'</div><div class="vo2-method">VO₂max estimate is a heuristic for running: pointwise ACSM oxygen cost is grade-corrected and scaled by heart-rate reserve. It is useful for within-person trends, not a substitute for a laboratory VO₂max test.</div>';
+  el(detailId).innerHTML='<h3>'+escapeHtml(a.name||"Workout")+'</h3><div class="workout-primary-metrics">'+
+    primary.map(i=>'<div class="detail-item"><div class="detail-key">'+escapeHtml(i[0])+
+      '</div><div class="detail-value">'+escapeHtml(i[1])+'</div></div>').join("")+"</div>";
+  const secondary=[
+    ["Max HR",fmt(a.max_hr,0," bpm")],
+    ["Pace",fmtPace(a.avg_pace_min_km)],
+    ["Gradient-adjusted pace",fmtPace(a.avg_gap_pace_min_km)],
+    ["Elevation gain / loss",fmt(a.elevation_gain_m,0," m")+" / "+fmt(a.elevation_loss_m,0," m")],
+    ["Training load",fmt(derivedLoad(a),1)],
+    ["Z1–Z2 / Z4–Z5",fmt(n(a.easy_zone_fraction)!=null?n(a.easy_zone_fraction)*100:null,0,"%")+" / "+fmt(n(a.hard_zone_fraction)!=null?n(a.hard_zone_fraction)*100:null,0,"%")],
+    ["HR drift",fmt(a.hr_efficiency_drift_pct,1,"%")],
+    ["GAP HR drift",fmt(a.gap_hr_efficiency_drift_pct,1,"%")],
+    ["Fatigue-adjusted HR score",fmt(mj.fatigue_adjusted_efficiency_score,1)],
+    ["HR residual vs expectation",fmt(mj.fatigue_hr_residual_bpm,1," bpm")],
+    ["HR model",mj.hr_prediction_model==="gradient_boosting"?"Gradient Boosting":mj.hr_prediction_model==="ridge"?"Ridge":"—"],
+    ["Power / normalized power",fmt(a.average_power,0," W")+" / "+fmt(a.normalized_power,0," W")],
+    ["Cadence",fmt(a.cadence_spm,0," spm")],
+    ["Estimated steps",fmt(mj.estimated_total_steps,0)],
+    ["Best 5-min pace",fmtPace(mj.best_5min_pace_min_km)],
+    ["Gradient-normalized VO₂max",fmt(a.own_vo2max_estimate??derived.vo2,1)],
+    ["Apple VO₂max",fmt(a.apple_vo2max,1)],
+    ["Weather start",fmt(w.start_temp_c,1," °C")+" · "+fmt(w.start_humidity_pct,0,"% RH")],
+    ["Weather finish",fmt(w.end_temp_c,1," °C")+" · "+fmt(w.end_humidity_pct,0,"% RH")],
+    ["Temperature min–max",fmt(w.min_temp_c,1," °C")+" – "+fmt(w.max_temp_c,1," °C")],
+    ["Humidity min–max",fmt(w.min_humidity_pct,0,"%")+" – "+fmt(w.max_humidity_pct,0,"%")],
+    ["Highest GPS point",w.peak_altitude_m!=null?fmt(w.peak_altitude_m,0," m")+" · "+fmt(w.peak_temp_c,1," °C")+" · "+fmt(w.peak_humidity_pct,0,"% RH"):"—"]
+  ];
+  const rawSplits=Array.isArray(mj.km_splits)?mj.km_splits:[];
+  const splits=rawSplits.length?
+    '<details><summary>Per-kilometre efficiency ('+rawSplits.length+' splits)</summary>'+
+    '<div class="table-wrap"><table class="workout-table"><thead><tr><th>km</th><th>Pace</th><th>GAP</th><th>HR</th><th>Expected HR</th><th>Score</th><th>Prior load</th></tr></thead><tbody>'+
+    rawSplits.map(r=>'<tr><td>'+escapeHtml(r.km)+'</td><td>'+escapeHtml(fmtPace(r.avg_pace_min_km))+'</td>'+
+      '<td>'+escapeHtml(fmtPace(r.avg_gap_pace_min_km))+'</td><td>'+escapeHtml(fmt(r.avg_hr,0))+'</td>'+
+      '<td>'+escapeHtml(fmt(r.expected_hr_personal,0))+'</td>'+
+      '<td>'+escapeHtml(fmt(r.fatigue_adjusted_efficiency_score,1))+'</td>'+
+      '<td>'+escapeHtml(fmt(r.cumulative_hr_load_before,1))+'</td></tr>').join("")+
+    '</tbody></table></div></details>':"";
+  el(belowId).innerHTML='<div class="workout-metrics-title">Training metrics & weather</div>'+
+    '<div class="detail-grid">'+secondary.map(i=>'<div class="detail-item"><div class="detail-key">'+escapeHtml(i[0])+
+      '</div><div class="detail-value">'+escapeHtml(i[1])+'</div></div>').join("")+'</div>'+
+    '<p class="muted small-note">HR model scores are personalized predictive estimates, not clinical findings. Weather comes from gridded models; mountain temperatures are approximate.</p>'+splits;
   renderStreamViewer(rows,target);
   if(target==="history")renderWorkoutTable(filteredActivities());
 }
