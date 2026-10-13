@@ -1465,7 +1465,7 @@ async function computeMlModelReport(force=false){
       for(let k=0;k<groups.length;k++){
         const hold=groups[k],train=data.samples.filter(s=>s.activity_id!==hold),test=data.samples.filter(s=>s.activity_id===hold);
         if(train.length<20)continue;
-        const ridge=fitRidgeRegression(train,useWeather?1.1:.8);
+        const ridge=fitPersonalFatigueReference(hold,useWeather);
         if(!ridge)continue;
         const boosting=mlEligible?fitGradientBoostResidual(train,ridge):null;
         for(const sample of test){
