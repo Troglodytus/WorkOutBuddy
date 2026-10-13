@@ -2228,24 +2228,53 @@ function renderAnalysis() {
 
 
 
+
+const AI_ADVANCED_KEYS=[
+  "first_half_avg_hr","second_half_avg_hr","first_half_avg_gap_speed_mps","second_half_avg_gap_speed_mps",
+  "first_half_eff_gap_speed_per_hr","second_half_eff_gap_speed_per_hr",
+  "hr_efficiency_drift_pct","gap_hr_efficiency_drift_pct","km_gap_hr_efficiency_drift_pct",
+  "fatigue_adjusted_efficiency_score","fatigue_adjusted_efficiency_last_third",
+  "fatigue_adjusted_efficiency_drift_pct","fatigue_hr_residual_bpm",
+  "fatigue_reference_n_runs","fatigue_reference_rmse_bpm",
+  "weather_start_temp_c","weather_end_temp_c","weather_peak_temp_c",
+  "weather_mean_temp_c","weather_mean_humidity_pct",
+  "weather_min_temp_c","weather_max_temp_c",
+  "best_5min_pace_min_km","best_20min_pace_min_km","normalized_power_w","power_hr_efficiency",
+  "moving_ratio","impact_load_index"
+];
 function scalarMetricsJson(a){
   const src=safeJson(a.metrics_json,{}),out={};
-  for(const [k,v] of Object.entries(src)){
-    if(typeof v==="number"&&Number.isFinite(v))out[k]=v;
-    else if(typeof v==="boolean")out[k]=v;
-    else if(typeof v==="string"&&["advanced_metrics_version","step_frequency_source","speed_source","metrics_quality","fatigue_model_version"].includes(k))out[k]=v;
+  for(const key of AI_ADVANCED_KEYS){
+    const v=src[key];if(typeof v==="number"&&Number.isFinite(v))out[key]=Math.round(v*100)/100;
   }
+  if(src.hr_prediction_model)out.hr_prediction_model=src.hr_prediction_model;
   return out;
 }
 function compactKmEfficiencyForAi(a){
   const splits=safeJson(a.metrics_json,{}).km_splits;
   if(!Array.isArray(splits))return [];
-  return splits.map(s=>({
-    km:n(s.km),avg_hr:n(s.avg_hr),gap_pace_min_km:n(s.avg_gap_pace_min_km),
+  const step=Math.max(1,Math.ceil(splits.length/8));
+  const chosen=splits.filter((_,i)=>i===0||i===splits.length-1||i%step===0).slice(0,9);
+  return chosen.map(s=>({
+    km:n(s.km),avg_hr:n(s.avg_hr),gap_pace:n(s.avg_gap_pace_min_km),
     prior_load:n(s.cumulative_hr_load_before),prior_z45_min:n(s.cumulative_z45_before_min),
-    prior_time_min:n(s.cumulative_duration_before_min),expected_hr:n(s.expected_hr_personal),
     fatigue_efficiency:n(s.fatigue_adjusted_efficiency_score),hr_residual_bpm:n(s.hr_residual_vs_expected_bpm)
   }));
+}
+
+
+function compactAnalysisForAi(d){
+  return {
+    fitness_trend:d.trend,fitness_trend_note:d.trendNote,aerobic_base:d.baseStatus,
+    durability:d.durability,durability_note:d.durabilityNote,load_status:d.loadStatus,
+    run_volume_status:d.volumeStatus,easy_zone_pct:d.easyPct,hard_zone_pct:d.hardPct,
+    weekly_run_km:d.c&&d.c.runKm28Weekly,acute_load_ratio:d.c&&d.c.loadRatio,
+    weather:d.weather?{
+      median_temp_c:d.weather.median_temp_c,median_humidity_pct:d.weather.median_humidity_pct,
+      hot_count:d.weather.hot_count,weather_adjusted_runs:d.weather.weather_adjusted_runs
+    }:null,
+    evidence:(d.evidence||[]).slice(0,7)
+  };
 }
 function activityForAi(a,detailLevel="full"){
   if(detailLevel==="compact"){
@@ -2296,12 +2325,25 @@ async function loadAiHistory(){
   aiHistory=res.data||[];
   renderAiHistory();
 }
-function aiHistoryPayload(limit=4,maxChars=1200){
-  return aiHistory.slice(0,limit).map(h=>{
-    const d=safeJson(h.deterministic,{});
-    const raw=String(h.llm_markdown||"");
-    return {created_at:h.created_at,evaluation_type:d.evaluation_type||"analysis",model:h.model,text:raw.slice(0,maxChars)};
-  });
+
+function summarizeAiMemory(text){
+  const raw=String(text||"").replace(/\r/g,""),sections=raw.split(/^##\s+/m).filter(Boolean),parts=[];
+  for(const section of sections){
+    const lines=section.split("\n"),title=(lines.shift()||"").trim();
+    const paragraph=lines.join(" ").replace(/[#*_\`>]/g,"").replace(/\[[^\]]+\]\([^)]+\)/g,"").replace(/\s+/g," ").trim();
+    if(!paragraph)continue;
+    parts.push(title+": "+paragraph.slice(0,title.toLowerCase().includes("evidence")?110:220));
+  }
+  return (parts.length?parts.join(" | "):raw.replace(/[#*_]/g,"").replace(/\s+/g," ")).slice(0,850);
+}
+function aiHistoryPayload(){
+  // Only the last ANALYSIS is used as memory. Historical evaluations and plans
+  // remain stored in full in Supabase, but are not retransmitted to OpenAI.
+  const last=aiHistory.find(h=>safeJson(h.deterministic,{}).evaluation_type==="analysis");
+  if(!last)return [];
+  const data=safeJson(last.deterministic,{});
+  const summary=String(data.ai_memory_summary||summarizeAiMemory(last.llm_markdown||""));
+  return [{created_at:last.created_at,evaluation_type:"analysis",summary:summary.slice(0,850)}];
 }
 
 function renderAiHistory(){
@@ -2316,7 +2358,7 @@ function renderAiHistory(){
 }
 async function saveAiEvaluation(type,context,text,model,responseJson=null){
   if(!client||!userId())return;
-  const deterministic={evaluation_type:type,...context};
+  const deterministic={evaluation_type:type,...context,ai_memory_summary:summarizeAiMemory(text)};
   if(responseJson!=null)deterministic.response_json=responseJson;
   const res=await client.from("analysis_snapshots").insert({
     user_id:userId(),deterministic,llm_markdown:text||"",model:model||"unknown"
@@ -2332,12 +2374,12 @@ async function askAiCoach() {
   try{
     const compact=await activitiesForAi(180);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"analysis",analysis:d,race_predictions:conservativeRacePredictions(),activities:compact,history:aiHistoryPayload(),profile:profileForAi()
+      mode:"analysis",analysis:compactAnalysisForAi(d),ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+result.error.message;return;}
     const text=(result.data&&result.data.text)||"No response returned.",model=(result.data&&result.data.model)||"unknown";
     el("aiCoachOutput").innerHTML=window.marked?marked.parse(text):escapeHtml(text);
-    await saveAiEvaluation("analysis",{window_days:180,activity_count:compact.length,analysis:d},text,model);
+    await saveAiEvaluation("analysis",{window_days:180,activity_count:compact.length,analysis:compactAnalysisForAi(d),ml_model:compactMlForAi()},text,model);
   }catch(err){
     el("aiCoachOutput").textContent="AI coach failed: "+(err.message||String(err));
   }finally{el("aiCoachButton").disabled=false;}
@@ -2374,7 +2416,7 @@ async function askAiPlanner(){
     const base=currentPlan.length?currentPlan:buildFourteenDayPlan();
     const compact=await activitiesForAi(30);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"plan",race_predictions:conservativeRacePredictions(),activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
+      mode:"plan",ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error)throw result.error;
     const candidate=validateAiPlan(result.data&&result.data.plan,base);
