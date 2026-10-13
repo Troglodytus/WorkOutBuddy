@@ -1638,7 +1638,7 @@ async function getWorkoutStream(id){
   streamCache.set(id,stream);return stream;
 }
 
-const WEATHER_VERSION="openmeteo_v1";
+const WEATHER_VERSION="openmeteo_v2_peak";
 function utcDateString(ms){return new Date(ms).toISOString().slice(0,10);}
 function weatherNumbers(a){
   const m=safeJson(a&&a.metrics_json,{});
@@ -1647,7 +1647,9 @@ function weatherNumbers(a){
     end_temp_c:n(m.weather_end_temp_c),end_humidity_pct:n(m.weather_end_humidity_pct),
     min_temp_c:n(m.weather_min_temp_c),max_temp_c:n(m.weather_max_temp_c),
     min_humidity_pct:n(m.weather_min_humidity_pct),max_humidity_pct:n(m.weather_max_humidity_pct),
-    mean_temp_c:n(m.weather_mean_temp_c),mean_humidity_pct:n(m.weather_mean_humidity_pct)
+    mean_temp_c:n(m.weather_mean_temp_c),mean_humidity_pct:n(m.weather_mean_humidity_pct),
+    peak_temp_c:n(m.weather_peak_temp_c),peak_humidity_pct:n(m.weather_peak_humidity_pct),
+    peak_altitude_m:n(m.weather_peak_altitude_m),peak_time:m.weather_peak_time||null
   };
 }
 function nearestOrInterpolatedWeather(series,targetMs){
@@ -1708,6 +1710,7 @@ async function fetchOpenMeteoSeries(lat,lon,startMs,endMs){
   if(lastError)throw lastError;
   return null;
 }
+
 async function workoutWeatherGeometry(activity){
   const stream=await getWorkoutStream(activity.id),pts=Array.isArray(stream&&stream.points)?stream.points:[];
   const gps=pts.filter(p=>n(p.lat)!=null&&n(p.lon)!=null);
@@ -1715,42 +1718,91 @@ async function workoutWeatherGeometry(activity){
   const first=gps[0],last=gps[gps.length-1];
   const startMs=new Date(activity.start_time).getTime();
   if(!Number.isFinite(startMs))return null;
-  const streamEnd=Math.max(...pts.map(p=>n(p.elapsed_s,0)));
-  const durationMs=Math.max(0,(n(activity.duration_s)??streamEnd??0)*1000);
-  const endMs=startMs+durationMs;
-  return {startMs,endMs,start:{lat:n(first.lat),lon:n(first.lon)},end:{lat:n(last.lat),lon:n(last.lon)}};
+  const streamEnd=Math.max(0,...pts.map(p=>n(p.elapsed_s,0)));
+  const endMs=startMs+(n(last.elapsed_s)??n(activity.duration_s)??streamEnd)*1000;
+  let peak=null,bestAltitude=-Infinity;
+  for(let i=0;i<gps.length;i++){
+    const h=n(gps[i].alt);if(h==null)continue;
+    const neighborhood=gps.slice(Math.max(0,i-2),Math.min(gps.length,i+3)).map(p=>n(p.alt)).filter(Number.isFinite);
+    const smoothed=median(neighborhood);
+    if(smoothed!=null&&smoothed>bestAltitude){bestAltitude=smoothed;peak=gps[i];}
+  }
+  const makeLocation=(p,t)=>({
+    lat:n(p.lat),lon:n(p.lon),timeMs:t,alt:n(p.alt)
+  });
+  return {
+    startMs,endMs,
+    start:makeLocation(first,startMs+(n(first.elapsed_s)??0)*1000),
+    end:makeLocation(last,endMs),
+    peak:peak?makeLocation(peak,startMs+(n(peak.elapsed_s)??0)*1000):null,
+    gps
+  };
+}
+function nearbyWeatherStation(a,b){
+  // Approximate horizontal distance in metres, only for choosing the nearest
+  // of the three geographical sample locations.
+  const y=(a.lat-b.lat)*111195,lonFactor=Math.cos(a.lat*Math.PI/180);
+  const x=(a.lon-b.lon)*111195*lonFactor;
+  return x*x+y*y;
 }
 async function fetchWeatherForActivity(activity){
   const geo=await workoutWeatherGeometry(activity);if(!geo)return null;
-  const same=Math.abs(geo.start.lat-geo.end.lat)<.002&&Math.abs(geo.start.lon-geo.end.lon)<.002;
-  const startSeries=await fetchOpenMeteoSeries(geo.start.lat,geo.start.lon,geo.startMs,geo.endMs);
-  if(!startSeries)return null;
-  const endSeries=same?startSeries:await fetchOpenMeteoSeries(geo.end.lat,geo.end.lon,geo.startMs,geo.endMs);
-  if(!endSeries)return null;
-
-  const start=nearestOrInterpolatedWeather(startSeries,geo.startMs);
-  const end=nearestOrInterpolatedWeather(endSeries,geo.endMs);
-  const pad=Math.max(startSeries.resolution_min,endSeries.resolution_min)*30000;
-  const values=[
-    ...seriesWindowValues(startSeries,geo.startMs,geo.endMs,pad),
-    ...(same?[]:seriesWindowValues(endSeries,geo.startMs,geo.endMs,pad))
+  const locations=[
+    {name:"start",point:geo.start},
+    {name:"finish",point:geo.end}
   ];
-  values.push({t:geo.startMs,temp:start.temp,humidity:start.humidity},{t:geo.endMs,temp:end.temp,humidity:end.humidity});
+  if(geo.peak)locations.push({name:"peak",point:geo.peak});
+  const stations=[];
+  for(const loc of locations){
+    const reused=stations.find(v=>nearbyWeatherStation(v.point,loc.point)<50*50);
+    let series=reused&&reused.series;
+    if(!series)series=await fetchOpenMeteoSeries(loc.point.lat,loc.point.lon,geo.startMs,geo.endMs);
+    if(!series)return null;
+    stations.push({...loc,series});
+  }
+  const pointWeather=(loc)=>nearestOrInterpolatedWeather(
+    stations.find(v=>v.name===loc.name).series,loc.point.timeMs
+  );
+  const first=pointWeather(stations[0]),end=pointWeather(stations[1]);
+  const peak=geo.peak?pointWeather(stations[2]):null;
+
+  // Estimate weather along the ACTUAL recorded route/times using the closest
+  // available weather-model location; do not use the entire peak weather time
+  // series to claim a minimum when the athlete was not at the summit.
+  const sampleStep=Math.max(1,Math.floor(geo.gps.length/120)),values=[];
+  for(let i=0;i<geo.gps.length;i+=sampleStep){
+    const p=geo.gps[i],t=geo.startMs+(n(p.elapsed_s)??0)*1000;
+    const nearest=stations.reduce((best,loc)=>
+      !best||nearbyWeatherStation(loc.point,p)<nearbyWeatherStation(best.point,p)?loc:best,null);
+    const sampled=nearestOrInterpolatedWeather(nearest.series,t);
+    values.push({temp:sampled.temp,humidity:sampled.humidity});
+  }
+  values.push(first,end);
+  if(peak)values.push(peak);
   const temps=values.map(x=>n(x.temp)).filter(Number.isFinite),hums=values.map(x=>n(x.humidity)).filter(Number.isFinite);
   if(!temps.length&&!hums.length)return null;
   return {
     weather_version:WEATHER_VERSION,
-    weather_start_temp_c:start.temp,weather_start_humidity_pct:start.humidity,
+    weather_start_temp_c:first.temp,weather_start_humidity_pct:first.humidity,
     weather_end_temp_c:end.temp,weather_end_humidity_pct:end.humidity,
-    weather_min_temp_c:temps.length?Math.min(...temps):null,weather_max_temp_c:temps.length?Math.max(...temps):null,
+    weather_peak_temp_c:peak&&peak.temp,weather_peak_humidity_pct:peak&&peak.humidity,
+    weather_peak_altitude_m:geo.peak&&geo.peak.alt,
+    weather_peak_time:geo.peak?new Date(geo.peak.timeMs).toISOString():null,
+    weather_min_temp_c:temps.length?Math.min(...temps):null,
+    weather_max_temp_c:temps.length?Math.max(...temps):null,
     weather_mean_temp_c:temps.length?mean(temps):null,
-    weather_min_humidity_pct:hums.length?Math.min(...hums):null,weather_max_humidity_pct:hums.length?Math.max(...hums):null,
+    weather_min_humidity_pct:hums.length?Math.min(...hums):null,
+    weather_max_humidity_pct:hums.length?Math.max(...hums):null,
     weather_mean_humidity_pct:hums.length?mean(hums):null,
-    weather_resolution_min:Math.min(startSeries.resolution_min,endSeries.resolution_min),
-    weather_start_source:startSeries.source,weather_end_source:endSeries.source,
+    weather_resolution_min:Math.min(...stations.map(x=>x.series.resolution_min)),
+    weather_start_source:stations[0].series.source,
+    weather_end_source:stations[1].series.source,
+    weather_peak_source:geo.peak?stations[2].series.source:null,
+    weather_spatial_sampling:"nearest of start/finish/highest GPS point; route-time sampled approximation",
     weather_fetched_at:new Date().toISOString()
   };
 }
+
 async function persistWeatherForActivity(activity,force=false){
   const existing=safeJson(activity.metrics_json,{});
   if(!force&&existing.weather_version===WEATHER_VERSION)return "skipped";
