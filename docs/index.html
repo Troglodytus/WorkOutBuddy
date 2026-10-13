@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=0.9.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -156,8 +156,12 @@
       <article class="panel">
         <div class="panel-head">
           <div><div class="eyebrow">ACTIVITIES</div><h2>Workout table</h2></div>
-          <span class="muted small-note">Apple VO₂max and weight are editable directly in the table.</span>
+          <div class="inline-actions">
+            <span class="muted small-note">Apple VO₂max and weight are editable directly in the table.</span>
+            <button id="refreshWeatherButton" class="secondary small">Refresh all weather</button>
+          </div>
         </div>
+        <div id="weatherRefreshStatus" class="status"></div>
         <div id="historyTableWrap" class="table-wrap"></div>
       </article>
 
@@ -354,7 +358,7 @@
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="./config.js?v=0.9.0"></script>
-  <script src="./app.js?v=0.9.0"></script>
+  <script src="./config.js?v=1.0.0"></script>
+  <script src="./app.js?v=1.0.0"></script>
 </body>
 </html>
