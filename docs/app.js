@@ -1825,6 +1825,7 @@ function renderStreamViewer(rows,target){
   }
 }
 
+
 function analysisData() {
   const cutoff90 = daysAgo(90);
   const recent = activities.filter(a => new Date(a.start_time)>=cutoff90);
@@ -1847,14 +1848,47 @@ function analysisData() {
   const baseStatus = easyPct==null?"Unknown":easyPct>=70?"Good":easyPct>=60?"Moderate":"Low";
   const loadStatus = c.loadRatio>1.5?"High":c.loadRatio<.6?"Low":"Normal";
   const volumeStatus = c.runKm28Weekly>=15?"Established":c.runKm28Weekly>=8?"Building":"Low";
+
+  const weatherRows=recent.map(a=>({a,w:weatherNumbers(a)})).filter(x=>x.w.mean_temp_c!=null||x.w.mean_humidity_pct!=null);
+  const tempVals=weatherRows.map(x=>x.w.mean_temp_c).filter(Number.isFinite);
+  const humidityVals=weatherRows.map(x=>x.w.mean_humidity_pct).filter(Number.isFinite);
+  const weatherMedianTemp=median(tempVals),weatherMedianHumidity=median(humidityVals);
+  const hotRows=weatherRows.filter(x=>n(x.w.mean_temp_c,-99)>=24);
+  const humidRows=weatherRows.filter(x=>n(x.w.mean_humidity_pct,-1)>=75);
+  const hotHumidRows=weatherRows.filter(x=>n(x.w.mean_temp_c,-99)>=20&&n(x.w.mean_humidity_pct,-1)>=70);
+  const weatherAdjustedRuns=runs.filter(a=>n(safeJson(a.metrics_json,{}).fatigue_reference_uses_weather)===1);
+  const hotFatigue=median(hotHumidRows.map(x=>n(safeJson(x.a.metrics_json,{}).fatigue_adjusted_efficiency_score)).filter(Number.isFinite));
+  const mildFatigue=median(weatherRows.filter(x=>n(x.w.mean_temp_c,99)>=5&&n(x.w.mean_temp_c,99)<=18)
+    .map(x=>n(safeJson(x.a.metrics_json,{}).fatigue_adjusted_efficiency_score)).filter(Number.isFinite));
+  let weatherLabel=weatherRows.length?(weatherMedianTemp!=null?weatherMedianTemp.toFixed(1)+" °C":"Weather loaded"):"No weather";
+  let weatherNote=weatherRows.length+" / "+recent.length+" recent workouts have weather.";
+  if(weatherMedianHumidity!=null)weatherNote+=" Median RH "+weatherMedianHumidity.toFixed(0)+"%.";
+  if(hotHumidRows.length)weatherNote+=" "+hotHumidRows.length+" warm/humid workout"+(hotHumidRows.length===1?"":"s")+".";
+  if(weatherAdjustedRuns.length)weatherNote+=" Personal HR-efficiency reference includes temperature/humidity for "+weatherAdjustedRuns.length+" run"+(weatherAdjustedRuns.length===1?"":"s")+".";
+  if(hotFatigue!=null&&mildFatigue!=null&&Math.abs(hotFatigue-mildFatigue)>=1.5){
+    weatherNote+=" Fatigue-adjusted efficiency differs by "+Math.abs(hotFatigue-mildFatigue).toFixed(1)+" points between warm/humid and mild conditions.";
+  }
+
   const evidence=[];
   if(easyPct!=null) evidence.push("Easy Z1–Z2 share over 90 days: "+easyPct.toFixed(1)+"%.");
   if(hardPct!=null) evidence.push("Hard Z4–Z5 share over 90 days: "+hardPct.toFixed(1)+"%.");
   evidence.push("7-day load / 28-day weekly baseline: "+c.loadRatio.toFixed(2)+"×.");
   evidence.push("Recent weekly-equivalent running volume: "+c.runKm28Weekly.toFixed(1)+" km.");
   if(easyRuns.length) evidence.push("Comparable easy runs used for pace trend: "+easyRuns.length+".");
-  return {trend,trendNote,baseStatus,loadStatus,volumeStatus,durability,durabilityNote,easyPct,hardPct,z,c,easyRuns,evidence,slope,generated_at:new Date().toISOString()};
+  if(weatherRows.length){
+    evidence.push("Weather coverage: "+weatherRows.length+" recent workouts; median "+(weatherMedianTemp==null?"—":weatherMedianTemp.toFixed(1)+" °C")+
+      " / "+(weatherMedianHumidity==null?"—":weatherMedianHumidity.toFixed(0)+"% RH")+
+      "; "+hotRows.length+" ≥24 °C and "+humidRows.length+" ≥75% RH.");
+  }
+  return {
+    trend,trendNote,baseStatus,loadStatus,volumeStatus,durability,durabilityNote,easyPct,hardPct,z,c,easyRuns,evidence,slope,
+    weather:{count:weatherRows.length,median_temp_c:weatherMedianTemp,median_humidity_pct:weatherMedianHumidity,
+      hot_count:hotRows.length,humid_count:humidRows.length,warm_humid_count:hotHumidRows.length,
+      weather_adjusted_runs:weatherAdjustedRuns.length,hot_fatigue_score:hotFatigue,mild_fatigue_score:mildFatigue,label:weatherLabel,note:weatherNote},
+    generated_at:new Date().toISOString()
+  };
 }
+
 function linearSlopePerWeek(rows,valueFn) {
   const pts=rows.map(a=>({x:new Date(a.start_time).getTime()/86400000,y:valueFn(a)})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)).sort((a,b)=>a.x-b.x);
   if(pts.length<4)return null;
@@ -1878,7 +1912,8 @@ function renderAnalysis() {
   const cards=[
     ["Fitness trend",d.trend,d.trendNote],["Aerobic base",d.baseStatus,d.easyPct==null?"Insufficient HR-zone data":fmt(d.easyPct,1,"% easy Z1–Z2")],
     ["Durability",d.durability,d.durabilityNote],["Training load",d.loadStatus,d.c.loadRatio.toFixed(2)+"× acute/baseline"],
-    ["Run volume",d.volumeStatus,d.c.runKm28Weekly.toFixed(1)+" km/week recent baseline"]
+    ["Run volume",d.volumeStatus,d.c.runKm28Weekly.toFixed(1)+" km/week recent baseline"],
+    ["Weather context",d.weather.label,d.weather.note]
   ];
   el("analysisCards").innerHTML=cards.map(c=>'<div class="analysis-card"><div class="eyebrow">'+escapeHtml(c[0])+'</div><div class="value">'+escapeHtml(c[1])+'</div><div class="note">'+escapeHtml(c[2])+"</div></div>").join("");
   const weaknesses=[];
