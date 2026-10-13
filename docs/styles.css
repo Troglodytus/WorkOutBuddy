@@ -89,3 +89,13 @@ textarea{font:inherit;border:1px solid #cbd5e1;border-radius:10px;padding:10px 1
 #mlAnalysisMetrics{margin:12px 0}
 #mlAnalysisPanel .analysis-grid{margin-top:8px}
 @media(max-width:800px){.workout-primary-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Race capability history with conservative, non-statistical uncertainty bars */
+.race-trend-panel{margin:14px 0 10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fbfcfe}
+.race-trend-panel .panel-head{align-items:center;gap:12px;flex-wrap:wrap}
+.race-trend-panel .panel-head h3{margin:3px 0}
+.race-trend-picker{display:flex;flex-direction:column;gap:5px;font-size:.8rem;min-width:155px;color:var(--muted)}
+.race-trend-picker select{min-height:38px;max-width:230px}
+#raceTrendPlot{min-height:255px;height:290px}
+#raceTrendInfo{line-height:1.5;margin-top:4px}
+#plannerIntensitySummary{margin-top:8px}
