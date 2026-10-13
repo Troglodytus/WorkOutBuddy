@@ -1321,12 +1321,28 @@ function fitRidgeRegression(samples,lambda=.8){
   return {beta,means,stds,predict};
 }
 
-function fatigueFeatureVector(split,weather=null,useWeather=false){
+function previousTrainingContext(activity){
+  const t=new Date(activity.start_time).getTime();
+  if(!Number.isFinite(t))return {load7:0,baseline28:0,recovery_hours:168};
+  let l7=0,l28=0,last=null;
+  for(const other of activities){
+    const ot=new Date(other.start_time).getTime();
+    if(!Number.isFinite(ot)||ot>=t)continue;
+    const dt=(t-ot)/3600000,load=derivedLoad(other);
+    if(dt<=7*24)l7+=load;
+    if(dt<=28*24)l28+=load;
+    if(last==null||ot>last)last=ot;
+  }
+  const recovery=last==null?168:clamp((t-last)/3600000,0,336);
+  return {load7:l7,baseline28:l28/4,recovery_hours:Math.log1p(recovery)};
+}
+function fatigueFeatureVector(split,weather=null,useWeather=false,context=null){
   const gap=n(split.avg_gap_speed_mps),time=n(split.cumulative_duration_before_min),
     load=n(split.cumulative_hr_load_before),z45=n(split.cumulative_z45_before_min),
     dist=n(split.cumulative_distance_before_km);
   if([gap,time,load,z45,dist].some(v=>v==null))return null;
-  const base=[gap,gap*gap,time,load,z45,dist];
+  const c=context||{load7:0,baseline28:0,recovery_hours:0};
+  const base=[gap,gap*gap,time,load,z45,dist,n(c.load7,0),n(c.baseline28,0),n(c.recovery_hours,0)];
   if(!useWeather)return base;
   const temp=n(weather&&weather.mean_temp_c),humidity=n(weather&&weather.mean_humidity_pct);
   if(temp==null||humidity==null)return null;
@@ -1338,9 +1354,9 @@ function personalFatigueSamples(excludeActivityId=null,useWeather=false){
     if(a.id===excludeActivityId||normalizeSport(a.sport_category||a.sport_type)!=="run"||new Date(a.start_time)<cutoff)continue;
     const splits=safeJson(a.metrics_json,{}).km_splits;
     if(!Array.isArray(splits))continue;
-    const weather=weatherNumbers(a);
+    const weather=weatherNumbers(a),prior=previousTrainingContext(a);
     for(const split of splits){
-      const hr=n(split.avg_hr),x=fatigueFeatureVector(split,weather,useWeather);
+      const hr=n(split.avg_hr),x=fatigueFeatureVector(split,weather,useWeather,prior);
       if(hr==null||hr<90||hr>205||!x||x[0]<1.2||x[0]>7)continue;
       samples.push({x,y:hr,activity_id:a.id});runIds.add(a.id);dates.push(new Date(a.start_time).getTime());
     }
@@ -1367,7 +1383,7 @@ function fitPersonalFatigueReference(excludeActivityId=null,useWeather=false){
 }
 
 
-const ML_FEATURE_LABELS=["GAP speed","GAP speed²","Prior duration","Cumulative HR load","Prior Z4/Z5","Prior distance","Temperature","Humidity"];
+const ML_FEATURE_LABELS=["GAP speed","GAP speed²","Prior duration","Cumulative HR load","Prior Z4/Z5","Prior distance","7-day pre-run load","28-day weekly baseline","Recovery interval","Temperature","Humidity"];
 function mlTreeValue(tree,x){
   if(tree.value!=null)return tree.value;
   return mlTreeValue(x[tree.feature]<=tree.threshold?tree.left:tree.right,x);
@@ -1581,13 +1597,14 @@ async function applyPersonalFatigueEfficiency(){
     const heldOutTraining=personalFatigueSamples(a.id,ridge.use_weather).samples;
     const boosted=useBoost?fitGradientBoostResidual(heldOutTraining,ridge):null;
     const model=boosted||ridge,method=boosted?"gradient_boosting":"ridge";
-    const signature=ridge.signature+"|"+method+"|hr_ml_v1";
+    const signature=ridge.signature+"|"+method+"|hr_ml_v1_hist";
     const mj=safeJson(a.metrics_json,{}),splits=Array.isArray(mj.km_splits)?mj.km_splits.map(x=>({...x})):[];
     if(!splits.length)continue;
-    if(mj.fatigue_model_version==="personal180_ml_loo_v4"&&mj.fatigue_model_signature===signature)continue;
+    if(mj.fatigue_model_version==="personal180_ml_loo_v5"&&mj.fatigue_model_signature===signature)continue;
 
+    const priorContext=previousTrainingContext(a);
     for(const split of splits){
-      const x=fatigueFeatureVector(split,ownWeather,ridge.use_weather),actual=n(split.avg_hr);
+      const x=fatigueFeatureVector(split,ownWeather,ridge.use_weather,priorContext),actual=n(split.avg_hr);
       if(!x||actual==null||actual<90||actual>205)continue;
       const expected=clamp(model.predict(x),85,205);
       split.expected_hr_personal=Math.round(expected*10)/10;
@@ -1607,7 +1624,7 @@ async function applyPersonalFatigueEfficiency(){
     mj.fatigue_reference_n_runs=ridge.n_runs;
     mj.fatigue_reference_rmse_bpm=Math.round(ridge.rmse*10)/10;
     mj.fatigue_reference_uses_weather=ridge.use_weather?1:0;
-    mj.fatigue_model_version="personal180_ml_loo_v4";
+    mj.fatigue_model_version="personal180_ml_loo_v5";
     mj.fatigue_model_signature=signature;
     mj.hr_prediction_model=method;
     mj.fatigue_efficiency_note=
