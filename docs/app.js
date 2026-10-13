@@ -397,6 +397,16 @@ function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
     const runSet=subset.filter(w=>!w.no_workout&&planSportCategory(w)==="run");
     const unlocked=runSet.filter(w=>!w.locked);
     if(!unlocked.length)continue;
+    // A high recent acute load warrants a lighter first week, not a permanent
+    // 14-day ban on quality work. Existing manually locked sessions remain fixed.
+    if(week===0&&elevatedLoad){
+      for(const w of unlocked){
+        if(!planIsHard(w))continue;
+        w.family="easy_aerobic";w.title="Easy aerobic run";
+        w.zone="Mostly Z2";w.pace=fmtPace(c.easyPace+.2);
+        w.notes="Reduced intensity in the first week because recent load is above baseline.";
+      }
+    }
     const quality=runSet.filter(planIsHard);
     const longs=runSet.filter(w=>w.family==="long_run");
     // Keep the manual dates exactly as entered. Use existing automatic run days
@@ -2596,8 +2606,11 @@ function plannerIntensityTargets(){
   // Aggressiveness controls training stimulus and allowed progressive adaptation,
   // NOT how many hard days to run.
   const gain=[0,.025,.05,.08,.11][level-1];
-  const totalWeek1=weeklyKm>0?Math.max(5,weeklyKm*(1+gain)):null;
-  const totalWeek2=totalWeek1!=null?totalWeek1*(1+Math.min(.07,gain*.65)):null;
+  const base7=n(c.runKm7,0),sustainableReference=weeklyKm+
+    Math.min(Math.max(0,base7-weeklyKm)*.35,weeklyKm*.35);
+  const moderatelyElevated=c.loadRatio>1.55||c.hardMin7>65;
+  const totalWeek1=weeklyKm>0?Math.max(5,sustainableReference*(moderatelyElevated?1:(1+gain))):null;
+  const totalWeek2=weeklyKm>0?Math.max(5,sustainableReference*(1+gain)*1.055):null;
   const sufficientBase=weeklyKm>=8&&runDays>=3;
   const overload=c.loadRatio>1.9||c.hardMin7>80;
   return {
@@ -2627,12 +2640,12 @@ function aiPlanWorkloadChecks(candidate,constraints,reason=""){
   const longs=weeks.map(w=>w.filter(x=>!x.no_workout&&x.family==="long_run").length);
   const volume=weeks.map(w=>sum(w.filter(x=>!x.no_workout&&planSportCategory(x)==="run").map(x=>n(x.distance_km,0))));
   const reasons=String(reason||"").trim();
-  const flags=/injur|pain|fatigue|overload|overtrain|recovery|medical|ill|illness|symptom|reduc/i.test(reasons);
   if(constraints.level>=4&&!constraints.recovery_caution&&constraints.recent_weekly_run_km>=8){
-    if(constraints.desired_quality_per_week&&quality[0]+quality[1]===0&&!flags)
-      problems.push("All quality sessions were removed despite level "+constraints.level+" and no clear recovery justification.");
-    if(constraints.desired_long_run_per_week&&longs[0]+longs[1]===0&&!flags)
-      problems.push("Both long aerobic runs were removed without a recovery justification.");
+    if(constraints.desired_quality_per_week&&quality[0]+quality[1]===0)
+      problems.push("All quality sessions were removed despite level "+constraints.level+
+        "; retain at least one controlled quality session in the second week or choose a conservative setting if recovery requires it.");
+    if(constraints.desired_long_run_per_week&&longs[0]+longs[1]===0)
+      problems.push("Both long aerobic runs were removed despite the athlete's endurance goal.");
   }
   const base=constraints.recent_weekly_run_km;
   if(base>=8){
