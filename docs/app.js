@@ -1559,7 +1559,7 @@ function renderMlAnalysis(){
     {margin:{l:118,r:12,t:15,b:45},xaxis:{title:"Relative split-gain (%)",rangemode:"tozero"},paper_bgcolor:"transparent",plot_bgcolor:"transparent"},
     {responsive:true,displaylogo:false});
   el("mlAnalysisExplanation").textContent=
-    "Tree split-gain is a predictive importance, not causal attribution. The selected model predicts HR conditioned on GAP speed, prior effort and "+
+    "Tree split-gain describes the candidate Gradient Boosting model (even when Ridge wins); it is predictive importance, not causal attribution. The selected model predicts HR conditioned on GAP speed, prior effort and "+
     (r.uses_weather?"weather.":"available prior-effort metrics.")+
     " The current run is always excluded from its own HR reference. Read differences below about 2–3 bpm cautiously; training state, hydration and sensor noise also affect HR.";
 }
@@ -2259,8 +2259,8 @@ const AI_ADVANCED_KEYS=[
   "fatigue_adjusted_efficiency_score","fatigue_adjusted_efficiency_last_third",
   "fatigue_adjusted_efficiency_drift_pct","fatigue_hr_residual_bpm",
   "fatigue_reference_n_runs","fatigue_reference_rmse_bpm",
-  "weather_start_temp_c","weather_end_temp_c","weather_peak_temp_c",
-  "weather_mean_temp_c","weather_mean_humidity_pct",
+  "weather_start_temp_c","weather_end_temp_c","weather_peak_temp_c","weather_peak_humidity_pct",
+  "weather_peak_altitude_m","weather_mean_temp_c","weather_mean_humidity_pct",
   "weather_min_temp_c","weather_max_temp_c",
   "best_5min_pace_min_km","best_20min_pace_min_km","normalized_power_w","power_hr_efficiency",
   "moving_ratio","impact_load_index"
