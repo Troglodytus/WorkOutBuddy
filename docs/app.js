@@ -1884,6 +1884,7 @@ async function enrichMetricsInBackground(){
 async function getWorkoutStream(id){
   if(streamCache.has(id))return streamCache.get(id);
   const res=await client.from("activity_streams").select("stream_data").eq("activity_id",id).maybeSingle();
+  if(res.error)throw new Error("Could not load workout stream: "+res.error.message);
   const stream=res.data?safeJson(res.data.stream_data,{}):{};
   streamCache.set(id,stream);return stream;
 }
@@ -2936,7 +2937,7 @@ function fitTimestamp(value){
     const d=new Date(value);return Number.isNaN(d.getTime())?null:d.toISOString();
   }
   const raw=n(value);if(raw==null)return null;
-  const epoch=raw>1e12?raw:raw>1e9&&raw<4e9?raw*1000+631065600000:raw*1000+631065600000;
+  const epoch=raw>1e12?raw:raw>=1450000000?raw*1000:raw*1000+631065600000;
   const d=new Date(epoch);
   return Number.isNaN(d.getTime())?null:d.toISOString();
 }
@@ -3114,6 +3115,23 @@ async function importTcx(file) {
     if(byKey.error)throw byKey.error;
     existing=byKey.data&&byKey.data[0];matchType="same start time / sport / duration / distance";
   }
+  if(!existing){
+    // Cross-format exports (TCX vs FIT) can differ by seconds or GPS rounding.
+    // Look for a close match, but never silently overwrite; user must choose.
+    const start=new Date(parsed.activity.start_time).getTime();
+    const nearby=await client.from("activities").select(fields+",sport_category,duration_s,distance_m")
+      .eq("user_id",userId())
+      .gte("start_time",new Date(start-90000).toISOString())
+      .lte("start_time",new Date(start+90000).toISOString()).limit(30);
+    if(nearby.error)throw nearby.error;
+    existing=(nearby.data||[]).find(a=>
+      normalizeSport(a.sport_category)===normalizeSport(parsed.activity.sport_category)&&
+      Math.abs(n(a.duration_s,0)-n(parsed.activity.duration_s,0))<=120&&
+      Math.abs(n(a.distance_m,0)-n(parsed.activity.distance_m,0))<=
+        Math.max(120,.035*Math.max(n(a.distance_m,0),n(parsed.activity.distance_m,0)))
+    );
+    if(existing)matchType="near-identical workout timestamp, sport, duration and distance";
+  }
 
   const year=new Date(parsed.activity.start_time).getFullYear();
   const safeName=file.name.replace(/[^A-Za-z0-9_.-]/g,"_");
@@ -3122,7 +3140,11 @@ async function importTcx(file) {
   if(existing){
     const decision=await askDuplicateDecision(file,existing,matchType);
     if(decision!=="overwrite")return "skipped";
-    const path=existing.raw_file_path||newPath;
+    // Preserve correct raw-file extensions when overwriting via a different
+    // export format; the old private file is kept as a backup.
+    const incomingExt=(file.name.match(/\.(tcx|fit|gpx)$/i)||[])[1]?.toLowerCase();
+    const oldExt=(String(existing.raw_file_path||"").match(/\.(tcx|fit|gpx)$/i)||[])[1]?.toLowerCase();
+    const path=existing.raw_file_path&&oldExt===incomingExt?existing.raw_file_path:newPath;
     const up=await client.storage.from("workout-files").upload(path,file,{upsert:true,contentType:/\.fit$/i.test(file.name)?"application/octet-stream":(file.type||"application/xml")});
     if(up.error)throw up.error;
 
