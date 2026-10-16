@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=1.0.2">
+  <link rel="stylesheet" href="./styles.css?v=1.0.3">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -163,6 +163,11 @@
           </div>
         </div>
         <div id="weatherRefreshStatus" class="status"></div>
+        <div class="comparison-toolbar">
+          <span id="workoutComparisonStatus" class="muted small-note">Select one or more workouts using the checkboxes; the first selected is the primary workout.</span>
+          <button id="clearWorkoutComparison" class="secondary small" type="button">Clear comparison</button>
+        </div>
+        <div id="workoutComparisonChips" class="comparison-chips"></div>
         <div id="historyTableWrap" class="table-wrap"></div>
       </article>
 
@@ -264,8 +269,8 @@
   <dialog id="uploadDialog">
     <form method="dialog" class="dialog-card">
       <div class="panel-head"><div><div class="eyebrow">IMPORT</div><h2>Upload workout</h2></div><button value="cancel" class="icon-button">×</button></div>
-      <p class="muted">Export TCX from WorkOutDoors and select it here. Multiple files are supported.</p>
-      <input id="tcxInput" type="file" accept=".tcx,application/vnd.garmin.tcx+xml,application/xml,text/xml" multiple>
+      <p class="muted">Import TCX or Garmin FIT files from WorkOutDoors, Garmin and other compatible devices. Multiple files are supported; duplicate Overwrite/Skip still applies.</p>
+      <input id="tcxInput" type="file" accept=".tcx,.fit,application/vnd.garmin.tcx+xml,application/vnd.ant.fit,application/xml,text/xml,application/octet-stream" multiple>
       <div id="uploadStatus" class="status"></div>
       <div class="dialog-actions">
         <button value="cancel" class="secondary">Cancel</button>
@@ -278,7 +283,7 @@
     <div class="dialog-card">
       <div class="panel-head"><div><div class="eyebrow">DUPLICATE DETECTED</div><h2>Workout already exists</h2></div></div>
       <div id="duplicateInfo" class="muted"></div>
-      <p class="small-note muted">Overwrite replaces the stored TCX-derived metrics and stream while keeping manual fields such as Apple VO₂max/weight unless the new import explicitly supplies them.</p>
+      <p class="small-note muted">Overwrite replaces the stored file-derived metrics and stream while keeping manual fields such as Apple VO₂max/weight unless the new import explicitly supplies them.</p>
       <div class="dialog-actions">
         <button id="duplicateSkipButton" type="button" class="secondary">Skip</button>
         <button id="duplicateOverwriteButton" type="button" class="primary">Overwrite existing</button>
@@ -388,7 +393,7 @@
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="./config.js?v=1.0.2"></script>
-  <script src="./app.js?v=1.0.2"></script>
+  <script src="./config.js?v=1.0.3"></script>
+  <script src="./app.js?v=1.0.3"></script>
 </body>
 </html>
