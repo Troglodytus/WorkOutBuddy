@@ -2359,7 +2359,7 @@ function buildColoredProfileTraces(rows,xKey,key,stats){
     line:{color,width:3}
   }));
 }
-function renderStreamViewer(rows,target){
+function renderStreamViewer(rows,target,comparisonEntries=[]){
   const mapId=target==="home"?"homeRouteMap":"routeMap",plotId=target==="home"?"homeStreamPlot":"streamPlot",
     metricId=target==="home"?"homeRouteMetric":"historyRouteMetric",xId=target==="home"?"homeRouteXAxis":"historyRouteXAxis",
     legendId=target==="home"?"homeRouteLegend":"historyRouteLegend",readoutId=target==="home"?"homeCursorReadout":"historyCursorReadout";
@@ -2373,7 +2373,9 @@ function renderStreamViewer(rows,target){
     else if(key==="zone")range="Z1 blue · Z2 green · Z3 yellow · Z4 orange · Z5 red · Z6 purple";
     else if(key==="pace_min_km"||key==="speed_kmh")range="derived from DistanceMeters / time · "+stats.lo.toFixed(1)+"–"+stats.hi.toFixed(1)+" "+def.unit+" (5th–95th percentile)";
     else range=stats.lo.toFixed(1)+"–"+stats.hi.toFixed(1)+" "+def.unit+" (5th–95th percentile)";
-    el(legendId).innerHTML='<span class="legend-label">'+escapeHtml(def.label)+'</span><span class="legend-gradient" style="background:'+def.gradient+'"></span><span>'+escapeHtml(range)+'</span>';
+    el(legendId).innerHTML='<span class="legend-label">'+escapeHtml(def.label)+' (primary)</span><span class="legend-gradient" style="background:'+def.gradient+'"></span><span>'+escapeHtml(range)+'</span>'+
+      comparisonEntries.map((entry,i)=>'<span class="comparison-legend-tag"><span class="comparison-swatch" style="background:'+comparisonColor(i+1)+'"></span>'+
+        escapeHtml("#"+(i+2)+" "+(entry.activity.name||"workout"))+'</span>').join("");
   }else el(legendId).classList.add("hidden");
 
   const old=viewerStates[target];
@@ -2386,9 +2388,18 @@ function renderStreamViewer(rows,target){
     el(mapId).classList.remove("hidden");
     const map=L.map(mapId,{renderer:L.canvas({padding:.5})});routeMaps[target]=map;state.map=map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
+    // The primary workout exclusively determines the initial map viewport.
+    // Overlay routes elsewhere must never zoom the primary route out.
+    comparisonEntries.forEach((entry,i)=>{
+      const coords=entry.rows.filter(r=>r.lat!=null&&r.lon!=null).map(r=>[r.lat,r.lon]);
+      if(coords.length<2)return;
+      const color=comparisonColor(i+1);
+      L.polyline(coords,{color,weight:3,opacity:.28,interactive:false,
+        dashArray:"5 7",lineCap:"round"}).addTo(map);
+    });
     for(let i=1;i<gps.length;i++){
       const c=colorForStreamMetric(key,gps[i][key],stats);
-      L.polyline([[gps[i-1].lat,gps[i-1].lon],[gps[i].lat,gps[i].lon]],{weight:5,opacity:.92,color:c,interactive:false}).addTo(map);
+      L.polyline([[gps[i-1].lat,gps[i-1].lon],[gps[i].lat,gps[i].lon]],{weight:5,opacity:comparisonEntries.length?1:.92,color:c,interactive:false}).addTo(map);
     }
     L.circleMarker([gps[0].lat,gps[0].lon],{radius:5,weight:2,color:"#166534",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Start").addTo(map);
     L.circleMarker([gps[gps.length-1].lat,gps[gps.length-1].lon],{radius:5,weight:2,color:"#991b1b",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Finish").addTo(map);
@@ -2416,6 +2427,18 @@ function renderStreamViewer(rows,target){
     const ys=plotRows.map(r=>n(r[key]));
     const custom=plotRows.map(r=>[r.time_min,r.distance_km,r.altitude_m,r.heart_rate,r.speed_kmh,r.power_w,r.cadence,r.grade_pct,r.i]);
     const traces=buildColoredProfileTraces(plotRows,xKey,key,stats);
+    // Secondary profiles are separate translucent continuous lines (no point cloud).
+    // Keep the primary's dynamic colored segments and its cursor above them.
+    comparisonEntries.forEach((entry,i)=>{
+      const valid=entry.rows.filter(r=>n(r[xKey])!=null&&n(r[key])!=null);
+      if(valid.length<2)return;
+      const color=comparisonColor(i+1);
+      traces.push({x:entry.rows.map(r=>n(r[xKey])),y:entry.rows.map(r=>n(r[key])),
+        name:"#"+(i+2)+" "+(entry.activity.name||"Workout"),type:"scattergl",
+        mode:"lines",connectgaps:false,showlegend:true,opacity:.4,
+        line:{color,width:2},hovertemplate:escapeHtml(entry.activity.name||"Comparison")+
+          "<br>%{x:.2f} · %{y:.2f}<extra></extra>"});
+    });
 
     // Invisible hit-test layer: keeps precise hover/click interaction without
     // drawing thousands of visible sample points.
@@ -2442,7 +2465,8 @@ function renderStreamViewer(rows,target){
       xaxis:{title:xKey==="distance_km"?"Distance (km)":"Time (min)"},
       yaxis:{title:def.label+" ("+def.unit+")",autorange:key==="pace_min_km"?"reversed":true},
       shapes:[{type:"line",x0:firstX,x1:firstX,yref:"paper",y0:0,y1:1,line:{color:"rgba(17,24,39,.35)",width:1,dash:"dot"}}],
-      paper_bgcolor:"transparent",plot_bgcolor:"transparent",showlegend:false},
+      paper_bgcolor:"transparent",plot_bgcolor:"transparent",
+      showlegend:comparisonEntries.length>0,legend:{orientation:"h",y:-.25,font:{size:10}}},
       {responsive:true,displaylogo:false,scrollZoom:false});
     state.plotReady=true;
     bindPlotCursor(target);
