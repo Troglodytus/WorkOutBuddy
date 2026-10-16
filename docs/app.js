@@ -2880,7 +2880,7 @@ function askDuplicateDecision(file,existing,matchType){
 }
 async function importSelectedFiles() {
   const files=Array.from(el("tcxInput").files||[]);
-  if(!files.length){el("uploadStatus").textContent="Choose at least one TCX or FIT file.";return;}
+  if(!files.length){el("uploadStatus").textContent="Choose at least one TCX, FIT or GPX file.";return;}
   el("importFilesButton").disabled=true;
   let ok=0, skipped=0, overwritten=0;
   for(let i=0;i<files.length;i++){
@@ -2986,6 +2986,22 @@ async function parseWorkoutFile(file) {
   if(isFit){
     const parsed=await decodeFitWorkout(file);
     sport=parsed.sport;idText=parsed.idText;points=parsed.points;
+  }else if(/\.gpx$/i.test(file.name)){
+    const xml=new DOMParser().parseFromString(await file.text(),"application/xml");
+    if(xml.querySelector("parsererror"))throw new Error("Invalid GPX XML.");
+    const track=Array.from(xml.getElementsByTagName("*")).find(x=>x.localName==="trk");
+    const typeNode=track&&firstByLocal(track,"type");
+    const trackType=typeNode?typeNode.textContent.trim():"";
+    sport=trackType||"Workout";idText=null;
+    const nodes=Array.from(xml.getElementsByTagName("*")).filter(x=>x.localName==="trkpt");
+    points=nodes.map(tp=>{
+      const time=textByLocal(tp,"time");
+      return {time,lat:n(tp.getAttribute("lat")),lon:n(tp.getAttribute("lon")),
+        alt:n(textByLocal(tp,"ele")),distance_m:null,
+        hr:n(textByLocal(tp,"hr")),cadence:n(textByLocal(tp,"cad")),
+        watts:n(textByLocal(tp,"power")??textByLocal(tp,"watts")),
+        raw_speed_mps:n(textByLocal(tp,"speed")),speed_mps:n(textByLocal(tp,"speed"))};
+    }).filter(p=>p.time);
   }else if(/\.tcx$/i.test(file.name)){
     const xml=new DOMParser().parseFromString(await file.text(),"application/xml");
     if(xml.querySelector("parsererror"))throw new Error("Invalid TCX XML.");
@@ -3006,8 +3022,8 @@ async function parseWorkoutFile(file) {
       points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts,
         raw_speed_mps:speed,speed_mps:speed});
     }
-  }else throw new Error("Unsupported file type. Please select a .tcx or .fit workout.");
-  if(!points.length)throw new Error((isFit?"FIT":"TCX")+" contains no trackpoints.");
+  }else throw new Error("Unsupported file type. Please select a .tcx, .fit or .gpx workout.");
+  if(!points.length)throw new Error((isFit?"FIT":/\.gpx$/i.test(file.name)?"GPX":"TCX")+" contains no timestamped trackpoints.");
   const firstTime=new Date(points.find(p=>p.time)?.time||idText);
   if(Number.isNaN(firstTime.getTime()))throw new Error("Could not determine workout start time.");
   let cumulative=0;
@@ -3067,7 +3083,7 @@ async function parseWorkoutFile(file) {
   const dedupe=[startIso.slice(0,19),normalizeSport(sport),Math.round(duration/10),Math.round(distance/10)].join("|");
   return {
     activity:{
-      source:isFit?"fit_upload":"tcx_upload",name:file.name.replace(/\.(tcx|fit)$/i,""),sport_type:sport,sport_category:normalizeSport(sport),
+      source:isFit?"fit_upload":/\.gpx$/i.test(file.name)?"gpx_upload":"tcx_upload",name:file.name.replace(/\.(tcx|fit|gpx)$/i,""),sport_type:sport,sport_category:normalizeSport(sport),
       start_time:startIso,original_start_time:idText||startIso,duration_s:duration,moving_time_s:duration,distance_m:distance,
       elevation_gain_m:elevation,elevation_loss_m:n(advanced.elevation_loss_m),avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,avg_gap_pace_min_km:streamDerived.gap,
       training_load_score:load,trimp_score:(zones[0]/60*.8+zones[1]/60*1.5+zones[2]/60*2.7+zones[3]/60*5+zones[4]/60*7),
@@ -3075,7 +3091,7 @@ async function parseWorkoutFile(file) {
       own_vo2max_estimate:streamDerived.vo2,estimated_vo2max:streamDerived.vo2,average_power:avgPower,normalized_power:n(advanced.normalized_power_w),cadence_spm:cadence,
       hr_efficiency_drift_pct:n(advanced.hr_efficiency_drift_pct)??drift,gap_hr_efficiency_drift_pct:n(advanced.gap_hr_efficiency_drift_pct),
       km_gap_hr_efficiency_drift_pct:n(advanced.km_gap_hr_efficiency_drift_pct),elapsed_time_s:duration,file_sha256:fileHash,dedupe_key:dedupe,
-      metrics_json:{parser:isFit?"workoutbuddy-web-fit-v1":"workoutbuddy-web-tcx-v4",trackpoints:points.length,stored_trackpoints:streamPoints.length,
+      metrics_json:{parser:isFit?"workoutbuddy-web-fit-v1":/\.gpx$/i.test(file.name)?"workoutbuddy-web-gpx-v1":"workoutbuddy-web-tcx-v4",trackpoints:points.length,stored_trackpoints:streamPoints.length,
         ...advanced,
         max_speed_kmh:streamDerived.max_speed_kmh,max_power_w:streamDerived.max_power_w,max_cadence:streamDerived.max_cadence,
         avg_grade_pct:streamDerived.avg_grade_pct,min_grade_pct:streamDerived.min_grade_pct,max_grade_pct:streamDerived.max_grade_pct,
