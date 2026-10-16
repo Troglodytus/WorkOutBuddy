@@ -245,7 +245,7 @@ async function loadProfile() {
 async function loadActivities() {
   if (!userId()) return;
   const res = await client.from("activities").select("*").order("start_time",{ascending:false}).limit(2000);
-  if (res.error) { toast("Could not load activities: " + res.error.message,5000); activities = []; return; }
+  if (res.error) { toast("Sync failed – previously loaded activities were preserved: "+res.error.message,5000);setSync("Sync failed · data not loaded");return; }
   activities = res.data || [];
 }
 
@@ -2880,7 +2880,7 @@ function askDuplicateDecision(file,existing,matchType){
 }
 async function importSelectedFiles() {
   const files=Array.from(el("tcxInput").files||[]);
-  if(!files.length){el("uploadStatus").textContent="Choose at least one TCX file.";return;}
+  if(!files.length){el("uploadStatus").textContent="Choose at least one TCX or FIT file.";return;}
   el("importFilesButton").disabled=true;
   let ok=0, skipped=0, overwritten=0;
   for(let i=0;i<files.length;i++){
@@ -2924,29 +2924,90 @@ function downsamplePoints(points,maxPoints=4000){
   for(let i=0;i<maxPoints;i++) out.push(points[Math.min(points.length-1,Math.round(i*step))]);
   return out;
 }
-async function parseTcx(file) {
-  const xml=new DOMParser().parseFromString(await file.text(),"application/xml");
-  if(xml.querySelector("parsererror")) throw new Error("Invalid TCX XML.");
-  const activity=Array.from(xml.getElementsByTagName("*")).find(x=>x.localName==="Activity");
-  if(!activity)throw new Error("No Activity element found.");
-  const sport=activity.getAttribute("Sport")||"Workout";
-  const idText=textByLocal(activity,"Id");
-  const tpNodes=Array.from(xml.getElementsByTagName("*")).filter(x=>x.localName==="Trackpoint");
-  const points=[];
-  for(const tp of tpNodes){
-    const time=textByLocal(tp,"Time");
-    const lat=n(textByLocal(tp,"LatitudeDegrees"));
-    const lon=n(textByLocal(tp,"LongitudeDegrees"));
-    const alt=n(textByLocal(tp,"AltitudeMeters"));
-    const dist=n(textByLocal(tp,"DistanceMeters"));
-    const hrNode=firstByLocal(tp,"HeartRateBpm");
-    const hr=hrNode?n(textByLocal(hrNode,"Value")):null;
-    const cad=n(textByLocal(tp,"Cadence")) ?? n(textByLocal(tp,"RunCadence"));
-    const watts=n(textByLocal(tp,"Watts"));
-    const speed=n(textByLocal(tp,"Speed"));
-    points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts,raw_speed_mps:speed,speed_mps:speed});
+
+let garminFitSdkPromise=null;
+function fitSemicirclesToDegrees(value){
+  const v=n(value);if(v==null)return null;
+  return Math.abs(v)>180?v*(180/2147483648):v;
+}
+function fitTimestamp(value){
+  if(value instanceof Date)return Number.isNaN(value.getTime())?null:value.toISOString();
+  if(typeof value==="string"){
+    const d=new Date(value);return Number.isNaN(d.getTime())?null:d.toISOString();
   }
-  if(!points.length)throw new Error("TCX contains no trackpoints.");
+  const raw=n(value);if(raw==null)return null;
+  const epoch=raw>1e12?raw:raw>1e9&&raw<4e9?raw*1000+631065600000:raw*1000+631065600000;
+  const d=new Date(epoch);
+  return Number.isNaN(d.getTime())?null:d.toISOString();
+}
+async function decodeFitWorkout(file){
+  // Official FIT JavaScript SDK, pinned to avoid unannounced API changes.
+  // Import only when a FIT file is selected; no API keys or GPS leave the browser.
+  if(!garminFitSdkPromise)garminFitSdkPromise=import("https://esm.sh/@garmin/fitsdk@21.218.0")
+    .catch(err=>{garminFitSdkPromise=null;throw new Error("Garmin FIT decoder could not be loaded (check internet/CDN): "+err.message);});
+  const {Decoder,Stream}=await garminFitSdkPromise;
+  const buf=await file.arrayBuffer(),stream=Stream.fromArrayBuffer(buf);
+  if(!Decoder.isFIT(stream))throw new Error("Invalid FIT file header.");
+  const decoder=new Decoder(stream);
+  if(!decoder.checkIntegrity())throw new Error("FIT file failed its integrity/CRC check.");
+  const {messages,errors}=decoder.read({convertDateTimesToDates:true,applyScaleAndOffset:true,
+    convertTypesToStrings:true,expandSubFields:true,expandComponents:true,mergeHeartRates:true});
+  const records=messages?.recordMesgs||messages?.record||[];
+  const sessions=messages?.sessionMesgs||messages?.session||[];
+  const session=Array.isArray(sessions)?sessions[0]:sessions;
+  if(!Array.isArray(records)||!records.length)throw new Error("FIT contains no timestamped record samples.");
+  const sport=String(session?.sport||"Workout");
+  const points=records.map(r=>{
+    const timestamp=fitTimestamp(r.timestamp||r.timeStamp);
+    const lat=fitSemicirclesToDegrees(r.positionLat),lon=fitSemicirclesToDegrees(r.positionLong);
+    return {
+      time:timestamp,
+      lat:lat!=null&&Math.abs(lat)<=90?lat:null,
+      lon:lon!=null&&Math.abs(lon)<=180?lon:null,
+      alt:n(r.enhancedAltitude)??n(r.altitude),
+      distance_m:n(r.distance),hr:n(r.heartRate),
+      cadence:n(r.cadence)??n(r.fractionalCadence),
+      watts:n(r.power)??n(r.calculatedPower),
+      speed_mps:n(r.enhancedSpeed)??n(r.speed),
+      raw_speed_mps:n(r.enhancedSpeed)??n(r.speed)
+    };
+  }).filter(p=>p.time).sort((a,b)=>new Date(a.time)-new Date(b.time));
+  if(points.length<2)throw new Error("FIT has fewer than two timestamped data points.");
+  // Sanity-check units and monotonic time before deriving workout metrics.
+  for(let i=1;i<points.length;i++){
+    if(new Date(points[i].time)<new Date(points[i-1].time))throw new Error("FIT timestamps are not ordered.");
+  }
+  if(errors&&errors.length)console.warn("FIT decoder reported non-fatal data warnings",errors);
+  return {sport,idText:fitTimestamp(session?.startTime)||points[0].time,points};
+}
+async function parseWorkoutFile(file) {
+  const isFit=/\.fit$/i.test(file.name);
+  let sport,idText,points;
+  if(isFit){
+    const parsed=await decodeFitWorkout(file);
+    sport=parsed.sport;idText=parsed.idText;points=parsed.points;
+  }else if(/\.tcx$/i.test(file.name)){
+    const xml=new DOMParser().parseFromString(await file.text(),"application/xml");
+    if(xml.querySelector("parsererror"))throw new Error("Invalid TCX XML.");
+    const activity=Array.from(xml.getElementsByTagName("*")).find(x=>x.localName==="Activity");
+    if(!activity)throw new Error("No Activity element found.");
+    sport=activity.getAttribute("Sport")||"Workout";
+    idText=textByLocal(activity,"Id");
+    const tpNodes=Array.from(xml.getElementsByTagName("*")).filter(x=>x.localName==="Trackpoint");
+    points=[];
+    for(const tp of tpNodes){
+      const time=textByLocal(tp,"Time"),lat=n(textByLocal(tp,"LatitudeDegrees")),
+        lon=n(textByLocal(tp,"LongitudeDegrees")),alt=n(textByLocal(tp,"AltitudeMeters")),
+        dist=n(textByLocal(tp,"DistanceMeters"));
+      const hrNode=firstByLocal(tp,"HeartRateBpm");
+      const hr=hrNode?n(textByLocal(hrNode,"Value")):null;
+      const cad=n(textByLocal(tp,"Cadence"))??n(textByLocal(tp,"RunCadence"));
+      const watts=n(textByLocal(tp,"Watts")),speed=n(textByLocal(tp,"Speed"));
+      points.push({time,lat,lon,alt,distance_m:dist,hr,cadence:cad,watts,
+        raw_speed_mps:speed,speed_mps:speed});
+    }
+  }else throw new Error("Unsupported file type. Please select a .tcx or .fit workout.");
+  if(!points.length)throw new Error((isFit?"FIT":"TCX")+" contains no trackpoints.");
   const firstTime=new Date(points.find(p=>p.time)?.time||idText);
   if(Number.isNaN(firstTime.getTime()))throw new Error("Could not determine workout start time.");
   let cumulative=0;
@@ -3006,7 +3067,7 @@ async function parseTcx(file) {
   const dedupe=[startIso.slice(0,19),normalizeSport(sport),Math.round(duration/10),Math.round(distance/10)].join("|");
   return {
     activity:{
-      source:"tcx_upload",name:file.name.replace(/\.tcx$/i,""),sport_type:sport,sport_category:normalizeSport(sport),
+      source:isFit?"fit_upload":"tcx_upload",name:file.name.replace(/\.(tcx|fit)$/i,""),sport_type:sport,sport_category:normalizeSport(sport),
       start_time:startIso,original_start_time:idText||startIso,duration_s:duration,moving_time_s:duration,distance_m:distance,
       elevation_gain_m:elevation,elevation_loss_m:n(advanced.elevation_loss_m),avg_hr:avgHr,max_hr:maxHr,avg_pace_min_km:pace,avg_gap_pace_min_km:streamDerived.gap,
       training_load_score:load,trimp_score:(zones[0]/60*.8+zones[1]/60*1.5+zones[2]/60*2.7+zones[3]/60*5+zones[4]/60*7),
@@ -3014,7 +3075,7 @@ async function parseTcx(file) {
       own_vo2max_estimate:streamDerived.vo2,estimated_vo2max:streamDerived.vo2,average_power:avgPower,normalized_power:n(advanced.normalized_power_w),cadence_spm:cadence,
       hr_efficiency_drift_pct:n(advanced.hr_efficiency_drift_pct)??drift,gap_hr_efficiency_drift_pct:n(advanced.gap_hr_efficiency_drift_pct),
       km_gap_hr_efficiency_drift_pct:n(advanced.km_gap_hr_efficiency_drift_pct),elapsed_time_s:duration,file_sha256:fileHash,dedupe_key:dedupe,
-      metrics_json:{parser:"workoutbuddy-web-tcx-v4",trackpoints:points.length,stored_trackpoints:streamPoints.length,
+      metrics_json:{parser:isFit?"workoutbuddy-web-fit-v1":"workoutbuddy-web-tcx-v4",trackpoints:points.length,stored_trackpoints:streamPoints.length,
         ...advanced,
         max_speed_kmh:streamDerived.max_speed_kmh,max_power_w:streamDerived.max_power_w,max_cadence:streamDerived.max_cadence,
         avg_grade_pct:streamDerived.avg_grade_pct,min_grade_pct:streamDerived.min_grade_pct,max_grade_pct:streamDerived.max_grade_pct,
@@ -3027,7 +3088,7 @@ async function parseTcx(file) {
 }
 
 async function importTcx(file) {
-  const parsed=await parseTcx(file);
+  const parsed=await parseWorkoutFile(file);
   const fields="id,name,start_time,raw_file_path,file_sha256,dedupe_key,apple_vo2max,body_weight_kg,metrics_json";
   const byHash=await client.from("activities").select(fields).eq("user_id",userId()).eq("file_sha256",parsed.activity.file_sha256).limit(1);
   if(byHash.error)throw byHash.error;
@@ -3046,7 +3107,7 @@ async function importTcx(file) {
     const decision=await askDuplicateDecision(file,existing,matchType);
     if(decision!=="overwrite")return "skipped";
     const path=existing.raw_file_path||newPath;
-    const up=await client.storage.from("workout-files").upload(path,file,{upsert:true,contentType:file.type||"application/xml"});
+    const up=await client.storage.from("workout-files").upload(path,file,{upsert:true,contentType:/\.fit$/i.test(file.name)?"application/octet-stream":(file.type||"application/xml")});
     if(up.error)throw up.error;
 
     parsed.activity.user_id=userId();parsed.activity.raw_file_path=path;
@@ -3063,7 +3124,7 @@ async function importTcx(file) {
     return "overwritten";
   }
 
-  const up=await client.storage.from("workout-files").upload(newPath,file,{upsert:false,contentType:file.type||"application/xml"});
+  const up=await client.storage.from("workout-files").upload(newPath,file,{upsert:false,contentType:/\.fit$/i.test(file.name)?"application/octet-stream":(file.type||"application/xml")});
   if(up.error)throw up.error;
   parsed.activity.user_id=userId();parsed.activity.raw_file_path=newPath;
   const ins=await client.from("activities").insert(parsed.activity).select("id").single();
