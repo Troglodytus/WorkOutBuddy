@@ -2385,7 +2385,10 @@ function renderStreamViewer(rows,target,comparisonEntries=[]){
   viewerStates[target]=state;
 
   const gps=rows.filter(r=>r.lat!=null&&r.lon!=null);
-  if(gps.length>=2){
+  const secondaryGps=comparisonEntries.map(e=>e.rows.filter(r=>r.lat!=null&&r.lon!=null))
+    .find(coords=>coords.length>=2)||[];
+  const mapBoundsGps=gps.length>=2?gps:secondaryGps;
+  if(mapBoundsGps.length>=2){
     el(mapId).classList.remove("hidden");
     const map=L.map(mapId,{renderer:L.canvas({padding:.5})});routeMaps[target]=map;state.map=map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
@@ -2402,9 +2405,11 @@ function renderStreamViewer(rows,target,comparisonEntries=[]){
       const c=colorForStreamMetric(key,gps[i][key],stats);
       L.polyline([[gps[i-1].lat,gps[i-1].lon],[gps[i].lat,gps[i].lon]],{weight:5,opacity:comparisonEntries.length?1:.92,color:c,interactive:false}).addTo(map);
     }
-    L.circleMarker([gps[0].lat,gps[0].lon],{radius:5,weight:2,color:"#166534",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Start").addTo(map);
-    L.circleMarker([gps[gps.length-1].lat,gps[gps.length-1].lon],{radius:5,weight:2,color:"#991b1b",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Finish").addTo(map);
-    map.fitBounds(gps.map(r=>[r.lat,r.lon]),{padding:[18,18]});
+    if(gps.length>=2){
+      L.circleMarker([gps[0].lat,gps[0].lon],{radius:5,weight:2,color:"#166534",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Primary start").addTo(map);
+      L.circleMarker([gps[gps.length-1].lat,gps[gps.length-1].lon],{radius:5,weight:2,color:"#991b1b",fillColor:"#ffffff",fillOpacity:1}).bindTooltip("Primary finish").addTo(map);
+    }
+    map.fitBounds(mapBoundsGps.map(r=>[r.lat,r.lon]),{padding:[18,18]});
     map.on("click",e=>{const r=nearestGpsRow(rows,e.latlng);if(r)updateViewerCursor(target,r);});
     let lastMapFollow=0;
     map.on("mousemove",e=>{
@@ -2422,7 +2427,8 @@ function renderStreamViewer(rows,target,comparisonEntries=[]){
   // intervals across the workout.
   const plotRows=rows;
   const validCount=plotRows.filter(r=>n(r[xKey])!=null&&n(r[key])!=null).length;
-  if(validCount>=2){
+  const secondaryValid=comparisonEntries.some(e=>e.rows.filter(r=>n(r[xKey])!=null&&n(r[key])!=null).length>=2);
+  if(validCount>=2||secondaryValid){
     el(plotId).classList.remove("hidden");
     const xs=plotRows.map(r=>n(r[xKey]));
     const ys=plotRows.map(r=>n(r[key]));
@@ -2471,7 +2477,7 @@ function renderStreamViewer(rows,target,comparisonEntries=[]){
       {responsive:true,displaylogo:false,scrollZoom:false});
     state.plotReady=true;
     bindPlotCursor(target);
-    updateViewerCursor(target,firstValid);
+    if(firstValid)updateViewerCursor(target,firstValid);
   }else{
     el(plotId).classList.add("hidden");
     el(readoutId).classList.add("hidden");
