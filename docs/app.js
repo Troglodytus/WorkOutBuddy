@@ -11,6 +11,8 @@ let session = null;
 let activities = [];
 let profile = null;
 let selectedActivityId = null;
+let selectedActivityIds = [];
+let workoutComparisonRequest = 0;
 let routeMaps = {history:null, home:null};
 let viewerStates = {history:null, home:null};
 let currentPlan = [];
@@ -146,6 +148,19 @@ function bindUi() {
   ["historyXMetric","historyYMetric","historyPlotType","historyColorBy"].forEach(id => el(id).addEventListener("change", renderHistory));
   el("fullStatisticsToggle").addEventListener("change", renderHistory);
   el("refreshWeatherButton").addEventListener("click",()=>refreshAllWeather(true));
+  el("clearWorkoutComparison").addEventListener("click",()=>{
+    selectedActivityIds=[];selectedActivityId=null;workoutComparisonRequest++;
+    renderWorkoutTable(filteredActivities());
+    renderComparisonSelection();
+    el("workoutDetail").textContent="Select a workout from the table.";
+    el("historyWorkoutMetrics").innerHTML="";
+    el("routeMap").classList.add("hidden");
+    el("streamPlot").classList.add("hidden");
+    el("historyRouteLegend").classList.add("hidden");
+    el("historyCursorReadout").classList.add("hidden");
+    if(routeMaps.history){routeMaps.history.remove();routeMaps.history=null;}
+    Plotly.purge("streamPlot");
+  });
   initWorkoutViewerControls();
   el("regeneratePlanButton").addEventListener("click", recalculateAndPersistPlan);
   el("plannerRegenerateButton").addEventListener("click", recalculateAndPersistPlan);
@@ -981,15 +996,57 @@ function tableMetricText(a,key){
   if(label.includes("distance")&&key!=="distance_km")return fmt(v,2);
   return fmt(v,2);
 }
+
+const COMPARE_COLORS=["#0d9488","#e8792a","#7c3aed","#e11d48","#2563eb","#a16207","#be185d","#059669"];
+function comparisonColor(index){return COMPARE_COLORS[(index-1+COMPARE_COLORS.length)%COMPARE_COLORS.length];}
+function renderComparisonSelection(){
+  const status=el("workoutComparisonStatus"),chips=el("workoutComparisonChips");
+  if(!status||!chips)return;
+  const active=selectedActivityIds.map(id=>activities.find(a=>a.id===id)).filter(Boolean);
+  if(!active.length){
+    status.textContent="Tick several workouts to compare them. First selection = primary; click a row for single view.";
+    chips.innerHTML="";
+    return;
+  }
+  status.textContent=active.length===1?
+    "One workout selected · tick another to overlay route, graph and metric deltas.":
+    active.length+" workouts compared · #1 is primary (100% route opacity, primary-only map bounds).";
+  chips.innerHTML=active.map((a,i)=>'<button type="button" class="comparison-chip '+(i===0?"comparison-primary":"")+
+    '" data-remove-compare="'+escapeHtml(a.id)+'" title="Remove from comparison">'+
+    '<span class="comparison-swatch" style="background:'+(i===0?"#111827":comparisonColor(i))+'"></span>'+
+    (i===0?"Primary · ":"#"+(i+1)+" · ")+escapeHtml(a.name||localDate(a.start_time))+' ×</button>').join("");
+  qsa("#workoutComparisonChips [data-remove-compare]").forEach(button=>button.addEventListener("click",()=>{
+    toggleWorkoutSelection(button.dataset.removeCompare,false);
+  }));
+}
+function toggleWorkoutSelection(id,checked=null){
+  if(!activities.some(a=>a.id===id))return;
+  const has=selectedActivityIds.includes(id),newState=checked==null?!has:!!checked;
+  if(newState&&!has)selectedActivityIds.push(id);
+  if(!newState&&has)selectedActivityIds=selectedActivityIds.filter(x=>x!==id);
+  selectedActivityId=selectedActivityIds[0]||null;
+  renderWorkoutTable(filteredActivities());
+  if(selectedActivityId)showWorkout(selectedActivityId,"history");
+  else{
+    ++workoutComparisonRequest;
+    el("workoutDetail").textContent="Select a workout from the table.";
+    el("historyWorkoutMetrics").innerHTML="";
+    el("routeMap").classList.add("hidden");
+    el("streamPlot").classList.add("hidden");
+    if(routeMaps.history){routeMaps.history.remove();routeMaps.history=null;}
+  }
+}
 function renderWorkoutTable(rows){
   const wrap=el("historyTableWrap");
+  renderComparisonSelection();
   if(!rows.length){wrap.innerHTML='<div class="muted" style="padding:14px">No workouts match these filters.</div>';return;}
   const extras=fullTableMetricKeys(rows);
-  const head=["Date","Sport","Name","Distance","Duration","Pace","GAP","Avg HR","Max HR","Elevation","Power","Cadence","Load","VO₂ est.","Apple VO₂max","Weight",...extras.map(humanMetricName)];
+  const head=["Compare","Date","Sport","Name","Distance","Duration","Pace","GAP","Avg HR","Max HR","Elevation","Power","Cadence","Load","VO₂ est.","Apple VO₂max","Weight",...extras.map(humanMetricName)];
   const body=rows.map(a=>{
-    const selected=a.id===selectedActivityId?" selected":"";
+    const selected=selectedActivityIds.includes(a.id)?" selected":"";
     const extraCells=extras.map(k=>'<td class="advanced-metric">'+escapeHtml(tableMetricText(a,k))+'</td>').join("");
     return '<tr class="workout-table-row'+selected+'" data-activity-id="'+escapeHtml(a.id)+'">'+
+      '<td><input type="checkbox" class="compare-checkbox" aria-label="Compare '+escapeHtml(a.name||"workout")+'" data-id="'+escapeHtml(a.id)+'" '+(selectedActivityIds.includes(a.id)?"checked":"")+'></td>'+
       '<td>'+escapeHtml(localDate(a.start_time))+'</td><td>'+escapeHtml(a.sport_type||a.sport_category||"—")+'</td><td>'+escapeHtml(a.name||"Workout")+'</td>'+
       '<td>'+escapeHtml(fmt(distanceKm(a),2," km"))+'</td><td>'+escapeHtml(fmt(durationMin(a),0," min"))+'</td><td>'+escapeHtml(fmtPace(a.avg_pace_min_km))+'</td>'+
       '<td>'+escapeHtml(fmtPace(a.avg_gap_pace_min_km))+'</td><td>'+escapeHtml(fmt(a.avg_hr,0))+'</td><td>'+escapeHtml(fmt(a.max_hr,0))+'</td>'+
@@ -1002,8 +1059,15 @@ function renderWorkoutTable(rows){
   wrap.innerHTML='<table class="workout-table"><thead><tr>'+head.map(h=>"<th>"+escapeHtml(h)+"</th>").join("")+"</tr></thead><tbody>"+body+"</tbody></table>";
   qsa("#historyTableWrap .workout-table-row").forEach(r=>r.addEventListener("click",e=>{
     if(e.target.closest("input")) return;
-    showWorkout(r.dataset.activityId,"history");
+    const id=r.dataset.activityId;
+    if(e.ctrlKey||e.metaKey||e.shiftKey){toggleWorkoutSelection(id);}
+    else{selectedActivityIds=[id];selectedActivityId=id;showWorkout(id,"history");}
+    renderWorkoutTable(filteredActivities());
   }));
+  qsa("#historyTableWrap .compare-checkbox").forEach(input=>{
+    input.addEventListener("click",e=>e.stopPropagation());
+    input.addEventListener("change",()=>toggleWorkoutSelection(input.dataset.id,input.checked));
+  });
   qsa("#historyTableWrap .manual-cell").forEach(inp=>{
     inp.addEventListener("click",e=>e.stopPropagation());
     inp.addEventListener("change",()=>saveManualActivityValue(inp.dataset.id,inp.dataset.field,inp.value));
