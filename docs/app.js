@@ -2108,49 +2108,103 @@ async function renderLatestWorkout(){
   await showWorkout(activities[0].id,"home");
 }
 
-async function showWorkout(id,target="history") {
-  if(target==="history")selectedActivityId=id;
-  const a=activities.find(x=>x.id===id);if(!a)return;
+
+function workoutComparisonMetrics(a){
+  const mj=safeJson(a.metrics_json,{}),w=weatherNumbers(a);
+  const out=[
+    ["Max HR",n(a.max_hr)," bpm",0],
+    ["Pace",n(a.avg_pace_min_km)," min/km",null],
+    ["Gradient-adjusted pace",n(a.avg_gap_pace_min_km)," min/km",null],
+    ["Elevation gain",n(a.elevation_gain_m)," m",0],["Elevation loss",n(a.elevation_loss_m)," m",0],
+    ["Training load",derivedLoad(a),"",1],
+    ["Z1–Z2",n(a.easy_zone_fraction)!=null?n(a.easy_zone_fraction)*100:null,"%",0],
+    ["Z4–Z5",n(a.hard_zone_fraction)!=null?n(a.hard_zone_fraction)*100:null,"%",0],
+    ["HR drift",n(a.hr_efficiency_drift_pct),"%",1],
+    ["GAP HR drift",n(a.gap_hr_efficiency_drift_pct),"%",1],
+    ["Fatigue-adjusted HR score",n(mj.fatigue_adjusted_efficiency_score),"",1],
+    ["HR residual vs expectation",n(mj.fatigue_hr_residual_bpm)," bpm",1],
+    ["HR model",mj.hr_prediction_model==="gradient_boosting"?"Gradient Boosting":mj.hr_prediction_model==="ridge"?"Ridge":"—",null,null],
+    ["Average power",n(a.average_power)," W",0],
+    ["Normalized power",n(a.normalized_power)," W",0],
+    ["Cadence",n(a.cadence_spm)," spm",0],
+    ["Estimated steps",n(mj.estimated_total_steps),"",0],
+    ["Best 5-min pace",n(mj.best_5min_pace_min_km)," min/km",null],
+    ["Estimated VO₂max",n(a.own_vo2max_estimate)??n(a.estimated_vo2max),"",1],
+    ["Apple VO₂max",n(a.apple_vo2max),"",1],
+    ["Weather start temp",w.start_temp_c," °C",1],
+    ["Weather start RH",w.start_humidity_pct,"%",0],
+    ["Weather finish temp",w.end_temp_c," °C",1],
+    ["Weather finish RH",w.end_humidity_pct,"%",0],
+    ["Minimum temp",w.min_temp_c," °C",1],
+    ["Maximum temp",w.max_temp_c," °C",1],
+    ["Minimum humidity",w.min_humidity_pct,"%",0],
+    ["Maximum humidity",w.max_humidity_pct,"%",0],
+    ["Highest GPS altitude",w.peak_altitude_m," m",0],
+    ["Highest point temp",w.peak_temp_c," °C",1],
+    ["Highest point RH",w.peak_humidity_pct,"%",0]
+  ];
+  return out.map(([label,value,unit,digits])=>({label,value,unit,digits}));
+}
+function formattedCompareValue(value,unit="",digits=1){
+  if(value==null||value==="")return "—";
+  if(typeof value!=="number"||!Number.isFinite(value))return String(value);
+  if(digits===null)return fmtPace(value);
+  return value.toFixed(digits)+(unit||"");
+}
+function formattedCompareDelta(value,unit="",digits=1){
+  if(value==null||!Number.isFinite(value))return "—";
+  const prefix=value>0?"+":value<0?"−":"±",abs=Math.abs(value);
+  return prefix+formattedCompareValue(abs,unit,digits);
+}
+function detailComparisonCard(descriptor,values,primaryClass=""){
+  const {label,unit="",digits=1}=descriptor;
+  const primary=values[0],other=values.slice(1),numbers=values.filter(Number.isFinite);
+  const base=formattedCompareValue(primary,unit,digits);
+  let detail="",description="";
+  if(other.length===1){
+    const v=other[0];
+    if(Number.isFinite(primary)&&Number.isFinite(v)){
+      detail="Δ "+formattedCompareDelta(v-primary,unit,digits);
+      description="Second − primary: "+detail;
+    }else{detail="Other: "+formattedCompareValue(v,unit,digits);description=detail;}
+  }else if(other.length>=2){
+    if(numbers.length){
+      const average=mean(numbers),lo=Math.min(...numbers),hi=Math.max(...numbers);
+      detail="Ø "+formattedCompareValue(average,unit,digits)+
+        " · ΔØ "+(Number.isFinite(primary)?formattedCompareDelta(average-primary,unit,digits):"—");
+      description="Range "+formattedCompareValue(lo,unit,digits)+" – "+formattedCompareValue(hi,unit,digits);
+    }else{
+      detail=values.filter(v=>v!=null&&v!=="").length+" values";
+      description=[...new Set(values.map(v=>formattedCompareValue(v,unit,digits)))].join(" · ");
+    }
+  }
+  const title=label+" · Primary "+base+(detail?" · "+detail:"")+(description?" · "+description:"");
+  return '<div class="detail-item comparison-detail '+primaryClass+'" title="'+escapeHtml(title)+'">'+
+    '<div class="detail-key">'+escapeHtml(label)+'</div>'+
+    '<div class="detail-value">'+escapeHtml(base)+'</div>'+
+    '<div class="detail-compare">'+escapeHtml(detail||"")+'</div>'+
+    '<div class="detail-range">'+escapeHtml(other.length>=2?description:"")+'</div></div>';
+}
+function renderComparedWorkoutDetails(entries,target,derived={}){
+  const a=entries[0].activity,all=entries.map(e=>e.activity);
   const detailId=target==="home"?"homeWorkoutDetail":"workoutDetail";
   const belowId=target==="home"?"homeWorkoutMetrics":"historyWorkoutMetrics";
-  const stream=await getWorkoutStream(id),rows=buildStreamRows(stream),derived=rows.length?await maybePersistDerivedMetrics(a,rows):{};
-  const w=weatherNumbers(a),mj=safeJson(a.metrics_json,{});
-  const primary=[
-    ["Date",localDate(a.start_time)],["Type",a.sport_type||a.sport_category],
-    ["Distance",fmt(distanceKm(a),2," km")],["Duration",fmt(durationMin(a),0," min")],
-    ["Avg HR",fmt(a.avg_hr,0," bpm")]
+  const primaryDescriptions=[
+    {label:"Date",values:all.map(a=>localDate(a.start_time))},
+    {label:"Type",values:all.map(a=>a.sport_type||a.sport_category||"—")},
+    {label:"Distance",values:all.map(distanceKm),unit:" km",digits:2},
+    {label:"Duration",values:all.map(durationMin),unit:" min",digits:0},
+    {label:"Avg HR",values:all.map(a=>n(a.avg_hr)),unit:" bpm",digits:0}
   ];
-  el(detailId).innerHTML='<h3>'+escapeHtml(a.name||"Workout")+'</h3><div class="workout-primary-metrics">'+
-    primary.map(i=>'<div class="detail-item"><div class="detail-key">'+escapeHtml(i[0])+
-      '</div><div class="detail-value">'+escapeHtml(i[1])+'</div></div>').join("")+"</div>";
-  const secondary=[
-    ["Max HR",fmt(a.max_hr,0," bpm")],
-    ["Pace",fmtPace(a.avg_pace_min_km)],
-    ["Gradient-adjusted pace",fmtPace(a.avg_gap_pace_min_km)],
-    ["Elevation gain / loss",fmt(a.elevation_gain_m,0," m")+" / "+fmt(a.elevation_loss_m,0," m")],
-    ["Training load",fmt(derivedLoad(a),1)],
-    ["Z1–Z2 / Z4–Z5",fmt(n(a.easy_zone_fraction)!=null?n(a.easy_zone_fraction)*100:null,0,"%")+" / "+fmt(n(a.hard_zone_fraction)!=null?n(a.hard_zone_fraction)*100:null,0,"%")],
-    ["HR drift",fmt(a.hr_efficiency_drift_pct,1,"%")],
-    ["GAP HR drift",fmt(a.gap_hr_efficiency_drift_pct,1,"%")],
-    ["Fatigue-adjusted HR score",fmt(mj.fatigue_adjusted_efficiency_score,1)],
-    ["HR residual vs expectation",fmt(mj.fatigue_hr_residual_bpm,1," bpm")],
-    ["HR model",mj.hr_prediction_model==="gradient_boosting"?"Gradient Boosting":mj.hr_prediction_model==="ridge"?"Ridge":"—"],
-    ["Power / normalized power",fmt(a.average_power,0," W")+" / "+fmt(a.normalized_power,0," W")],
-    ["Cadence",fmt(a.cadence_spm,0," spm")],
-    ["Estimated steps",fmt(mj.estimated_total_steps,0)],
-    ["Best 5-min pace",fmtPace(mj.best_5min_pace_min_km)],
-    ["Gradient-normalized VO₂max",fmt(a.own_vo2max_estimate??derived.vo2,1)],
-    ["Apple VO₂max",fmt(a.apple_vo2max,1)],
-    ["Weather start",fmt(w.start_temp_c,1," °C")+" · "+fmt(w.start_humidity_pct,0,"% RH")],
-    ["Weather finish",fmt(w.end_temp_c,1," °C")+" · "+fmt(w.end_humidity_pct,0,"% RH")],
-    ["Temperature min–max",fmt(w.min_temp_c,1," °C")+" – "+fmt(w.max_temp_c,1," °C")],
-    ["Humidity min–max",fmt(w.min_humidity_pct,0,"%")+" – "+fmt(w.max_humidity_pct,0,"%")],
-    ["Highest GPS point",w.peak_altitude_m!=null?fmt(w.peak_altitude_m,0," m")+" · "+fmt(w.peak_temp_c,1," °C")+" · "+fmt(w.peak_humidity_pct,0,"% RH")+
-      (w.peak_time?" · "+new Date(w.peak_time).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):""):"—"]
-  ];
-  const rawSplits=Array.isArray(mj.km_splits)?mj.km_splits:[];
+  el(detailId).innerHTML='<h3>'+escapeHtml(a.name||"Workout")+
+    (entries.length>1?' <span class="muted small-note">compared with '+(entries.length-1)+' other workout(s)</span>':'')+
+    '</h3><div class="workout-primary-metrics">'+primaryDescriptions.map(d=>detailComparisonCard(d,d.values)).join("")+'</div>';
+  const metrics=all.map(workoutComparisonMetrics);
+  const descriptors=metrics[0];
+  const grid=descriptors.map((desc,i)=>detailComparisonCard(desc,metrics.map(m=>m[i]?.value))).join("");
+  const mj=safeJson(a.metrics_json,{}),rawSplits=Array.isArray(mj.km_splits)?mj.km_splits:[];
   const splits=rawSplits.length?
-    '<details><summary>Per-kilometre efficiency ('+rawSplits.length+' splits)</summary>'+
+    '<details><summary>Primary workout: per-kilometre efficiency ('+rawSplits.length+' splits)</summary>'+
     '<div class="table-wrap"><table class="workout-table"><thead><tr><th>km</th><th>Pace</th><th>GAP</th><th>HR</th><th>Expected HR</th><th>Score</th><th>Prior load</th></tr></thead><tbody>'+
     rawSplits.map(r=>'<tr><td>'+escapeHtml(r.km)+'</td><td>'+escapeHtml(fmtPace(r.avg_pace_min_km))+'</td>'+
       '<td>'+escapeHtml(fmtPace(r.avg_gap_pace_min_km))+'</td><td>'+escapeHtml(fmt(r.avg_hr,0))+'</td>'+
@@ -2158,12 +2212,38 @@ async function showWorkout(id,target="history") {
       '<td>'+escapeHtml(fmt(r.fatigue_adjusted_efficiency_score,1))+'</td>'+
       '<td>'+escapeHtml(fmt(r.cumulative_hr_load_before,1))+'</td></tr>').join("")+
     '</tbody></table></div></details>':"";
-  el(belowId).innerHTML='<div class="workout-metrics-title">Training metrics & weather</div>'+
-    '<div class="detail-grid">'+secondary.map(i=>'<div class="detail-item"><div class="detail-key">'+escapeHtml(i[0])+
-      '</div><div class="detail-value">'+escapeHtml(i[1])+'</div></div>').join("")+'</div>'+
-    '<p class="muted small-note">HR model scores are personalized predictive estimates, not clinical findings. Weather comes from gridded models; mountain temperatures are approximate.</p>'+splits;
-  renderStreamViewer(rows,target);
-  if(target==="history")renderWorkoutTable(filteredActivities());
+  el(belowId).innerHTML='<div class="workout-metrics-title">Training metrics & weather'+
+    (entries.length>1?' <span class="muted small-note">· Δ = comparison minus primary'+
+    (entries.length>2?' · Ø/range include all selected workouts':'')+'</span>':'')+'</div>'+
+    '<div class="detail-grid">'+grid+'</div>'+
+    '<p class="muted small-note">HR model scores are personalized predictive estimates. Weather comes from gridded models; mountain temperatures are approximate.</p>'+splits;
+}
+async function showWorkout(id,target="history"){
+  const isHistory=target==="history";
+  if(isHistory){
+    if(!selectedActivityIds.length||!selectedActivityIds.includes(id))selectedActivityIds=[id];
+    selectedActivityId=selectedActivityIds[0];
+    id=selectedActivityId;
+  }
+  const ticket=isHistory?++workoutComparisonRequest:null;
+  const ids=isHistory?selectedActivityIds.slice():[id];
+  const chosen=ids.map(x=>activities.find(a=>a.id===x)).filter(Boolean);
+  if(!chosen.length)return;
+  try{
+    const entries=await Promise.all(chosen.map(async activity=>({
+      activity,rows:buildStreamRows(await getWorkoutStream(activity.id))
+    })));
+    if(isHistory&&ticket!==workoutComparisonRequest)return;
+    const first=entries[0],derived=first.rows.length?await maybePersistDerivedMetrics(first.activity,first.rows):{};
+    if(isHistory&&ticket!==workoutComparisonRequest)return;
+    renderComparedWorkoutDetails(entries,target,derived);
+    renderStreamViewer(first.rows,target,isHistory?entries.slice(1):[]);
+    if(isHistory){renderWorkoutTable(filteredActivities());renderComparisonSelection();}
+  }catch(err){
+    const status=el(isHistory?"workoutDetail":"homeWorkoutDetail");
+    if(!isHistory||ticket===workoutComparisonRequest)status.textContent="Could not load selected workout: "+(err.message||String(err));
+    console.error(err);
+  }
 }
 
 function nearestRowByX(rows,xKey,xValue){
