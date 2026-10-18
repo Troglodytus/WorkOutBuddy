@@ -2714,8 +2714,8 @@ function scalarMetricsJson(a){
 function compactKmEfficiencyForAi(a){
   const splits=safeJson(a.metrics_json,{}).km_splits;
   if(!Array.isArray(splits))return [];
-  const step=Math.max(1,Math.ceil(splits.length/8));
-  const chosen=splits.filter((_,i)=>i===0||i===splits.length-1||i%step===0).slice(0,9);
+  const step=Math.max(1,Math.ceil(splits.length/4));
+  const chosen=splits.filter((_,i)=>i===0||i===splits.length-1||i%step===0).slice(0,5);
   return chosen.map(s=>({
     km:n(s.km),avg_hr:n(s.avg_hr),gap_pace:n(s.avg_gap_pace_min_km),
     prior_load:n(s.cumulative_hr_load_before),prior_z45_min:n(s.cumulative_z45_before_min),
@@ -2724,6 +2724,86 @@ function compactKmEfficiencyForAi(a){
 }
 
 
+
+function aiRounded(value,digits=1){
+  const v=n(value);return v==null?null:Number(v.toFixed(digits));
+}
+function aiGroupSummary(rows,spanDays){
+  const runs=rows.filter(a=>normalizeSport(a.sport_category||a.sport_type)==="run");
+  const easyRuns=runs.filter(a=>n(a.easy_zone_fraction,0)>=.55&&distanceKm(a)>=3);
+  return {
+    workout_count:rows.length,run_count:runs.length,
+    running_km:aiRounded(sum(runs.map(distanceKm))),running_km_per_week:aiRounded(sum(runs.map(distanceKm))*7/spanDays),
+    all_sport_load:aiRounded(sum(rows.map(derivedLoad))),
+    hard_z45_minutes:aiRounded(sum(rows.map(a=>(n(a.z4_s,0)+n(a.z5_s,0))/60))),
+    median_easy_gap_pace_min_km:aiRounded(median(easyRuns.map(a=>n(a.avg_gap_pace_min_km)).filter(Number.isFinite)),2),
+    median_run_drift_pct:aiRounded(median(runs.map(a=>n(a.gap_hr_efficiency_drift_pct)).filter(Number.isFinite))),
+    median_fatigue_efficiency:aiRounded(median(runs.map(a=>n(safeJson(a.metrics_json,{}).fatigue_adjusted_efficiency_score)).filter(Number.isFinite))),
+    longest_run_km:aiRounded(runs.length?Math.max(...runs.map(distanceKm)):null)
+  };
+}
+function aiComparisonOfRuns(rows){
+  if(rows.length<6)return {status:"Too few runs for reliable matched comparisons"};
+  const easy=rows.filter(a=>normalizeSport(a.sport_category||a.sport_type)==="run"&&
+    n(a.easy_zone_fraction,0)>=.55&&distanceKm(a)>=3);
+  const group=(filter)=>easy.filter(filter);
+  const summary=(arr)=>({
+    n:arr.length,median_gap_pace_min_km:aiRounded(median(arr.map(a=>n(a.avg_gap_pace_min_km)).filter(Number.isFinite)),2),
+    median_hr:aiRounded(median(arr.map(a=>n(a.avg_hr)).filter(Number.isFinite)),0),
+    median_drift_pct:aiRounded(median(arr.map(a=>n(a.gap_hr_efficiency_drift_pct)).filter(Number.isFinite)))
+  });
+  const cool=group(a=>{const w=weatherNumbers(a);return w.mean_temp_c!=null&&w.mean_temp_c<=16;});
+  const warm=group(a=>{const w=weatherNumbers(a);return w.mean_temp_c!=null&&w.mean_temp_c>=23;});
+  const short=group(a=>distanceKm(a)<7),long=group(a=>distanceKm(a)>=7);
+  const output={easy_run_count:easy.length};
+  if(cool.length>=3&&warm.length>=3)output.weather_groups={
+    cool_max_16c:summary(cool),warm_min_23c:summary(warm),
+    caution:"Not speed- or route-matched; directional only; heat and training intensity are confounded."
+  };
+  if(short.length>=3&&long.length>=3)output.run_length_groups={
+    short_below_7km:summary(short),long_7km_plus:summary(long),
+    caution:"Differences also reflect pacing and session purpose; not a pure durability test."
+  };
+  return output;
+}
+function analyticalRelationshipsForAi(){
+  const now=Date.now(),recent=activities.filter(a=>{
+    const t=new Date(a.start_time).getTime();
+    return t<=now&&t>=now-120*86400000;
+  });
+  const older=recent.filter(a=>new Date(a.start_time).getTime()<now-60*86400000);
+  const newer=recent.filter(a=>new Date(a.start_time).getTime()>=now-60*86400000);
+  const last28=recent.filter(a=>new Date(a.start_time).getTime()>=now-28*86400000);
+  const weekly=[];
+  for(let offset=3;offset>=0;offset--){
+    const start=now-(offset+1)*7*86400000,end=now-offset*7*86400000;
+    const group=last28.filter(a=>{
+      const t=new Date(a.start_time).getTime();return t>=start&&t<end;
+    });
+    const summary=aiGroupSummary(group,7);
+    weekly.push({week_ending:new Date(end).toISOString().slice(0,10),km:summary.running_km,
+      load:summary.all_sport_load,z45_min:summary.hard_z45_minutes});
+  }
+  const eligible=last28.filter(a=>normalizeSport(a.sport_category||a.sport_type)==="run"&&distanceKm(a)>=3);
+  const examples=eligible.slice().sort((a,b)=>{
+    const va=Math.abs(n(a.gap_hr_efficiency_drift_pct,0));
+    const vb=Math.abs(n(b.gap_hr_efficiency_drift_pct,0));
+    return vb-va;
+  }).slice(0,3).map(a=>{
+    const w=weatherNumbers(a),mj=safeJson(a.metrics_json,{});
+    return {date:a.start_time.slice(0,10),km:aiRounded(distanceKm(a)),avg_hr:n(a.avg_hr),
+      gap_pace_min_km:aiRounded(n(a.avg_gap_pace_min_km),2),
+      hr_gap_drift_pct:aiRounded(n(a.gap_hr_efficiency_drift_pct)),
+      fatigue_score:aiRounded(n(mj.fatigue_adjusted_efficiency_score)),
+      temp_c:aiRounded(w.mean_temp_c),z45_min:aiRounded((n(a.z4_s,0)+n(a.z5_s,0))/60)};
+  });
+  return {
+    first_60d:aiGroupSummary(older,60),latest_60d:aiGroupSummary(newer,60),
+    last_4_weeks:weekly,comparable_run_groups:aiComparisonOfRuns(recent),
+    contrasting_recent_runs:examples,
+    interpretation_rule:"Observational patterns, not causal effects. Prioritize matched intensity/GAP, route, weather, load and data sufficiency."
+  };
+}
 function compactAnalysisForAi(d){
   return {
     fitness_trend:d.trend,fitness_trend_note:d.trendNote,aerobic_base:d.baseStatus,
@@ -2804,7 +2884,7 @@ function aiHistoryPayload(){
   if(!last)return [];
   const data=safeJson(last.deterministic,{});
   const summary=String(data.ai_memory_summary||summarizeAiMemory(last.llm_markdown||""));
-  return [{created_at:last.created_at,evaluation_type:"analysis",summary:summary.slice(0,850)}];
+  return [{created_at:last.created_at,evaluation_type:"analysis",summary:summary.slice(0,650)}];
 }
 
 function renderAiHistory(){
@@ -2830,17 +2910,21 @@ async function saveAiEvaluation(type,context,text,model,responseJson=null){
 async function askAiCoach() {
   if (!client) return;
   const d=analysisData();
-  el("aiCoachOutput").textContent="Deriving 180-day metrics and analyzing…";
+  el("aiCoachOutput").textContent="Preparing 120-day training trends and detailed 28-day evidence…";
   el("aiCoachButton").disabled=true;
   try{
-    const compact=await activitiesForAi(180);
+    const compact=await activitiesForAi(120);
+    const patterns=analyticalRelationshipsForAi();
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"analysis",analysis:compactAnalysisForAi(d),ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,history:aiHistoryPayload(),profile:profileForAi()
+      mode:"analysis",analysis:compactAnalysisForAi(d),relationships:patterns,
+      ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),
+      activities:compact,history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+result.error.message;return;}
     const text=(result.data&&result.data.text)||"No response returned.",model=(result.data&&result.data.model)||"unknown";
     el("aiCoachOutput").innerHTML=window.marked?marked.parse(text):escapeHtml(text);
-    await saveAiEvaluation("analysis",{window_days:180,activity_count:compact.length,analysis:compactAnalysisForAi(d),ml_model:compactMlForAi()},text,model);
+    await saveAiEvaluation("analysis",{window_days:120,full_detail_days:28,activity_count:compact.length,
+      analysis:compactAnalysisForAi(d),relationships:patterns,ml_model:compactMlForAi()},text,model);
   }catch(err){
     el("aiCoachOutput").textContent="AI coach failed: "+(err.message||String(err));
   }finally{el("aiCoachButton").disabled=false;}
