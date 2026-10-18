@@ -147,7 +147,7 @@ function bindUi() {
   el("historyPeriodFilter").addEventListener("change", renderHistory);
   ["historyXMetric","historyYMetric","historyPlotType","historyColorBy"].forEach(id => el(id).addEventListener("change", renderHistory));
   el("fullStatisticsToggle").addEventListener("change", renderHistory);
-  el("refreshWeatherButton").addEventListener("click",()=>refreshAllWeather(true));
+  el("refreshWeatherButton").addEventListener("click",()=>refreshAllWeather(false));
   el("clearWorkoutComparison").addEventListener("click",()=>{
     selectedActivityIds=[];selectedActivityId=null;workoutComparisonRequest++;
     renderWorkoutTable(filteredActivities());
@@ -242,11 +242,61 @@ async function loadProfile() {
   }
 }
 
-async function loadActivities() {
-  if (!userId()) return;
-  const res = await client.from("activities").select("*").order("start_time",{ascending:false}).limit(2000);
-  if (res.error) { toast("Sync failed – previously loaded activities were preserved: "+res.error.message,5000);setSync("Sync failed · data not loaded");return; }
-  activities = res.data || [];
+
+const INHERITED_VITAL_FIELDS=["apple_vo2max","body_weight_kg"];
+function inheritedVitalIsValid(field,value){
+  const v=n(value);
+  return v!=null&&(field==="apple_vo2max"?v>=15&&v<=90:v>=30&&v<=250);
+}
+async function inheritLatestWorkoutVitals(){
+  if(!client||!userId()||!activities.length)return 0;
+  // Ascending chronological order: never borrow from a future workout.
+  const ordered=activities.slice().sort((a,b)=>new Date(a.start_time)-new Date(b.start_time));
+  const latest={},changes=[];
+  for(const activity of ordered){
+    const mj=safeJson(activity.metrics_json,{});
+    const provenance={...(safeJson(mj.inherited_workout_values,{})||{})};
+    const update={};let modified=false;
+    for(const field of INHERITED_VITAL_FIELDS){
+      const existing=n(activity[field]),auto=provenance[field];
+      if(inheritedVitalIsValid(field,existing)&&!auto){
+        latest[field]={value:existing,source_id:activity.id};
+        continue;
+      }
+      const source=latest[field];
+      if(source&&(!inheritedVitalIsValid(field,existing)||!!auto)&&
+        (existing!==source.value||!auto||auto.source_id!==source.source_id)){
+        update[field]=source.value;activity[field]=source.value;
+        provenance[field]={source_id:source.source_id};modified=true;
+      }else if(!source&&auto){
+        update[field]=null;activity[field]=null;delete provenance[field];modified=true;
+      }
+      // Inherited values are displayed, but NEVER become independent measurement sources.
+    }
+    if(modified){
+      update.metrics_json={...mj,inherited_workout_values:provenance};
+      activity.metrics_json=update.metrics_json;
+      changes.push({activity,update});
+    }
+  }
+  let successful=0,failed=0;
+  for(const {activity,update} of changes){
+    const res=await client.from("activities").update(update)
+      .eq("id",activity.id).eq("user_id",userId());
+    if(res.error){failed++;console.warn("Vital inheritance failed",activity.id,res.error);}
+    else successful++;
+  }
+  if(failed)toast("Could not save inherited measurements for "+failed+" workouts.",5000);
+  return successful;
+}
+async function loadActivities(){
+  if(!userId())return;
+  const res=await client.from("activities").select("*").eq("user_id",userId())
+    .order("start_time",{ascending:false}).limit(2000);
+  if(res.error){toast("Sync failed – previously loaded activities were preserved: "+res.error.message,5000);
+    setSync("Sync failed · data not loaded");return;}
+  activities=res.data||[];
+  await inheritLatestWorkoutVitals();
 }
 
 function renderAll() {
@@ -1078,10 +1128,16 @@ async function saveManualActivityValue(id,field,raw){
   const value=raw===""?null:n(raw);
   if(value!=null&&field==="apple_vo2max"&&(value<15||value>90)){toast("VO₂max must be between 15 and 90.");renderHistory();return;}
   if(value!=null&&field==="body_weight_kg"&&(value<30||value>250)){toast("Weight must be between 30 and 250 kg.");renderHistory();return;}
-  const res=await client.from("activities").update({[field]:value}).eq("id",id).eq("user_id",userId());
+  const a=activities.find(x=>x.id===id),mj=safeJson(a&&a.metrics_json,{});
+  const inherited={...(safeJson(mj.inherited_workout_values,{})||{})};
+  delete inherited[field];
+  const updatedMetrics={...mj,inherited_workout_values:inherited};
+  const res=await client.from("activities").update({[field]:value,metrics_json:updatedMetrics})
+    .eq("id",id).eq("user_id",userId());
   if(res.error){toast("Could not save value: "+res.error.message,5000);renderHistory();return;}
-  const a=activities.find(x=>x.id===id);if(a)a[field]=value;
-  toast(field==="apple_vo2max"?"Apple VO₂max saved.":"Weight saved.");
+  if(a){a[field]=value;a.metrics_json=updatedMetrics;}
+  await inheritLatestWorkoutVitals();
+  toast(field==="apple_vo2max"?"Apple VO₂max saved; newer missing values updated.":"Weight saved; newer missing values updated.");
   renderHistory();renderHome();renderAnalysis();
   if(selectedActivityId===id) showWorkout(id,"history");
 }
@@ -2059,9 +2115,16 @@ async function fetchWeatherForActivity(activity){
   };
 }
 
+function workoutHasWeather(activity){
+  const m=safeJson(activity&&activity.metrics_json,{});
+  return ["weather_start_temp_c","weather_end_temp_c","weather_mean_temp_c",
+    "weather_start_humidity_pct","weather_mean_humidity_pct","weather_peak_temp_c"]
+    .some(k=>n(m[k])!=null);
+}
 async function persistWeatherForActivity(activity,force=false){
   const existing=safeJson(activity.metrics_json,{});
-  if(!force&&existing.weather_version===WEATHER_VERSION)return "skipped";
+  // Never re-fetch previously stored weather just because the parser was upgraded.
+  if(workoutHasWeather(activity))return "skipped";
   const weather=await fetchWeatherForActivity(activity);
   if(!weather)return "no-gps";
   const mj={...existing,...weather};
@@ -2073,7 +2136,7 @@ async function persistWeatherForActivity(activity,force=false){
   activity.metrics_json=mj;
   return "updated";
 }
-async function refreshAllWeather(force=true){
+async function refreshAllWeather(force=false){
   const btn=el("refreshWeatherButton"),status=el("weatherRefreshStatus");
   if(btn)btn.disabled=true;
   let updated=0,skipped=0,failed=0,noGps=0;
@@ -2081,17 +2144,20 @@ async function refreshAllWeather(force=true){
     for(let i=0;i<activities.length;i++){
       const a=activities[i];
       if(status)status.textContent="Weather "+(i+1)+" / "+activities.length+": "+(a.name||a.sport_type||"Workout");
+      if(workoutHasWeather(a)){skipped++;continue;}
       try{
-        const r=await persistWeatherForActivity(a,force);
+        const r=await persistWeatherForActivity(a,false);
         if(r==="updated")updated++;else if(r==="no-gps")noGps++;else skipped++;
       }catch(err){failed++;console.warn("Weather refresh failed",a.id,err);}
-      // Stay friendly to the free public endpoint during a bulk refresh.
+      // Throttle only actual weather requests; existing records cost no API calls.
       if(i<activities.length-1)await new Promise(resolve=>setTimeout(resolve,90));
     }
     if(status)status.textContent="Weather: "+updated+" updated · "+skipped+" already current · "+noGps+" without GPS · "+failed+" failed.";
-    setSync("Relearning weather-aware HR efficiency…");
-    await applyPersonalFatigueEfficiency();
-    renderHistory();renderAnalysis();renderPlanner();
+    if(updated){
+      setSync("Relearning weather-aware HR efficiency…");
+      await applyPersonalFatigueEfficiency();
+      renderHistory();renderAnalysis();renderPlanner();
+    }
   }finally{
     if(btn)btn.disabled=false;
     setSync("Synced");
