@@ -238,7 +238,15 @@ function scheduleWorkoutPlotResize(){
 }
 function watchResponsiveWorkouts(){
   if(typeof ResizeObserver==="undefined")return;
-  const observer=new ResizeObserver(scheduleWorkoutPlotResize);
+  const priorWidths=new WeakMap();
+  const observer=new ResizeObserver(entries=>{
+    let changed=false;
+    for(const entry of entries){
+      const width=entry.target.clientWidth;
+      if(priorWidths.get(entry.target)!==width){priorWidths.set(entry.target,width);changed=true;}
+    }
+    if(changed)scheduleWorkoutPlotResize();
+  });
   qsa(".app-shell,.view,.panel,.analysis-grid").forEach(node=>observer.observe(node));
   window.addEventListener("orientationchange",()=>setTimeout(scheduleWorkoutPlotResize,90));
   window.addEventListener("resize",scheduleWorkoutPlotResize,{passive:true});
