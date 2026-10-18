@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=1.0.3">
+  <link rel="stylesheet" href="./styles.css?v=1.0.4">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -35,7 +35,7 @@
         <h1>Training dashboard</h1>
       </div>
       <div class="topbar-actions">
-        <button id="uploadTopButton" class="secondary">Upload TCX</button>
+        <button id="uploadTopButton" class="secondary">Upload workout</button>
         <button id="settingsButton" class="icon-button" aria-label="Settings">⚙</button>
       </div>
     </header>
@@ -75,7 +75,7 @@
         <div class="panel-head">
           <div><div class="eyebrow">RECENT</div><h2>Latest workouts</h2></div>
           <div class="inline-actions">
-            <button id="uploadHomeButton" class="primary small">+ Upload TCX</button>
+            <button id="uploadHomeButton" class="primary small">+ Upload workout</button>
             <button class="text-button" data-view-link="history">View all →</button>
           </div>
         </div>
@@ -151,7 +151,7 @@
         <div id="plotCoverage" class="status"></div>
         <div id="historyPlot" class="plot"></div>
         <label class="checkbox-label stats-full-toggle"><input id="fullStatisticsToggle" type="checkbox"> Full statistics</label>
-        <div class="muted small-note">Enable to expose all advanced derived metrics from the TCX stream in the X/Y selectors and workout table.</div>
+        <div class="muted small-note">Enable to expose all advanced derived metrics from workout streams in the X/Y selectors and workout table.</div>
       </article>
 
       <article class="panel">
@@ -159,7 +159,7 @@
           <div><div class="eyebrow">ACTIVITIES</div><h2>Workout table</h2></div>
           <div class="inline-actions">
             <span class="muted small-note">Apple VO₂max and weight are editable directly in the table.</span>
-            <button id="refreshWeatherButton" class="secondary small">Refresh all weather</button>
+            <button id="refreshWeatherButton" class="secondary small">Fetch missing weather</button>
           </div>
         </div>
         <div id="weatherRefreshStatus" class="status"></div>
@@ -251,7 +251,7 @@
           <div><h3>Ridge vs Gradient Boosting</h3><div id="mlModelComparison" class="plot compact"></div></div>
           <div><h3>Feature influence</h3><div id="mlFeatureImportance" class="plot compact"></div></div>
         </div>
-        <div id="mlAnalysisExplanation" class="muted small-note"></div>
+        <div id="mlAnalysisExplanation" class="muted small-note"></div><p class="muted small-note">Lower MAE (bpm) is better. The importance chart describes how frequently the candidate Gradient Boosting model uses a variable to reduce prediction error; it is not proof of causation.</p>
       </article>
       <article class="panel">
         <div class="panel-head"><div><div class="eyebrow">AI COACH</div><h2>Interpretation</h2></div></div>
@@ -393,7 +393,7 @@
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="./config.js?v=1.0.3"></script>
-  <script src="./app.js?v=1.0.3"></script>
+  <script src="./config.js?v=1.0.4"></script>
+  <script src="./app.js?v=1.0.4"></script>
 </body>
 </html>
