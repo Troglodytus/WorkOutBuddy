@@ -19,6 +19,7 @@ let currentPlan = [];
 let duplicateResolver = null;
 let aiHistory = [];
 let metricsEnrichmentRunning = false;
+let inheritedVitalsPending = Promise.resolve();
 let mlModelReport = null;
 let mlModelSignature = null;
 let mlAnalysisBusy = false;
@@ -215,7 +216,7 @@ async function enterApp() {
   renderAll();
   scheduleWorkoutPlotResize();
   setSync("Synced");
-  enrichMetricsInBackground();
+  inheritedVitalsPending.then(()=>enrichMetricsInBackground());
 }
 
 
@@ -324,7 +325,10 @@ async function loadActivities(){
   if(res.error){toast("Sync failed – previously loaded activities were preserved: "+res.error.message,5000);
     setSync("Sync failed · data not loaded");return;}
   activities=res.data||[];
-  await inheritLatestWorkoutVitals();
+  // Apply inherited values immediately, persist them without blocking first paint.
+  inheritedVitalsPending=inheritLatestWorkoutVitals().catch(err=>{
+    console.warn("Could not persist inherited workout measurements",err);
+  });
 }
 
 function renderAll() {
@@ -2167,6 +2171,8 @@ async function persistWeatherForActivity(activity,force=false){
 async function refreshAllWeather(force=false){
   const btn=el("refreshWeatherButton"),status=el("weatherRefreshStatus");
   if(btn)btn.disabled=true;
+  // Don't collide with the first-run vital carry-forward JSON writes.
+  await inheritedVitalsPending;
   let updated=0,skipped=0,failed=0,noGps=0;
   try{
     for(let i=0;i<activities.length;i++){
@@ -3076,7 +3082,8 @@ async function importSelectedFiles() {
     } catch(err){ console.error(err); toast(files[i].name+": "+err.message,5000); }
   }
   el("importFilesButton").disabled=false;
-  await loadActivities(); streamCache.clear(); renderAll(); enrichMetricsInBackground();
+  await loadActivities(); streamCache.clear(); renderAll();
+  inheritedVitalsPending.then(()=>enrichMetricsInBackground());
   el("uploadStatus").textContent="Imported "+ok+(overwritten?" · overwritten "+overwritten:"")+(skipped?" · skipped "+skipped:"")+".";
   if(ok||overwritten){
     refreshMissingWeather().catch(err=>console.warn("Automatic weather enrichment failed",err));
