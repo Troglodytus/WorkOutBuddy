@@ -136,6 +136,7 @@ async function boot() {
 }
 
 function bindUi() {
+  watchResponsiveWorkouts();
   el("loginForm").addEventListener("submit", onLogin);
   el("logoutButton").addEventListener("click", async () => { if (client) await client.auth.signOut(); });
   qsa("[data-view]").forEach(b => b.addEventListener("click", () => openView(b.dataset.view)));
@@ -212,10 +213,35 @@ async function enterApp() {
   setSync("Loading…");
   await Promise.all([loadProfile(), loadActivities(), loadAiHistory(), loadLatestTrainingPlan()]);
   renderAll();
+  scheduleWorkoutPlotResize();
   setSync("Synced");
   enrichMetricsInBackground();
 }
 
+
+let workoutPlotResizeScheduled=false;
+function resizeVisibleWorkoutPlots(){
+  workoutPlotResizeScheduled=false;
+  if(typeof Plotly!=="undefined"&&Plotly.Plots&&typeof Plotly.Plots.resize==="function"){
+    qsa(".view.active .js-plotly-plot").forEach(plot=>{
+      if(plot.getBoundingClientRect().width<=0||!plot._fullLayout)return;
+      Promise.resolve(Plotly.Plots.resize(plot)).catch(err=>console.warn("Plot resize",err));
+    });
+  }
+  Object.values(routeMaps).forEach(map=>{if(map)map.invalidateSize();});
+}
+function scheduleWorkoutPlotResize(){
+  if(workoutPlotResizeScheduled)return;
+  workoutPlotResizeScheduled=true;
+  requestAnimationFrame(resizeVisibleWorkoutPlots);
+}
+function watchResponsiveWorkouts(){
+  if(typeof ResizeObserver==="undefined")return;
+  const observer=new ResizeObserver(scheduleWorkoutPlotResize);
+  qsa(".app-shell,.view,.panel,.analysis-grid").forEach(node=>observer.observe(node));
+  window.addEventListener("orientationchange",()=>setTimeout(scheduleWorkoutPlotResize,90));
+  window.addEventListener("resize",scheduleWorkoutPlotResize,{passive:true});
+}
 function openView(name) {
   qsa(".tab").forEach(b => b.classList.toggle("active", b.dataset.view === name));
   qsa(".view").forEach(v => v.classList.remove("active"));
@@ -224,6 +250,8 @@ function openView(name) {
   if (name === "history") renderHistory();
   if (name === "planner") renderPlanner();
   if (name === "analysis") {renderAnalysis();renderMlAnalysis();}
+  scheduleWorkoutPlotResize();
+  setTimeout(scheduleWorkoutPlotResize,100);
 }
 
 async function loadProfile() {
