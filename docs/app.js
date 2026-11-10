@@ -2978,6 +2978,19 @@ async function saveAiEvaluation(type,context,text,model,responseJson=null){
   if(res.error){console.warn("Could not save AI evaluation",res.error);return;}
   await loadAiHistory();
 }
+async function coachInvocationError(error){
+  const response=error&&error.context;
+  if(response&&typeof response.json==="function"){
+    try{
+      const body=await response.clone().json();
+      if(body&&typeof body.error==="string"&&body.error.trim()){
+        return body.error.trim();
+      }
+    }catch(err){console.warn("Could not read coach error response",err);}
+    return "Coach request failed with HTTP "+(response.status||"error")+".";
+  }
+  return (error&&error.message)||"The AI coach request failed.";
+}
 async function askAiCoach() {
   if (!client) return;
   const d=analysisData();
@@ -2992,7 +3005,7 @@ async function askAiCoach() {
       ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),
       activities:compact,history:aiHistoryPayload(),profile:profileForAi()
     }});
-    if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+result.error.message;return;}
+    if(result.error){el("aiCoachOutput").textContent="AI coach failed: "+await coachInvocationError(result.error);return;}
     const text=(result.data&&result.data.text)||"No response returned.",model=(result.data&&result.data.model)||"unknown";
     el("aiCoachOutput").innerHTML=window.marked?marked.parse(text):escapeHtml(text);
     await saveAiEvaluation("analysis",{window_days:120,full_detail_days:28,activity_count:compact.length,
@@ -3101,7 +3114,7 @@ async function askAiPlanner(){
       mode:"plan",user_context:userContext,ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,
       planning_intensity:constraints,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
     }});
-    if(result.error)throw result.error;
+    if(result.error)throw new Error(await coachInvocationError(result.error));
     const candidate=validateAiPlan(result.data&&result.data.plan,base);
     if(!candidate)throw new Error("AI returned an invalid 14-day plan; existing plan was left unchanged.");
     const reason=String(result.data&&result.data.load_adjustment_reason||"");
