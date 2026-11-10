@@ -178,6 +178,7 @@ function bindUi() {
   el("duplicateOverwriteButton").addEventListener("click",()=>resolveDuplicateDecision("overwrite"));
   el("duplicateDialog").addEventListener("cancel",e=>{e.preventDefault();resolveDuplicateDecision("skip");});
   el("aiCoachButton").addEventListener("click", askAiCoach);
+  bindAiContextInputs();
   el("mlRecalculateButton").addEventListener("click",async()=>{
     el("mlRecalculateButton").disabled=true;
     try{await computeMlModelReport(true);await applyPersonalFatigueEfficiency();renderHistory();renderAnalysis();}
@@ -213,6 +214,7 @@ async function enterApp() {
   el("appView").classList.remove("hidden");
   setSync("Loading…");
   await Promise.all([loadProfile(), loadActivities(), loadAiHistory(), loadLatestTrainingPlan()]);
+  populateAiContext();
   renderAll();
   scheduleWorkoutPlotResize();
   setSync("Synced");
@@ -2863,6 +2865,61 @@ async function activitiesForAi(days){
   const fullCutoff=daysAgo(28);
   return rows.map(a=>activityForAi(a,new Date(a.start_time)>=fullCutoff?"full":"compact"));
 }
+
+let aiContextDraft="";
+let aiContextDirty=false;
+let aiContextSaveTask=Promise.resolve();
+const AI_CONTEXT_MAX_CHARS=1000;
+function setAiContextStatus(message){
+  ["aiContextAnalysisStatus","aiContextPlannerStatus"].forEach(id=>{
+    const node=el(id);if(node)node.textContent=message;
+  });
+}
+function populateAiContext(){
+  aiContextDraft=String((profile&&profile.training_preferences&&profile.training_preferences.ai_context_note)||"").slice(0,AI_CONTEXT_MAX_CHARS);
+  aiContextDirty=false;
+  ["aiContextAnalysis","aiContextPlanner"].forEach(id=>{
+    const node=el(id);if(node)node.value=aiContextDraft;
+  });
+  setAiContextStatus(aiContextDraft?"Saved context loaded.":"");
+}
+async function persistAiContextIfNeeded(){
+  if(!aiContextDirty||!client||!userId())return;
+  const content=aiContextDraft.slice(0,AI_CONTEXT_MAX_CHARS);
+  aiContextDirty=false;
+  setAiContextStatus("Saving context…");
+  const saving=aiContextSaveTask.catch(()=>{}).then(()=>persistTrainingPreferences({ai_context_note:content}));
+  aiContextSaveTask=saving;
+  try{
+    await saving;
+    if(!aiContextDirty)setAiContextStatus("Saved to your profile.");
+  }catch(err){
+    aiContextDirty=true;
+    setAiContextStatus("Could not save context: "+(err.message||String(err)));
+    throw err;
+  }
+}
+function bindAiContextInputs(){
+  ["aiContextAnalysis","aiContextPlanner"].forEach(id=>{
+    const node=el(id);if(!node)return;
+    node.addEventListener("input",()=>{
+      aiContextDraft=node.value.slice(0,AI_CONTEXT_MAX_CHARS);
+      aiContextDirty=true;
+      const other=el(id==="aiContextAnalysis"?"aiContextPlanner":"aiContextAnalysis");
+      if(other)other.value=aiContextDraft;
+      setAiContextStatus("Unsaved changes · automatically saved when you leave the field or run AI.");
+    });
+    node.addEventListener("blur",()=>{
+      persistAiContextIfNeeded().catch(err=>console.warn("AI context save failed",err));
+    });
+  });
+}
+async function aiContextForRequest(){
+  // The text is still sent for this request if Supabase saving is temporarily
+  // unavailable; the interface displays any persistence failure.
+  try{await persistAiContextIfNeeded();}catch(err){console.warn("AI context will be sent but is not saved",err);}
+  return aiContextDraft.trim().slice(0,AI_CONTEXT_MAX_CHARS);
+}
 function profileForAi(){
   const t=(profile&&profile.training_preferences)||{};
   return {
@@ -2927,10 +2984,11 @@ async function askAiCoach() {
   el("aiCoachOutput").textContent="Preparing 120-day training trends and detailed 28-day evidence…";
   el("aiCoachButton").disabled=true;
   try{
+    const userContext=await aiContextForRequest();
     const compact=await activitiesForAi(120);
     const patterns=analyticalRelationshipsForAi();
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"analysis",analysis:compactAnalysisForAi(d),relationships:patterns,
+      mode:"analysis",user_context:userContext,analysis:compactAnalysisForAi(d),relationships:patterns,
       ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),
       activities:compact,history:aiHistoryPayload(),profile:profileForAi()
     }});
@@ -2938,7 +2996,7 @@ async function askAiCoach() {
     const text=(result.data&&result.data.text)||"No response returned.",model=(result.data&&result.data.model)||"unknown";
     el("aiCoachOutput").innerHTML=window.marked?marked.parse(text):escapeHtml(text);
     await saveAiEvaluation("analysis",{window_days:120,full_detail_days:28,activity_count:compact.length,
-      analysis:compactAnalysisForAi(d),relationships:patterns,ml_model:compactMlForAi()},text,model);
+      user_context:userContext,analysis:compactAnalysisForAi(d),relationships:patterns,ml_model:compactMlForAi()},text,model);
   }catch(err){
     el("aiCoachOutput").textContent="AI coach failed: "+(err.message||String(err));
   }finally{el("aiCoachButton").disabled=false;}
@@ -3035,11 +3093,12 @@ async function askAiPlanner(){
   el("plannerAiButton").disabled=true;
   el("plannerAiStatus").textContent="Deriving the last 30 days and asking AI to evaluate the 14-day plan…";
   try{
+    const userContext=await aiContextForRequest();
     const base=currentPlan.length?currentPlan:buildFourteenDayPlan();
     const constraints=plannerIntensityTargets();
     const compact=await activitiesForAi(30);
     const result=await client.functions.invoke(cfg.COACH_FUNCTION||"coach",{body:{
-      mode:"plan",ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,
+      mode:"plan",user_context:userContext,ml_model:compactMlForAi(),race_predictions:conservativeRacePredictions(),activities:compact,
       planning_intensity:constraints,current_plan:base.map(({dateObj,...w})=>w),history:aiHistoryPayload(),profile:profileForAi()
     }});
     if(result.error)throw result.error;
@@ -3051,8 +3110,8 @@ async function askAiPlanner(){
       " Deterministic plan remains unchanged.");
     const summary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan."),model=(result.data&&result.data.model)||"unknown";
     currentPlan=candidate;
-    await persistPlan(candidate,"ai_coach_v1",{ai_summary:summary,model});
-    await saveAiEvaluation("planner",{window_days:30,activity_count:compact.length,current_plan:base.map(({dateObj,...w})=>w)},summary,model,
+    await persistPlan(candidate,"ai_coach_v1",{ai_summary:summary,model,user_context:userContext});
+    await saveAiEvaluation("planner",{window_days:30,activity_count:compact.length,user_context:userContext,current_plan:base.map(({dateObj,...w})=>w)},summary,model,
       {summary,plan:candidate.map(({dateObj,...w})=>w)});
     el("plannerAiStatus").textContent="AI-adjusted plan saved.";
     el("plannerAiSummary").classList.remove("hidden");
