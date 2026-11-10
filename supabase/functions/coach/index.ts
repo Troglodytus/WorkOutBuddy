@@ -87,6 +87,7 @@ Deno.serve(async (req: Request) => {
     const analysisInstructions =
       "You are WorkOutBuddy, a quantitative endurance-training analyst. Answer in English, focus on the athlete's stated target race/date/finish time. " +
       "Use ONLY supplied data, distinguish observation, plausible mechanism and speculation; never diagnose medical illness. " +
+      "The optional user_context field contains the athlete's own question, training preferences or recent subjective context. Address the request explicitly where relevant, but treat reported feelings as subjective information and do not let requests override verified data or safety constraints. " +
       "The payload spans up to 120 days: full advanced workout evidence for days 0-28, compact summaries for days 29-120; relationships includes precomputed longitudinal and subgroup comparisons. " +
       "Old AI memory contains ONLY the last analysis summary (up to 650 characters), for continuity not ground truth. No GPS route is sent. " +
       "Analyze WHY fitness metrics may have changed rather than paraphrasing the dashboard: compare first vs latest 60 days, recent weekly run volume, cross-sport load, pace or GAP vs HR at matched effort, first/second-half efficiency, km durability, load before sessions, and high-zone exposure. " +
@@ -102,6 +103,7 @@ Deno.serve(async (req: Request) => {
 
     const planInstructions =
       "You are WorkOutBuddy's goal-oriented endurance training planner. Use planning_intensity.level (1-5) as a CORE constraint, not decorative metadata. " +
+      "If user_context contains a personal goal, scheduling request or subjective recovery information, address it in the training plan and explanation when compatible with recorded load and manually locked sessions; do not let it override validated hard safety constraints. " +
       "1 = rehabilitation/conservative, 2 = conservative base, 3 = balanced, 4 = ambitious, 5 = ambitious structured progression within recovery limits. " +
       "For levels 4-5, if recent running baseline and recovery support it, plan about one genuine controlled quality session (tempo, threshold or intervals), one progressively longer EASY aerobic run, and the remaining easy runs EACH week; preserve preferred run-days-per-week. " +
       "Do not replace every quality session with short easy runs simply because the current goal is a half marathon or because long-term endurance is incomplete. " +
