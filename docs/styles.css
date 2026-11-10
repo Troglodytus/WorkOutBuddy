@@ -139,3 +139,13 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  .analysis-cards{grid-template-columns:minmax(0,1fr)}
  .panel{padding:13px}
 }
+
+/* Shared, optional AI context note on Analysis and Planner. */
+.ai-context-block{display:flex;flex-direction:column;gap:7px;min-width:0;max-width:100%;margin:13px 0;padding:12px 14px;
+  border:1px solid var(--line);border-radius:12px;background:rgba(118,137,164,.055)}
+.ai-context-block label{font-size:.89rem}
+.ai-context-input{box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:90px;
+  padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;line-height:1.45;
+  color:inherit;background:var(--surface, #fff);resize:vertical}
+.ai-context-input:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+.ai-context-block .status{min-height:1em;margin:0;font-size:.76rem}
