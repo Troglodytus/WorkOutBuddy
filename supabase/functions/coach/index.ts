@@ -152,10 +152,33 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const message = data?.error?.message || "OpenAI request failed";
-      return Response.json({ error: message }, { status: response.status, headers: corsHeaders });
+      // Report the failing upstream service without disclosing any API key,
+      // partial credentials or private request information to the browser.
+      const upstreamCode = String(data?.error?.code || data?.error?.type || "").slice(0, 60);
+      console.error("OpenAI API request failed", { status: response.status, code: upstreamCode });
+      let message = "OpenAI API request failed (HTTP " + response.status + ").";
+      let code = "OPENAI_UPSTREAM_ERROR";
+      if (response.status === 401) {
+        code = "OPENAI_AUTHENTICATION_FAILED";
+        message = "OpenAI rejected the API credentials (HTTP 401). Check or replace the OPENAI_API_KEY secret in Supabase; this is not a WorkOutBuddy login error.";
+      } else if (response.status === 403) {
+        code = "OPENAI_PERMISSION_DENIED";
+        message = "OpenAI denied access (HTTP 403). Verify the API key's project, permissions and any IP restrictions.";
+      } else if (response.status === 429) {
+        code = "OPENAI_RATE_OR_QUOTA";
+        message = upstreamCode === "insufficient_quota" || upstreamCode === "credit_balance_exhausted"
+          ? "OpenAI API billing credits or quota are exhausted (HTTP 429)."
+          : "OpenAI API rate or quota limit reached (HTTP 429). Check API usage and billing.";
+      } else if (response.status === 404) {
+        code = "OPENAI_MODEL_UNAVAILABLE";
+        message = "OpenAI could not access the configured model (HTTP 404). Check the OPENAI_MODEL setting and model permissions.";
+      }
+      // 502 identifies a rejected upstream API call, rather than a failed
+      // Supabase user session or invalid JWT.
+      return Response.json({ error: message, code, upstream_status: response.status },
+        { status: 502, headers: corsHeaders });
     }
 
     const text = extractText(data);
