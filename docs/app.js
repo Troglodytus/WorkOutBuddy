@@ -3109,26 +3109,82 @@ function plannerIntensityTargets(){
       "Conservative volume and low-intensity base development"
   };
 }
+function adaptAiPlanToVolume(candidate,constraints){
+  // The AI may plan more aggressively than the athlete's recent, demonstrated
+  // capacity. Adjust the distance of only unlocked runs; never modify the user's
+  // manual overrides or eliminate purposeful sessions without explanation.
+  const plan=candidate.map(w=>({...w})),adjustments=[];
+  for(let week=0;week<2;week++){
+    const target=n(week===0?constraints.target_week1_run_km:constraints.target_week2_run_km);
+    if(target==null||target<4)continue;
+    const block=plan.slice(week*7,week*7+7);
+    const runs=block.filter(w=>!w.no_workout&&planSportCategory(w)==="run");
+    const before=sum(runs.map(w=>n(w.distance_km,0)));
+    if(before<=target+.65)continue;
+    const locked=runs.filter(w=>w.locked),flexible=runs.filter(w=>!w.locked);
+    const lockedKm=sum(locked.map(w=>n(w.distance_km,0)));
+    if(!flexible.length){
+      adjustments.push("Week "+(week+1)+": manually locked runs total "+before.toFixed(1)+
+        " km (above the suggested "+target.toFixed(1)+" km); left unchanged.");
+      continue;
+    }
+    const available=Math.max(0,target-lockedKm);
+    const flexibleTotal=sum(flexible.map(w=>n(w.distance_km,0)));
+    if(available<flexible.length*2.5){
+      // With a very large locked workout, avoid inventing 1 km 'quality runs'.
+      adjustments.push("Week "+(week+1)+": locked running volume leaves insufficient room for "+
+        flexible.length+" additional workouts; manual sessions were preserved.");
+      continue;
+    }
+    const factor=flexibleTotal>0?available/flexibleTotal:0;
+    flexible.forEach(w=>{
+      const oldKm=n(w.distance_km,0);
+      const nextKm=Math.round(Math.max(2.5,oldKm*factor)*10)/10;
+      w.distance_km=nextKm;
+      if(oldKm>0&&n(w.duration_min,0)>0)
+        w.duration_min=Math.max(18,Math.round(w.duration_min*nextKm/oldKm));
+      if(planIsHard(w)&&nextKm<4.5){
+        w.title="Controlled quality run (shortened)";
+        w.pace="Brief controlled Z3–low Z4 blocks";
+        w.notes="Mileage-adjusted: 8–10 min warm-up, 2 × 2–3 min controlled faster running "+
+          "with easy recovery and a relaxed cool-down; stop or switch to easy if knee symptoms recur.";
+      }else if(planIsHard(w)){
+        w.notes=String(w.notes||"").slice(0,330)+" Mileage adjusted to "+nextKm.toFixed(1)+
+          " km including warm-up and cool-down; shorten intervals as needed. Stop if knee pain recurs.";
+      }else{
+        w.notes=String(w.notes||"").slice(0,350)+" Distance adjusted to "+nextKm.toFixed(1)+
+          " km to match demonstrated training load; keep this run easy.";
+      }
+      w.source="ai_coach_adjusted";
+    });
+    const after=sum(runs.map(w=>n(w.distance_km,0)));
+    adjustments.push("Week "+(week+1)+": AI suggested "+before.toFixed(1)+" km; "+
+      "adjusted to "+after.toFixed(1)+" km (personalized target "+target.toFixed(1)+" km).");
+  }
+  return {plan,adjustments};
+}
 function aiPlanWorkloadChecks(candidate,constraints,reason=""){
   const problems=[];
   const weeks=[candidate.slice(0,7),candidate.slice(7,14)];
   const quality=weeks.map(w=>w.filter(x=>!x.no_workout&&planIsHard(x)).length);
   const longs=weeks.map(w=>w.filter(x=>!x.no_workout&&x.family==="long_run").length);
   const volume=weeks.map(w=>sum(w.filter(x=>!x.no_workout&&planSportCategory(x)==="run").map(x=>n(x.distance_km,0))));
-  const reasons=String(reason||"").trim();
   if(constraints.level>=4&&!constraints.recovery_caution&&constraints.recent_weekly_run_km>=8){
-    if(constraints.desired_quality_per_week&&quality[0]+quality[1]===0)
-      problems.push("All quality sessions were removed despite level "+constraints.level+
-        "; retain at least one controlled quality session in the second week or choose a conservative setting if recovery requires it.");
-    if(constraints.desired_long_run_per_week&&longs[0]+longs[1]===0)
+    const needsRecovery=String(reason||"").length>=35&&
+      /ongoing|persist|injur|pain|symptom|illness|medical/i.test(String(reason).toLowerCase());
+    if(constraints.desired_quality_per_week&&quality[0]+quality[1]===0&&!needsRecovery)
+      problems.push("All quality work was removed without a documented current recovery concern.");
+    if(constraints.desired_long_run_per_week&&longs[0]+longs[1]===0&&!needsRecovery)
       problems.push("Both long aerobic runs were removed despite the athlete's endurance goal.");
   }
-  const base=constraints.recent_weekly_run_km;
-  if(base>=8){
-    if(volume[0]>base*1.22+1&&volume[0]>base+4)
-      problems.push("Week 1 running volume exceeds conservative progression limits.");
-    if(volume[1]>Math.max(base*1.34+1,volume[0]*1.18+1)&&volume[1]>base+4)
-      problems.push("Week 2 running volume exceeds progression limits.");
+  for(let week=0;week<2;week++){
+    const target=n(week===0?constraints.target_week1_run_km:constraints.target_week2_run_km);
+    if(target==null)continue;
+    const lockedKm=sum(weeks[week].filter(w=>w.locked&&!w.no_workout&&planSportCategory(w)==="run")
+      .map(w=>n(w.distance_km,0)));
+    if(volume[week]>target+1.2&&volume[week]>lockedKm+.65)
+      problems.push("Week "+(week+1)+" still exceeds its individualized target ("+
+        volume[week].toFixed(1)+" vs "+target.toFixed(1)+" km).");
   }
   for(let start=0;start<=7;start++){
     if(candidate.slice(start,start+7).filter(planIsHard).length>2)
@@ -3153,15 +3209,22 @@ async function askAiPlanner(){
     const candidate=validateAiPlan(result.data&&result.data.plan,base);
     if(!candidate)throw new Error("AI returned an invalid 14-day plan; existing plan was left unchanged.");
     const reason=String(result.data&&result.data.load_adjustment_reason||"");
-    const checks=aiPlanWorkloadChecks(candidate,constraints,reason);
+    const adapted=adaptAiPlanToVolume(candidate,constraints);
+    const checks=aiPlanWorkloadChecks(adapted.plan,constraints,reason);
     if(checks.problems.length)throw new Error("AI plan rejected: "+checks.problems.join(" ")+
-      " Deterministic plan remains unchanged.");
-    const summary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan."),model=(result.data&&result.data.model)||"unknown";
-    currentPlan=candidate;
-    await persistPlan(candidate,"ai_coach_v1",{ai_summary:summary,model,user_context:userContext});
-    await saveAiEvaluation("planner",{window_days:30,activity_count:compact.length,user_context:userContext,current_plan:base.map(({dateObj,...w})=>w)},summary,model,
-      {summary,plan:candidate.map(({dateObj,...w})=>w)});
-    el("plannerAiStatus").textContent="AI-adjusted plan saved.";
+      " Existing plan remains unchanged.");
+    const originalSummary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan.");
+    const adjustmentNote=adapted.adjustments.length?
+      "\n\n**Volume adjustment:** "+adapted.adjustments.join(" ") : "";
+    const summary=originalSummary+adjustmentNote,model=(result.data&&result.data.model)||"unknown";
+    currentPlan=adapted.plan;
+    await persistPlan(adapted.plan,"ai_coach_v2",{ai_summary:summary,model,user_context:userContext,
+      volume_adjustments:adapted.adjustments,planner_targets:constraints});
+    await saveAiEvaluation("planner",{window_days:30,activity_count:compact.length,user_context:userContext,
+      volume_adjustments:adapted.adjustments,current_plan:base.map(({dateObj,...w})=>w)},summary,model,
+      {summary,plan:adapted.plan.map(({dateObj,...w})=>w)});
+    el("plannerAiStatus").textContent=adapted.adjustments.length?
+      "AI plan saved; weekly distance adjusted to your individualized running targets.":"AI-adjusted plan saved.";
     el("plannerAiSummary").classList.remove("hidden");
     el("plannerAiSummary").innerHTML=window.marked?marked.parse(summary):escapeHtml(summary);
     renderPlan();
