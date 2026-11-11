@@ -490,15 +490,52 @@ function normalizePlanOverride(raw,dateObj){
   return w;
 }
 
+
+function establishedRunningWeeks(maxAgeDays=70){
+  const now=Date.now(),weekly=new Map();
+  for(const a of activities){
+    if(normalizeSport(a.sport_category||a.sport_type)!=="run")continue;
+    const time=new Date(a.start_time);if(!Number.isFinite(time.getTime()))continue;
+    if(time.getTime()<now-maxAgeDays*86400000||time.getTime()>now)continue;
+    const monday=new Date(time.getFullYear(),time.getMonth(),time.getDate());
+    monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
+    const key=isoPlanDate(monday),entry=weekly.get(key)||{week_start:key,km:0,runs:0,week_ts:monday.getTime()};
+    entry.km+=distanceKm(a);entry.runs++;
+    weekly.set(key,entry);
+  }
+  const current=new Date(),thisMonday=new Date(current.getFullYear(),current.getMonth(),current.getDate());
+  thisMonday.setDate(thisMonday.getDate()-(thisMonday.getDay()+6)%7);
+  return Array.from(weekly.values()).filter(x=>x.week_ts<thisMonday.getTime()&&x.runs>=2&&x.km>=8)
+    .sort((a,b)=>b.week_ts-a.week_ts).slice(0,4);
+}
+function individualizedPlannerVolume(c,level){
+  const base=n(c.runKm28Weekly,0),recent=n(c.runKm7,0),
+    activeWeeks=establishedRunningWeeks(),established=activeWeeks.length>=3?
+      median(activeWeeks.map(w=>w.km)):null;
+  const newestAge=activeWeeks.length?(Date.now()-activeWeeks[0].week_ts)/86400000:Infinity;
+  const reentry=level>=4&&established!=null&&newestAge<=28&&
+    established>=base*1.45&&recent<established*.7;
+  const gain=[.02,.04,.07,.10,.13][clamp(level,1,5)-1];
+  const sustainable=base+Math.min(Math.max(0,recent-base)*.35,base*.35);
+  let week1=base>0?Math.max(5,sustainable*(1+gain)):null;
+  let week2=week1==null?null:week1*1.06;
+  if(reentry){
+    // A short interruption makes the 28-day average artificially small.
+    // Re-enter below demonstrated prior load rather than instantly restoring it.
+    const w1Ratio=level===5?.72:.68,w2Ratio=level===5?.83:.77;
+    week1=Math.max(week1,established*w1Ratio);
+    week2=Math.max(week2,established*w2Ratio);
+  }
+  const round=v=>v==null?null:Math.round(v*10)/10;
+  return {week1_km:round(week1),week2_km:round(week2),established_weekly_km:round(established),
+    active_weeks_count:activeWeeks.length,reentry_after_break:reentry,
+    historic_weekly_km:activeWeeks.map(w=>round(w.km)),recent_weekly_km:round(base)};
+}
 function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
   if(!plan.length||n(c.runKm28Weekly,0)<=0)return plan;
   const elevatedLoad=c.loadRatio>1.55||c.hardMin7>65;
   const severeFatigue=c.loadRatio>1.9||c.hardMin7>80;
-  const progression=[0,.025,.05,.08,.11][aggr-1];
-  // Combine the four-week baseline with a recent higher-volume week cautiously.
-  // This avoids treating a sporadic lower-volume month as an absolute fitness ceiling.
-  const baseline28=n(c.runKm28Weekly,0),recent7=n(c.runKm7,0);
-  const sustainableReference=baseline28+Math.min(Math.max(0,recent7-baseline28)*.35,baseline28*.35);
+  const volumeTargets=individualizedPlannerVolume(c,aggr);
   for(let week=0;week<2;week++){
     const subset=plan.slice(week*7,(week+1)*7);
     const runSet=subset.filter(w=>!w.no_workout&&planSportCategory(w)==="run");
@@ -536,8 +573,8 @@ function tuneDeterministicPlanIntensity(plan,c,aggr,runDays){
         candidate.notes="Warm up 10–12 min; 3 × 3 min Z3–low Z4 / 2 min easy; cool down. Only progress if recovering well.";
       }
     }
-    const maxTotal=Math.max(7,sustainableReference*(week===0&&elevatedLoad?1:1+progression)*
-      (week===1?1.055:1));
+    const prescribed=week===0?volumeTargets.week1_km:volumeTargets.week2_km;
+    const maxTotal=Math.max(7,n(prescribed,7));
     const lockedKm=sum(runSet.filter(w=>w.locked).map(w=>n(w.distance_km,0)));
     const kmBudget=Math.max(0,maxTotal-lockedKm);
     const weights=unlocked.map(w=>w.family==="long_run"?1.75:planIsHard(w)?1.05:1);
@@ -3046,12 +3083,8 @@ function plannerIntensityTargets(){
   const weeklyKm=n(c.runKm28Weekly,0);
   // Aggressiveness controls training stimulus and allowed progressive adaptation,
   // NOT how many hard days to run.
-  const gain=[0,.025,.05,.08,.11][level-1];
-  const base7=n(c.runKm7,0),sustainableReference=weeklyKm+
-    Math.min(Math.max(0,base7-weeklyKm)*.35,weeklyKm*.35);
-  const moderatelyElevated=c.loadRatio>1.55||c.hardMin7>65;
-  const totalWeek1=weeklyKm>0?Math.max(5,sustainableReference*(moderatelyElevated?1:(1+gain))):null;
-  const totalWeek2=weeklyKm>0?Math.max(5,sustainableReference*(1+gain)*1.055):null;
+  const volumeTargets=individualizedPlannerVolume(c,level);
+  const totalWeek1=volumeTargets.week1_km,totalWeek2=volumeTargets.week2_km;
   const sufficientBase=weeklyKm>=8&&runDays>=3;
   const overload=c.loadRatio>1.9||c.hardMin7>80;
   return {
@@ -3063,8 +3096,10 @@ function plannerIntensityTargets(){
     recent_longest_run_km:Math.round(n(c.longestRun,0)*10)/10,
     acute_load_ratio:Math.round(c.loadRatio*100)/100,recent_z45_min:Math.round(c.hardMin7),
     hours_since_last_hard:Math.round(c.lastHardHours),
-    target_week1_run_km:totalWeek1==null?null:Math.round(totalWeek1*10)/10,
-    target_week2_run_km:totalWeek2==null?null:Math.round(totalWeek2*10)/10,
+    target_week1_run_km:totalWeek1,target_week2_run_km:totalWeek2,
+    established_weekly_run_km:volumeTargets.established_weekly_km,
+    recent_active_week_km:volumeTargets.historic_weekly_km,
+    returning_from_break:volumeTargets.reentry_after_break,
     desired_quality_per_week:level>=3&&sufficientBase&&!overload?1:0,
     desired_long_run_per_week:runDays>=2&&weeklyKm>=7?1:0,
     recovery_caution:overload,
