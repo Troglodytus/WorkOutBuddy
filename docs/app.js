@@ -3211,8 +3211,8 @@ function aiPlanWorkloadChecks(candidate,constraints,reason=""){
   const longs=weeks.map(w=>w.filter(x=>!x.no_workout&&x.family==="long_run").length);
   const volume=weeks.map(w=>sum(w.filter(x=>!x.no_workout&&planSportCategory(x)==="run").map(x=>n(x.distance_km,0))));
   if(constraints.level>=4&&!constraints.recovery_caution&&constraints.recent_weekly_run_km>=8){
-    const needsRecovery=String(reason||"").length>=35&&
-      /ongoing|persist|injur|pain|symptom|illness|medical/i.test(String(reason).toLowerCase());
+    const needsRecovery=String(reason||"").trim().length>=12&&
+      /ongoing|persist|injur|pain|knee|symptom|illness|medical/i.test(String(reason).toLowerCase());
     if(constraints.desired_quality_per_week&&quality[0]+quality[1]===0&&!needsRecovery)
       problems.push("All quality work was removed without a documented current recovery concern.");
     if(constraints.desired_long_run_per_week&&longs[0]+longs[1]===0&&!needsRecovery)
@@ -3254,7 +3254,8 @@ async function askAiPlanner(){
     const checks=aiPlanWorkloadChecks(adapted.plan,constraints,reason);
     if(checks.problems.length)throw new Error("AI plan rejected: "+checks.problems.join(" ")+
       " Existing plan remains unchanged.");
-    const originalSummary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan.");
+    const originalSummary=String((result.data&&result.data.summary)||"AI reviewed and updated the plan.")+
+      (reason?"\n\n**Recovery rationale:** "+reason:"");
     const adjustmentNote=adapted.adjustments.length?
       "\n\n**Volume adjustment:** "+adapted.adjustments.join(" ") : "";
     const summary=originalSummary+adjustmentNote,model=(result.data&&result.data.model)||"unknown";
