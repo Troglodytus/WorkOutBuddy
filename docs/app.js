@@ -3139,11 +3139,14 @@ function adaptAiPlanToVolume(candidate,constraints){
         (b.family==="long_run"?0:planIsHard(b)?2:1));
       for(const w of prioritized){
         if(free>=2.5){
-          const km=Math.min(free,Math.max(2.5,n(w.distance_km,0)));
+          const oldKm=n(w.distance_km,0);
+          const km=Math.min(free,Math.max(2.5,oldKm));
           w.distance_km=Math.round(km*10)/10;
           w.duration_min=Math.max(18,Math.round(n(w.duration_min,30)*w.distance_km/
-            Math.max(1,n(w.distance_km,0))));
-          if(planIsHard(w)){w.family="easy_aerobic";w.title="Easy run (recovery priority)";w.zone="Z2";}
+            Math.max(1,oldKm)));
+          if(planIsHard(w)||w.family==="long_run"&&w.distance_km<5){
+            w.family="easy_aerobic";w.title="Easy run (recovery priority)";w.zone="Z2";
+          }
           w.notes="Adjusted to fit manually locked sessions. Keep this run easy.";
           free=Math.max(0,free-w.distance_km);
         }else{
