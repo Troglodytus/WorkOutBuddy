@@ -3129,20 +3129,44 @@ function adaptAiPlanToVolume(candidate,constraints){
       continue;
     }
     const available=Math.max(0,target-lockedKm);
-    const flexibleTotal=sum(flexible.map(w=>n(w.distance_km,0)));
-    if(available<flexible.length*2.5){
-      // With a very large locked workout, avoid inventing 1 km 'quality runs'.
-      adjustments.push("Week "+(week+1)+": locked running volume leaves insufficient room for "+
-        flexible.length+" additional workouts; manual sessions were preserved.");
+    const floors=flexible.map(w=>planIsHard(w)?3.5:2.5),floorSum=sum(floors);
+    if(available<floorSum){
+      // Locked sessions take precedence. Preserve as many useful easy runs as
+      // fit; replace the rest by recovery instead of creating 1-km intervals.
+      let free=available;
+      const prioritized=flexible.slice().sort((a,b)=>
+        (a.family==="long_run"?0:planIsHard(a)?2:1)-
+        (b.family==="long_run"?0:planIsHard(b)?2:1));
+      for(const w of prioritized){
+        if(free>=2.5){
+          const km=Math.min(free,Math.max(2.5,n(w.distance_km,0)));
+          w.distance_km=Math.round(km*10)/10;
+          w.duration_min=Math.max(18,Math.round(n(w.duration_min,30)*w.distance_km/
+            Math.max(1,n(w.distance_km,0))));
+          if(planIsHard(w)){w.family="easy_aerobic";w.title="Easy run (recovery priority)";w.zone="Z2";}
+          w.notes="Adjusted to fit manually locked sessions. Keep this run easy.";
+          free=Math.max(0,free-w.distance_km);
+        }else{
+          w.no_workout=true;w.sport_type="None";w.family="rest_or_mobility";
+          w.title="Rest / mobility (volume limit)";w.zone="Rest";
+          w.distance_km=0;w.duration_min=0;
+          w.notes="Recovery day: manual workout volume leaves no safe room for another run.";
+        }
+        w.source="ai_coach_adjusted";
+      }
+      adjustments.push("Week "+(week+1)+": manual sessions use most of the "+
+        target.toFixed(1)+" km target; additional sessions were shortened or changed to recovery.");
       continue;
     }
-    const factor=flexibleTotal>0?available/flexibleTotal:0;
-    flexible.forEach(w=>{
+    const weights=flexible.map((w,i)=>
+      Math.max(.5,n(w.distance_km,0)-floors[i])*(w.family==="long_run"?1.35:1));
+    const weightSum=sum(weights),remainder=available-floorSum;
+    flexible.forEach((w,i)=>{
       const oldKm=n(w.distance_km,0);
-      const nextKm=Math.round(Math.max(2.5,oldKm*factor)*10)/10;
+      const nextKm=Math.round((floors[i]+remainder*weights[i]/weightSum)*10)/10;
       w.distance_km=nextKm;
       if(oldKm>0&&n(w.duration_min,0)>0)
-        w.duration_min=Math.max(18,Math.round(w.duration_min*nextKm/oldKm));
+        w.duration_min=Math.max(planIsHard(w)?26:18,Math.round(w.duration_min*nextKm/oldKm));
       if(planIsHard(w)&&nextKm<4.5){
         w.title="Controlled quality run (shortened)";
         w.pace="Brief controlled Z3–low Z4 blocks";
@@ -3160,6 +3184,20 @@ function adaptAiPlanToVolume(candidate,constraints){
     const after=sum(runs.map(w=>n(w.distance_km,0)));
     adjustments.push("Week "+(week+1)+": AI suggested "+before.toFixed(1)+" km; "+
       "adjusted to "+after.toFixed(1)+" km (personalized target "+target.toFixed(1)+" km).");
+  }
+  for(let start=0;start<=7;start++){
+    const window=plan.slice(start,start+7);
+    const hard=window.filter(w=>!w.no_workout&&planIsHard(w));
+    while(hard.length>2){
+      const remove=hard.slice().reverse().find(w=>!w.locked);
+      if(!remove)break;
+      remove.family="easy_aerobic";remove.title="Easy aerobic run (recovery spacing)";
+      remove.zone="Z2";remove.pace="Conversational";
+      remove.notes="Converted from AI intensity: maximum two hard sessions in a rolling 7-day window.";
+      remove.source="ai_coach_adjusted";
+      hard.splice(hard.indexOf(remove),1);
+      adjustments.push("One overlapping high-intensity session was changed to easy running for recovery.");
+    }
   }
   return {plan,adjustments};
 }
@@ -3182,7 +3220,7 @@ function aiPlanWorkloadChecks(candidate,constraints,reason=""){
     if(target==null)continue;
     const lockedKm=sum(weeks[week].filter(w=>w.locked&&!w.no_workout&&planSportCategory(w)==="run")
       .map(w=>n(w.distance_km,0)));
-    if(volume[week]>target+1.2&&volume[week]>lockedKm+.65)
+    if(volume[week]>target+1.2&&volume[week]>Math.max(target,lockedKm)+.65)
       problems.push("Week "+(week+1)+" still exceeds its individualized target ("+
         volume[week].toFixed(1)+" vs "+target.toFixed(1)+" km).");
   }
