@@ -883,8 +883,12 @@ function renderPlanner(){
   const longCount=plan.filter(x=>!x.no_workout&&x.family==="long_run").length;
   el("plannerIntensitySummary").textContent="Training level "+target.level+"/5 · "+target.run_days_per_week+
     " planned run days/week · "+quality+" quality workouts · "+longCount+" long runs / 14 days"+
-    (target.recent_weekly_run_km>0?" · recent baseline "+target.recent_weekly_run_km.toFixed(1)+" km/week":"")+
-    ". Higher intensity means purposeful quality and progression, not an unbounded volume increase.";
+    (target.recent_weekly_run_km>0?" · last 28d average "+target.recent_weekly_run_km.toFixed(1)+" km/week":"")+
+    (target.established_weekly_run_km!=null?" · proven active-week volume "+target.established_weekly_run_km.toFixed(1)+" km/week":"")+
+    (target.target_week1_run_km!=null?" · week 1 target "+target.target_week1_run_km.toFixed(1)+" km":"")+
+    (target.target_week2_run_km!=null?" · week 2 target "+target.target_week2_run_km.toFixed(1)+" km":"")+
+    (target.returning_from_break?" · progressive return after a break":"")+
+    ". Intensity 5 prioritizes purposeful training without skipping recovery.";
   renderRacePredictions();
   renderRaceTrend();
   el("plannerCalendar").innerHTML=plan.map((w,i)=>
