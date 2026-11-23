@@ -24,6 +24,8 @@ let mlModelReport = null;
 let mlModelSignature = null;
 let mlAnalysisBusy = false;
 const streamCache = new Map();
+let hrZoneEstimateState = {status:"idle",value:null,asOf:0};
+let hrZoneEstimateTicket = 0;
 
 const el = id => document.getElementById(id);
 const qs = sel => document.querySelector(sel);
@@ -206,6 +208,8 @@ async function onLogin(event) {
 }
 
 function leaveApp() {
+  ++hrZoneEstimateTicket;
+  hrZoneEstimateState = {status:"idle",value:null,asOf:0};
   el("loginView").classList.remove("hidden");
   el("appView").classList.add("hidden");
 }
@@ -216,6 +220,7 @@ async function enterApp() {
   await Promise.all([loadProfile(), loadActivities(), loadAiHistory(), loadLatestTrainingPlan()]);
   populateAiContext();
   renderAll();
+  void refreshHrZoneEstimation();
   scheduleWorkoutPlotResize();
   setSync("Synced");
   inheritedVitalsPending.then(()=>enrichMetricsInBackground());
@@ -259,7 +264,11 @@ function openView(name) {
   const target = el(name + "View");
   if (target) target.classList.add("active");
   if (name === "history") renderHistory();
-  if (name === "planner") renderPlanner();
+  if (name === "planner") {
+    renderPlanner();
+    if (hrZoneEstimateState.status!=="loading" && Date.now()-hrZoneEstimateState.asOf>6*3600000)
+      void refreshHrZoneEstimation();
+  }
   if (name === "analysis") {renderAnalysis();renderMlAnalysis();}
   scheduleWorkoutPlotResize();
   setTimeout(scheduleWorkoutPlotResize,100);
@@ -814,6 +823,95 @@ function renderRacePredictions(){
       '</div><div class="note">'+escapeHtml(note)+'</div></div>';
   }).join("");
 }
+
+const HR_ESTIMATE_COLORS=["#60a5fa","#22c55e","#eab308","#f97316","#dc2626"];
+function renderHrZoneEstimation(){
+  const status=el("hrZoneEstimateStatus"),cards=el("hrZoneEstimateCards"),details=el("hrZoneEstimateDetails");
+  if(!status||!cards||!details)return;
+  const state=hrZoneEstimateState, r=state.value;
+  if(state.status==="idle"||state.status==="loading"){
+    status.textContent="Analyzing recorded HR streams from the last 60 days…";
+    cards.innerHTML="";details.textContent="";return;
+  }
+  if(state.status==="error"){
+    status.textContent="Could not calculate zones: "+state.message;
+    cards.innerHTML="";details.textContent="Previous manually configured zones are unchanged.";return;
+  }
+  if(!r || !r.available){
+    status.textContent=(r ? r.streamWorkouts+" of "+r.totalWorkouts+" workouts with valid HR streams. " : "")+
+      (r ? r.reason : "No recent workouts.");
+    cards.innerHTML="";
+    details.textContent="The estimator does not manufacture zone boundaries from incomplete records; your configured zones remain active.";
+    return;
+  }
+  const basis=r.basisSport==="run"?"running-led":r.basisSport==="bike"?"cycling-led":"mixed-sport";
+  status.textContent=r.streamWorkouts+"/"+r.totalWorkouts+" workouts · "+r.hrHours.toFixed(1)+
+    " HR hours · "+basis+" · "+r.confidence+" confidence · updated "+
+    new Date(state.asOf).toLocaleString();
+  cards.innerHTML=r.zones.map((zone,i)=>{
+    const range=zone.min==null?"≤ "+zone.max:zone.zone===5?
+      zone.min+"–≈"+zone.max:zone.min+"–"+zone.max;
+    return '<div class="hr-zone-card" style="--zone-color:'+HR_ESTIMATE_COLORS[i]+'">'+
+      '<div class="eyebrow">Z'+zone.zone+'</div>'+
+      '<div class="value">'+escapeHtml(range)+' bpm</div>'+
+      '<div class="note">'+escapeHtml(zone.label)+'</div></div>';
+  }).join("");
+  details.textContent="Aerobic boundary proxy (top of Z2): "+r.aerobicThresholdProxy+
+    " ±≈"+r.uncertaintyBpm.aerobic+" bpm; threshold proxy (top of Z4): "+
+    r.thresholdProxy+" ±≈"+r.uncertaintyBpm.threshold+" bpm; estimated HRmax: "+
+    r.estimatedHrMax+" ±≈"+r.uncertaintyBpm.maximum+" bpm (observed sustained 1-minute peak "+
+    r.observedSustainedPeak+"). Supporting efforts: "+r.aerobicEvidence+
+    " stable long sessions, "+r.hardEvidence+" sustained higher-intensity sessions. "+
+    (r.ageBasedPriorUsed?"Age-based HRmax prior used. ":"No age-based HRmax prior available. ")+
+    "These uncertainty values are heuristic, not statistical confidence intervals. "+
+    "Cycling thresholds can differ from running; estimates are informational and do NOT overwrite settings. "+
+    r.limitation;
+}
+async function refreshHrZoneEstimation(){
+  const owner=userId();
+  if(!owner||!client)return;
+  const ticket=++hrZoneEstimateTicket;
+  hrZoneEstimateState={status:"loading",value:null,asOf:Date.now()};
+  renderHrZoneEstimation();
+  try{
+    if(!window.WorkoutBuddyHrZones)throw new Error("Estimator script did not load.");
+    const end=Date.now();
+    const recent=activities.filter(a=>{
+      const time=new Date(a.start_time).getTime();
+      return Number.isFinite(time)&&time<=end&&time>=end-60*86400000;
+    });
+    const streams=new Map();
+    const uncached=[];
+    for(const a of recent){
+      if(streamCache.has(a.id))streams.set(a.id,streamCache.get(a.id));
+      else uncached.push(a.id);
+    }
+    // Chunk requests so larger training histories avoid a single oversized URL.
+    // This reads only the logged-in user's RLS-protected rows.
+    for(let i=0;i<uncached.length;i+=12){
+      if(ticket!==hrZoneEstimateTicket||owner!==userId())return;
+      const batch=uncached.slice(i,i+12);
+      const response=await client.from("activity_streams")
+        .select("activity_id,stream_data").eq("user_id",owner).in("activity_id",batch);
+      if(response.error)throw new Error(response.error.message);
+      for(const row of response.data||[]){
+        const stream=safeJson(row.stream_data,{});
+        streamCache.set(row.activity_id,stream);
+        streams.set(row.activity_id,stream);
+      }
+    }
+    const value=window.WorkoutBuddyHrZones.estimate(recent,streams,profile,new Date(end));
+    if(ticket!==hrZoneEstimateTicket||owner!==userId())return;
+    hrZoneEstimateState={status:"ready",value,asOf:Date.now()};
+    renderHrZoneEstimation();
+  }catch(error){
+    if(ticket!==hrZoneEstimateTicket||owner!==userId())return;
+    console.warn("Heart-rate zone estimation failed",error);
+    hrZoneEstimateState={status:"error",message:error.message||String(error),value:null,asOf:Date.now()};
+    renderHrZoneEstimation();
+  }
+}
+
 function historicalRacePredictions(maxWeeks=26){
   const runs=activities.filter(a=>normalizeSport(a.sport_category||a.sport_type)==="run"&&
     Number.isFinite(new Date(a.start_time).getTime())).sort((a,b)=>new Date(a.start_time)-new Date(b.start_time));
@@ -890,6 +988,7 @@ function renderPlanner(){
     (target.returning_from_break?" · progressive return after a break":"")+
     ". Intensity 5 prioritizes purposeful training without skipping recovery.";
   renderRacePredictions();
+  renderHrZoneEstimation();
   renderRaceTrend();
   el("plannerCalendar").innerHTML=plan.map((w,i)=>
     '<div class="plan-card '+(i===0?"today ":"")+(w.locked?"manual":"")+'" data-plan-date="'+escapeHtml(w.date)+'">'+
@@ -3307,6 +3406,7 @@ async function importSelectedFiles() {
   }
   el("importFilesButton").disabled=false;
   await loadActivities(); streamCache.clear(); renderAll();
+  if(ok||overwritten)void refreshHrZoneEstimation();
   inheritedVitalsPending.then(()=>enrichMetricsInBackground());
   el("uploadStatus").textContent="Imported "+ok+(overwritten?" · overwritten "+overwritten:"")+(skipped?" · skipped "+skipped:"")+".";
   if(ok||overwritten){
@@ -3626,7 +3726,7 @@ async function saveSettings(event){
   const res=await client.from("profiles").upsert(row).select().single();
   if(res.error){el("settingsStatus").textContent=res.error.message;return;}
   profile=res.data;profile.hr_zones=safeJson(profile.hr_zones,{});profile.goals=safeJson(profile.goals,{});profile.training_preferences=safeJson(profile.training_preferences,{});
-  el("settingsStatus").textContent="Saved.";renderAll();setTimeout(()=>el("settingsDialog").close(),500);
+  el("settingsStatus").textContent="Saved.";renderAll();void refreshHrZoneEstimation();setTimeout(()=>el("settingsDialog").close(),500);
 }
 
 window.addEventListener("DOMContentLoaded",boot);
