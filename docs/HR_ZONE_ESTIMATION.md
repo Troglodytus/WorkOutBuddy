@@ -1,8 +1,8 @@
 # Automatic 60-day heart-rate training-zone estimates
 
-**Feature branch:** \`feature/automatic-60d-heart-rate-zones\` (from \`web-supabase-v2\`).
+**Feature branch:** `feature/automatic-60d-heart-rate-zones` (from `web-supabase-v2`).
 
-The Planner now displays five **provisional training-zone estimates** immediately below the race-time cards (10 km, half marathon and marathon). The calculation runs in the browser, using the authenticated user's existing \`activity_streams\` data, with no AI service or database migration.
+The Planner now displays five **provisional training-zone estimates** immediately below the race-time cards (10 km, half marathon and marathon). The calculation runs in the browser, using the authenticated user's existing `activity_streams` data, with no AI service or database migration.
 
 ## Inputs / refresh
 
@@ -12,7 +12,7 @@ The Planner now displays five **provisional training-zone estimates** immediatel
 - A valid birthdate, if available, provides a weak age-predicted HRmax prior.
 - Automatic calculation: at login, after a successful import/overwrite, after profile settings are saved, and when reopening the Planner after a prolonged period. The displayed time indicates when the calculation completed.
 
-The calculation **does not overwrite** \`profiles.hr_zones\`, stored per-activity zone metrics, or historical training plans. Existing configured zone limits remain operative in training analysis and workout color coding. This deliberately avoids retroactively changing previous statistics from uncertain physiological estimates.
+The calculation **does not overwrite** `profiles.hr_zones`, stored per-activity zone metrics, or historical training plans. Existing configured zone limits remain operative in training analysis and workout color coding. This deliberately avoids retroactively changing previous statistics from uncertain physiological estimates.
 
 ## Estimation method
 
@@ -31,6 +31,6 @@ These are personalized **training heuristics**, not clinical exercise testing. N
 
 For regression tests:
 
-\`\`\`bash
+```bash
 node --test tests/hr_zone_estimator.test.js
-\`\`\`
+```
