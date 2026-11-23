@@ -199,9 +199,9 @@
       basisSport,confidence,
       // Interpret as approximate sensitivity, NEVER formal confidence limits.
       uncertaintyBpm:{
-        aerobic:easy.length>=2?6:10,
-        threshold:hard.length>=2?6:11,
-        maximum:hrMax-observedPeak<=9?8:14
+        aerobic:easy.length>=2?8:12,
+        threshold:hard.length>=2?8:13,
+        maximum:hrMax-observedPeak<=9?12:18
       },
       limitation:"Training-data estimates only. No workout can establish true HRmax, LT1 or LT2 without a validated maximal/threshold test; heat, terrain, fatigue and sensor errors affect HR."
     };
