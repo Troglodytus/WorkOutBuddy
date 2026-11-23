@@ -163,3 +163,16 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 #hrZoneEstimateDetails{margin-top:10px;line-height:1.55}
 @media(max-width:1000px){.hr-zone-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.hr-zone-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 60-day HR evidence, with descriptive HR frequency plot beside zone cards. */
+.hr-zone-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.83fr);align-items:start;gap:17px;min-width:0}
+.hr-zone-summary,.hr-zone-plot-panel{min-width:0}
+.hr-zone-summary .hr-zone-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+.hr-zone-plot-panel{padding:10px 10px 7px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff)}
+.hr-zone-plot-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.82rem}
+.hr-zone-plot-switch{display:flex;align-items:center;gap:6px;font-size:.73rem;color:var(--muted)}
+.hr-zone-plot-switch select{max-width:150px;min-height:32px;padding:4px 7px;border-radius:8px}
+#hrZoneDistributionPlot{height:280px;min-height:250px;width:100%;max-width:100%}
+#hrZonePlotExplanation{font-size:.72rem;line-height:1.5;padding:2px 3px 6px}
+@media(max-width:1050px){.hr-zone-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.hr-zone-summary .hr-zone-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#hrZoneDistributionPlot{height:255px}}

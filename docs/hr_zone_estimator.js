@@ -62,6 +62,7 @@
     const points = jsonObject(stream).points;
     if (!Array.isArray(points) || points.length < 2) return null;
     const bins = [];
+    const hrSecondsPerBpm = new Array(226).fill(0);
     // Use elapsed-time weights, not the number of samples, so FIT and TCX
     // sampling rates do not change the estimate. Do not bridge data gaps.
     for (let i=1; i<points.length; i++) {
@@ -73,6 +74,7 @@
       if (t0<0 || t1>48*3600 || dt<=0 || dt>30 || h0<40 || h1<40 || h0>225 || h1>225) continue;
       if (Math.abs(h1-h0)>Math.max(15,4*dt)) continue; // optical-sensor spikes
       const hr=(h0+h1)/2;
+      hrSecondsPerBpm[Math.round(hr)] += dt;
       let cursor=t0;
       while(cursor<t1-0.000001) {
         const b=Math.floor(cursor/BIN_SECONDS);
@@ -91,10 +93,71 @@
     if (seconds<60) return null;
     const weightedHr=bins.reduce((s,b)=>s+b.hrSeconds,0)/seconds;
     return {
-      seconds, avgHr:weightedHr,
+      seconds, avgHr:weightedHr, hrSecondsPerBpm,
       peak1:rollingMaxHr(bins,2,.80),
       peak20:rollingMaxHr(bins,40,.82),
       peak30:rollingMaxHr(bins,60,.82)
+    };
+  }
+
+
+  function heartRateDistribution(records) {
+    const totals=new Array(226).fill(0);
+    for(const record of records){
+      const perBpm=record.hrSecondsPerBpm || [];
+      for(let bpm=40;bpm<=225;bpm++)totals[bpm]+=perBpm[bpm]||0;
+    }
+    // A small Gaussian kernel makes low-sample-rate and integer-bpm
+    // quantization less distracting. The underlying bars remain unsmoothed.
+    const smoothed=totals.map((_,bpm)=>{
+      let weighted=0,normalization=0;
+      for(let offset=-8;offset<=8;offset++){
+        const idx=bpm+offset;
+        if(idx<40||idx>225)continue;
+        const weight=Math.exp(-.5*(offset/2.2)**2);
+        normalization+=weight;weighted+=weight*totals[idx];
+      }
+      return normalization ? weighted/normalization : 0;
+    });
+    const filled=[];
+    for(let bpm=40;bpm<=225;bpm++)if(totals[bpm]>0)filled.push(bpm);
+    if(!filled.length)return null;
+    const low=Math.max(40,filled[0]-8), high=Math.min(225,filled[filled.length-1]+8);
+    const bpm=[],minutes=[],smoothedMinutes=[];
+    for(let i=low;i<=high;i++){
+      bpm.push(i);
+      minutes.push(Math.round(totals[i]/60*100)/100);
+      smoothedMinutes.push(Math.round(smoothed[i]/60*100)/100);
+    }
+    const max=Math.max(...smoothedMinutes);
+    // Two well-separated peaks with a clear intervening valley can show a
+    // training-intensity distribution dip. It is NOT a physiological breakpoint.
+    const peaks=[];
+    for(let i=4;i<smoothedMinutes.length-4;i++){
+      const value=smoothedMinutes[i];
+      if(value >= max*.27 && value>=smoothedMinutes[i-1] && value>smoothedMinutes[i+1])
+        peaks.push({i,bpm:bpm[i],value});
+    }
+    peaks.sort((a,b)=>b.value-a.value);
+    let dipBpm=null,dipRelativeDepth=null;
+    for(let i=0;i<peaks.length&&dipBpm===null;i++){
+      for(let j=i+1;j<peaks.length;j++){
+        const p=peaks[i],q=peaks[j],separation=Math.abs(p.i-q.i);
+        if(separation<14||separation>65)continue;
+        const a=Math.min(p.i,q.i),b=Math.max(p.i,q.i);
+        let valley=a+4;
+        for(let k=a+4;k<=b-4;k++)if(smoothedMinutes[k]<smoothedMinutes[valley])valley=k;
+        const depth=1-smoothedMinutes[valley]/Math.min(p.value,q.value);
+        if(depth>=.35){
+          dipBpm=bpm[valley];dipRelativeDepth=Math.round(depth*100);
+          break;
+        }
+      }
+    }
+    return {
+      bpm,minutes,smoothedMinutes,dipBpm,dipRelativeDepth,
+      workoutCount:records.length,
+      recordedHours:Math.round(records.reduce((s,r)=>s+r.seconds,0)/360)/10
     };
   }
 
@@ -197,6 +260,7 @@
       hardEvidence:hard.length,aerobicEvidence:easy.length,
       ageBasedPriorUsed:agePrediction!==null,
       basisSport,confidence,
+      distributions:{basis:heartRateDistribution(basis),all:heartRateDistribution(records)},
       // Interpret as approximate sensitivity, NEVER formal confidence limits.
       uncertaintyBpm:{
         aerobic:easy.length>=2?8:12,

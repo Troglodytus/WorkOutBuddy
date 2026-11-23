@@ -25,6 +25,20 @@ The calculation **does not overwrite** `profiles.hr_zones`, stored per-activity 
 - The remaining zone boundaries interpolate between the two proxies. Z1 ends at 86% of the aerobic-boundary proxy, and Z3 ends 52% of the way between the aerobic and threshold proxies.
 - All estimates are rounded to bpm, labeled as provisional, and shown alongside the number of workouts, HR hours, supporting efforts, observed peak and model confidence.
 
+## Heart-rate distribution plot
+
+A small, responsive chart now appears alongside the five zone cards in the Planner (stacked underneath on narrow/mobile screens):
+
+- **Bars:** actual time in minutes recorded at each 1-bpm interval during valid HR measurements (not the number of samples).
+- **Blue curve:** the same frequency distribution smoothed with a 2.2-bpm Gaussian kernel for legibility.
+- **Light zone bands:** the provisional Z1–Z5 boundaries from the model.
+- **Green/orange dashed markers:** LT1/LT2 *proxies*, not laboratory-measured thresholds.
+- **Optional purple dotted marker:** a descriptive dip in how often the user trains at a given HR. This is shown only when two sufficiently separated peaks and a deep intervening minimum are detected. A distribution dip is *not* an HR deflection point or proof of a lactate threshold.
+
+The selector switches between workouts used for the threshold estimate (running first where available) and **all recorded sports**. The 60-day analysis, data-quality checks, and automatic import refreshes remain unchanged.
+
+**Scientific distinction:** True heart-rate deflection as a function of increasing external exercise workload needs a standardized incremental test (and is not a reliably universal proxy for LT2). The frequency-versus-HR plot does *not* claim to derive that physiological deflection from ordinary workouts.
+
 ## Limitations
 
 These are personalized **training heuristics**, not clinical exercise testing. Neither the five boundaries nor aerobic / anaerobic thresholds can be established precisely from unsupervised workouts. Values can shift with sensor accuracy, heat, fatigue, elevation, medications, and the type of exercise. In particular, running and cycling often have different threshold HR values. A validated field test or laboratory assessment is preferable when precision matters.

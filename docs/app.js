@@ -170,6 +170,7 @@ function bindUi() {
   el("plannerRegenerateButton").addEventListener("click", recalculateAndPersistPlan);
   el("plannerAiButton").addEventListener("click", askAiPlanner);
   el("raceTrendDistance").addEventListener("change",renderRaceTrend);
+  el("hrZonePlotScope").addEventListener("change",()=>renderHrZoneDistributionPlot(hrZoneEstimateState.value));
   el("planEditForm").addEventListener("submit", savePlanOverride);
   el("planEditCloseButton").addEventListener("click",()=>el("planEditDialog").close());
   el("planEditCancelButton").addEventListener("click",()=>el("planEditDialog").close());
@@ -825,24 +826,111 @@ function renderRacePredictions(){
 }
 
 const HR_ESTIMATE_COLORS=["#60a5fa","#22c55e","#eab308","#f97316","#dc2626"];
+
+function clearHrZoneDistributionPlot(message){
+  const plot=el("hrZoneDistributionPlot"),description=el("hrZonePlotExplanation");
+  if(plot&&typeof Plotly!=="undefined"&&plot._fullLayout)Plotly.purge(plot);
+  if(description)description.textContent=message||"Graph available when recent HR streams have been analyzed.";
+}
+function renderHrZoneDistributionPlot(result){
+  const plot=el("hrZoneDistributionPlot"),description=el("hrZonePlotExplanation");
+  const picker=el("hrZonePlotScope"),planner=el("plannerView");
+  if(!plot||!description||!picker||!planner||!planner.classList.contains("active"))return;
+  if(!result||!result.available||!result.distributions){
+    clearHrZoneDistributionPlot("No heart-rate distribution available.");return;
+  }
+  if(typeof Plotly==="undefined"){
+    description.textContent="Plotly is not available for the HR distribution plot.";return;
+  }
+  const basis=result.basisSport==="run"?"Running workouts":
+    result.basisSport==="bike"?"Cycling workouts":"Mixed-sport evidence";
+  picker.options[0].textContent=basis;
+  const all=result.distributions.all,preferred=result.distributions.basis;
+  const canCompare=all&&preferred&&all.workoutCount>preferred.workoutCount;
+  picker.disabled=!canCompare;
+  if(!canCompare)picker.value="basis";
+  const current=picker.value==="all"&&canCompare?all:preferred;
+  if(!current||!current.bpm||current.bpm.length<2){
+    clearHrZoneDistributionPlot("No usable time-weighted HR histogram.");return;
+  }
+  const lower=current.bpm[0],upper=current.bpm[current.bpm.length-1];
+  const borders=result.zones.map(z=>z.max);
+  const starts=[lower,...borders.slice(0,-1).map(z=>z+0.5)],ends=borders.map(z=>z+0.5);
+  const shapes=[];
+  for(let i=0;i<5;i++)if(ends[i]>=lower&&starts[i]<=upper){
+    shapes.push({
+      type:"rect",xref:"x",yref:"paper",x0:Math.max(lower,starts[i]),x1:Math.min(upper,ends[i]),
+      y0:0,y1:1,fillcolor:HR_ESTIMATE_COLORS[i],opacity:.075,line:{width:0},layer:"below"
+    });
+  }
+  const boundaries=[
+    {x:result.aerobicThresholdProxy,color:"#13893d",label:"LT1 proxy"},
+    {x:result.thresholdProxy,color:"#dc6a10",label:"LT2 proxy"}
+  ];
+  const annotations=[];
+  for(const b of boundaries){
+    if(b.x<lower||b.x>upper)continue;
+    shapes.push({type:"line",xref:"x",yref:"paper",x0:b.x,x1:b.x,y0:0,y1:1,
+      line:{color:b.color,width:2,dash:"dash"}});
+    annotations.push({xref:"x",yref:"paper",x:b.x,y:1.11,
+      text:b.label+" "+b.x,showarrow:false,font:{size:10,color:b.color},
+      xanchor:b.label==="LT1 proxy"?"right":"left"});
+  }
+  if(current.dipBpm!=null){
+    shapes.push({type:"line",xref:"x",yref:"paper",x0:current.dipBpm,x1:current.dipBpm,y0:0,y1:.76,
+      line:{color:"#7656ae",width:1.5,dash:"dot"}});
+    annotations.push({xref:"x",yref:"paper",x:current.dipBpm,y:.8,
+      text:"Distribution dip",showarrow:false,font:{size:10,color:"#7656ae"}});
+  }
+  const traces=[
+    {type:"bar",x:current.bpm,y:current.minutes,name:"Raw observed minutes",
+      marker:{color:"#a6b6ca"},opacity:.48,
+      hovertemplate:"%{x} bpm · %{y:.2f} min observed<extra></extra>"},
+    {type:"scatter",mode:"lines",x:current.bpm,y:current.smoothedMinutes,name:"Smoothed training distribution",
+      line:{color:"#1d4ed8",width:2.8,shape:"spline",smoothing:.55},
+      hovertemplate:"%{x} bpm · %{y:.2f} smoothed min<extra></extra>"}
+  ];
+  const layout={
+    margin:{l:45,r:7,t:35,b:43},showlegend:false,autosize:true,
+    bargap:0,paper_bgcolor:"transparent",plot_bgcolor:"transparent",
+    font:{size:11,color:"#64748b"},
+    xaxis:{title:{text:"Heart rate (bpm)",font:{size:11}},range:[lower,upper],
+      ticks:"outside",gridcolor:"#e9eef4",zeroline:false,fixedrange:true},
+    yaxis:{title:{text:"Minutes / bpm",font:{size:11}},rangemode:"tozero",
+      gridcolor:"#e9eef4",zeroline:false,fixedrange:true},
+    shapes,annotations,hovermode:"x"
+  };
+  Promise.resolve(Plotly.react(plot,traces,layout,{responsive:true,displaylogo:false,
+    modeBarButtonsToRemove:["lasso2d","select2d"]}))
+    .catch(error=>{console.warn("HR distribution plot failed",error);
+      description.textContent="Could not display heart-rate distribution.";});
+  const dipText=current.dipBpm!=null?
+    "A lower-frequency dip occurs near "+current.dipBpm+" bpm — this shows a training habit, not a measured physiological deflection.":
+    "No robust dip between two distinct HR-frequency peaks was detected.";
+  description.textContent=current.workoutCount+" workouts · "+current.recordedHours.toFixed(1)+
+    " recorded HR hours. Bars = actual time, blue line = 2.2-bpm smoothed frequency; "+
+    "shading = estimated zones; dashed markers = LT1/LT2 proxies. "+dipText;
+}
+
 function renderHrZoneEstimation(){
   const status=el("hrZoneEstimateStatus"),cards=el("hrZoneEstimateCards"),details=el("hrZoneEstimateDetails");
   if(!status||!cards||!details)return;
   const state=hrZoneEstimateState, r=state.value;
   if(state.status==="idle"||state.status==="loading"){
     status.textContent="Analyzing recorded HR streams from the last 60 days…";
-    cards.innerHTML="";details.textContent="";return;
+    cards.innerHTML="";details.textContent="";clearHrZoneDistributionPlot();return;
   }
   if(state.status==="error"){
     status.textContent="Could not calculate zones: "+state.message;
-    cards.innerHTML="";details.textContent="Previous manually configured zones are unchanged.";return;
+    cards.innerHTML="";details.textContent="Previous manually configured zones are unchanged.";
+    clearHrZoneDistributionPlot("No graph available while HR-zone estimation is unavailable.");return;
   }
   if(!r || !r.available){
     status.textContent=(r ? r.streamWorkouts+" of "+r.totalWorkouts+" workouts with valid HR streams. " : "")+
       (r ? r.reason : "No recent workouts.");
     cards.innerHTML="";
     details.textContent="The estimator does not manufacture zone boundaries from incomplete records; your configured zones remain active.";
-    return;
+    clearHrZoneDistributionPlot("Not enough valid data for a distribution.");return;
   }
   const basis=r.basisSport==="run"?"running-led":r.basisSport==="bike"?"cycling-led":"mixed-sport";
   status.textContent=r.streamWorkouts+"/"+r.totalWorkouts+" workouts · "+r.hrHours.toFixed(1)+
@@ -866,6 +954,7 @@ function renderHrZoneEstimation(){
     "These uncertainty values are heuristic, not statistical confidence intervals. "+
     "Cycling thresholds can differ from running; estimates are informational and do NOT overwrite settings. "+
     r.limitation;
+  renderHrZoneDistributionPlot(r);
 }
 async function refreshHrZoneEstimation(){
   const owner=userId();

@@ -62,3 +62,40 @@ test("missing streams are counted instead of silently replaced by average HR",()
   assert.equal(r.missingStreams,1);
   assert.equal(r.available,true);
 });
+
+test("HR distribution conserves observed recording time",()=>{
+  const rows=[workout(20,"run",48,125),workout(21,"run",48,160)];
+  const estimateResult=runModel(rows);
+  assert.equal(estimateResult.available,true);
+  const histogram=estimateResult.distributions.all;
+  const expectedHours=estimateResult.hrHours;
+  const rawMinutes=histogram.minutes.reduce((a,b)=>a+b,0);
+  assert.ok(Math.abs(rawMinutes/60-expectedHours)<.08);
+  assert.equal(histogram.workoutCount,2);
+  assert.equal(histogram.bpm.length,histogram.minutes.length);
+  assert.equal(histogram.bpm.length,histogram.smoothedMinutes.length);
+});
+test("a clear between-peak HR frequency dip is descriptive and optional",()=>{
+  const rows=[
+    workout(31,"run",50,125),workout(32,"run",50,126),
+    workout(33,"run",50,166),workout(34,"run",50,167)
+  ];
+  const result=runModel(rows);
+  assert.equal(result.available,true);
+  const distribution=result.distributions.basis;
+  assert.ok(distribution.dipBpm>130 && distribution.dipBpm<165);
+  assert.ok(distribution.dipRelativeDepth>=35);
+  const steady=runModel([workout(41,"run",48,140),workout(42,"run",48,141)]);
+  assert.equal(steady.distributions.basis.dipBpm,null);
+});
+test("all-sports plot includes other workouts without altering run-led thresholds",()=>{
+  const rows=[
+    workout(51,"run",47,145),workout(52,"run",48,169),
+    workout(53,"bike",55,115)
+  ];
+  const result=runModel(rows);
+  assert.equal(result.basisSport,"run");
+  assert.equal(result.distributions.basis.workoutCount,2);
+  assert.equal(result.distributions.all.workoutCount,3);
+  assert.ok(result.distributions.all.recordedHours>result.distributions.basis.recordedHours);
+});
