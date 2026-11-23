@@ -149,3 +149,17 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   color:inherit;background:var(--surface, #fff);resize:vertical}
 .ai-context-input:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
 .ai-context-block .status{min-height:1em;margin:0;font-size:.76rem}
+
+/* Read-only, automatically calculated 60-day HR zones in the Planner. */
+.hr-zone-estimate{margin:15px 0;padding:15px;border:1px solid var(--line);border-radius:14px;background:#fbfcfe}
+.hr-zone-estimate .panel-head h3{margin:3px 0 7px}
+.hr-zone-estimate #hrZoneEstimateStatus{line-height:1.5;margin:2px 0 8px}
+.hr-zone-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:10px}
+.hr-zone-card{position:relative;min-width:0;padding:11px 10px 11px 14px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.hr-zone-card:before{content:"";position:absolute;top:0;bottom:0;left:0;width:4px;background:var(--zone-color)}
+.hr-zone-card .eyebrow{font-weight:700;letter-spacing:.04em}
+.hr-zone-card .value{font-size:1.14rem;font-weight:700;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
+.hr-zone-card .note{font-size:.76rem;line-height:1.4;color:var(--muted)}
+#hrZoneEstimateDetails{margin-top:10px;line-height:1.55}
+@media(max-width:1000px){.hr-zone-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.hr-zone-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
