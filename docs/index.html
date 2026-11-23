@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <title>WorkOutBuddy</title>
-  <link rel="stylesheet" href="./styles.css?v=1.0.8">
+  <link rel="stylesheet" href="./styles.css?v=1.0.9">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 </head>
 <body>
@@ -210,8 +210,25 @@
             <div><div class="eyebrow">60-DAY HEART-RATE MODEL</div><h3 id="hrZoneEstimateTitle">Estimated training zones</h3></div>
           </div>
           <div id="hrZoneEstimateStatus" class="muted small-note" role="status" aria-live="polite">Analyzing recent heart-rate streams…</div>
-          <div id="hrZoneEstimateCards" class="hr-zone-cards"></div>
-          <div id="hrZoneEstimateDetails" class="muted small-note"></div>
+          <div class="hr-zone-layout">
+            <div class="hr-zone-summary">
+              <div id="hrZoneEstimateCards" class="hr-zone-cards"></div>
+              <div id="hrZoneEstimateDetails" class="muted small-note"></div>
+            </div>
+            <div class="hr-zone-plot-panel">
+              <div class="hr-zone-plot-head">
+                <strong>Recorded heart-rate distribution</strong>
+                <label class="hr-zone-plot-switch">Data
+                  <select id="hrZonePlotScope" aria-label="Heart-rate distribution source">
+                    <option value="basis">Threshold sport</option>
+                    <option value="all">All sports</option>
+                  </select>
+                </label>
+              </div>
+              <div id="hrZoneDistributionPlot" class="plot" role="img" aria-label="Heart-rate distribution with estimated aerobic and higher threshold boundaries"></div>
+              <div id="hrZonePlotExplanation" class="muted small-note"></div>
+            </div>
+          </div>
         </section>
         <div class="race-trend-panel">
           <div class="panel-head">
@@ -416,7 +433,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="./config.js?v=1.0.7"></script>
-  <script src="./hr_zone_estimator.js?v=1.0.8"></script>
-  <script src="./app.js?v=1.0.8"></script>
+  <script src="./hr_zone_estimator.js?v=1.0.9"></script>
+  <script src="./app.js?v=1.0.9"></script>
 </body>
 </html>
